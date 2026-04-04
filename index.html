@@ -75,6 +75,14 @@ function playTaDa(){
 function playMatch(){playTone(523,0.15,'sine',0.2);setTimeout(()=>playTone(659,0.15,'sine',0.2),100);setTimeout(()=>playTone(784,0.2,'sine',0.2),200)}
 function playWrong(){playTone(200,0.2,'square',0.1);setTimeout(()=>playTone(160,0.25,'square',0.1),150)}
 function playFlip(){playTone(800,0.08,'sine',0.1)}
+function sayWord(word){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(word);
+  utt.lang='en-US';utt.rate=1.1;utt.pitch=1.5;utt.volume=1;
+  window.speechSynthesis.speak(utt);
+}
+
 let speechBusy=false;
 function sayNumber(n){
   if(!window.speechSynthesis)return;
@@ -759,8 +767,16 @@ function updateBurgerButtons(){
 
 function addBurgerItem(id){
   burgerStack.push(id);burgerBounceTimer=0.3;
-  wobbleVel+=(Math.random()-0.5)*0.08; // wobble on add
-  playPop();
+  wobbleVel+=(Math.random()-0.5)*0.08;
+  const item=BURGER_ITEMS.find(b=>b.id===id);
+  // Unique placement sound per item
+  if(id==='patty')playSplat();
+  else if(id==='cheese'){playTone(500,0.12,'sine',0.15);playTone(600,0.1,'sine',0.1)}
+  else if(id==='lettuce'){playTone(800,0.08,'sine',0.1);playTone(700,0.06,'sine',0.08)}
+  else if(id==='bacon'){playTone(300,0.1,'sawtooth',0.1);playTone(200,0.08,'square',0.08)}
+  else playPop();
+  // Say the item name
+  sayWord(item?item.label:id);
   const totalH=getBurgerHeight();
   const visibleH=H*0.7-30; // counter top to top of screen
   burgerCamY=Math.max(0,totalH-visibleH+60);
@@ -991,7 +1007,13 @@ function updateIceButtons(){
 function addIceItem(id){
   iceStack.push(id);iceBounceTimer=0.3;wobbleVel+=(Math.random()-0.5)*0.08;
   if(id==='sprinkles')iceSprinkleSeeds.push(Math.floor(Math.random()*10000));
-  playPop();
+  // Placement sound
+  if(id==='sprinkles'){for(let i=0;i<4;i++)setTimeout(()=>playTone(600+Math.random()*400,0.05,'sine',0.08),i*40)}
+  else if(id==='cherry'){playTone(800,0.1,'sine',0.15);setTimeout(()=>playTone(1000,0.08,'sine',0.1),80)}
+  else playPop();
+  // Say item name
+  const flav=ICE_FLAVORS.find(f=>f.id===id);
+  sayWord(flav?flav.label:id);
   const totalH=getIceHeight();
   const visH=H*0.7-30;
   iceCamY=Math.max(0,totalH-visH+60);
@@ -1560,7 +1582,12 @@ function addWreckBlock(id){
   const block=WRECK_BLOCKS.find(b=>b.id===id);
   wreckTower.push({...block,wobble:0});
   wobbleVel+=(Math.random()-0.5)*0.06;
-  playPop();
+  // Placement sound per block type
+  if(id==='brick'){playTone(150,0.12,'square',0.15);playTone(120,0.1,'triangle',0.1)}
+  else if(id==='glass'){playTone(900,0.15,'sine',0.1);playTone(1100,0.1,'sine',0.08)}
+  else if(id==='stone'){playTone(100,0.15,'triangle',0.2);playTone(80,0.1,'square',0.1)}
+  else playPop();
+  sayWord(block?block.label:id);
   updateWreckButtons();
 }
 
