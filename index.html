@@ -730,8 +730,8 @@ function finishBurger(){
 }
 
 function burgerDoEat(){
-  if(burgerState!=='eating'||burgerStack.length===0||mouthOpenTimer>0)return;
-  burgerCustomerPhase++;burgerEatCount++;mouthOpenTimer=0.4;
+  if(burgerState!=='eating'||burgerStack.length===0||mouthOpenTimer>0.15)return;
+  burgerCustomerPhase++;burgerEatCount++;mouthOpenTimer=0.3;
   const removed=burgerStack.pop();
   const item=BURGER_ITEMS.find(b=>b.id===removed);
   playChomp(item?item.pitch:200);
@@ -952,8 +952,8 @@ function finishIceCream(){
 
 const ICE_REACTS={vanilla:'😊',chocolate:'🤎',strawberry:'❤️',mint:'💚',blueberry:'💙',sprinkles:'🌈',cherry:'🍒'};
 function iceDoEat(){
-  if(iceState!=='eating'||iceStack.length<=1||mouthOpenTimer>0)return;
-  iceEatCount++;mouthOpenTimer=0.4;
+  if(iceState!=='eating'||iceStack.length<=1||mouthOpenTimer>0.15)return;
+  iceEatCount++;mouthOpenTimer=0.3;
   const removed=iceStack.pop();
   if(removed==='sprinkles')iceSprinkleSeeds.pop();
   const flav=ICE_FLAVORS.find(f=>f.id===removed);
