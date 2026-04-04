@@ -557,7 +557,19 @@ function drawDumpTruck(x,y){
   ctx.save();ctx.rotate(truckBedAngle);
   ctx.fillStyle='#c62828';ctx.fillRect(-2*s,-bedH,bedW,bedH);ctx.strokeStyle='#b71c1c';ctx.lineWidth=3;ctx.strokeRect(-2*s,-bedH,bedW,bedH);
   ctx.fillStyle='#b71c1c';ctx.fillRect(-2*s,-bedH,6*s,bedH);
-  if(Math.abs(truckBedAngle)<0.15)ctx.fillRect(bedW-6*s,-bedH,6*s,bedH);
+  // Tailgate — hinges at top, swings open when bed tilts
+  ctx.save();
+  ctx.translate(bedW-2*s,-bedH); // hinge point at top-right of bed
+  if(truckBedAngle>0.1){
+    // Swing open — hangs down from hinge
+    const gateAngle=Math.min(1.2,truckBedAngle*2);
+    ctx.rotate(gateAngle);
+  }
+  ctx.fillStyle='#b71c1c';ctx.fillRect(-4*s,0,6*s,bedH);
+  ctx.strokeStyle='#8e0000';ctx.lineWidth=1.5;ctx.strokeRect(-4*s,0,6*s,bedH);
+  // Hinge bolts
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(-1*s,3*s,2*s,0,Math.PI*2);ctx.fill();
+  ctx.restore();
   if(truckLoad.length>0){const lh=(bedH-4*s)/MAX_SCOOPS;ctx.save();ctx.beginPath();ctx.rect(4*s,-bedH+2*s,bedW-12*s,bedH-4*s);ctx.clip();truckLoad.forEach((mat,i)=>{drawDigMaterialFill(4*s,-4*s-(i+1)*lh,bedW-12*s,lh,mat,1000+i*137)});ctx.restore()}
   ctx.restore();ctx.restore();
 }
