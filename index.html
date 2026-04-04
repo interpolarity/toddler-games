@@ -275,6 +275,8 @@ function digDoDump(){
 
 function updateDigGame(dt){
   digGroundY=H*0.38;
+  // Piles slowly regrow
+  ['sand','rocks','water'].forEach(t=>{if(pileSizes[t]<1)pileSizes[t]=Math.min(1,pileSizes[t]+dt*0.04)});
   // Screen shake
   if(screenShakeTimer>0){screenShakeTimer-=dt;screenShakeX=(Math.random()-0.5)*screenShakeTimer*40;screenShakeY=(Math.random()-0.5)*screenShakeTimer*25}else{screenShakeX=0;screenShakeY=0}
   // Excavator movement
@@ -390,13 +392,20 @@ function drawExcavator(x,y){
 
   ctx.save();ctx.translate(x,y);
 
-  // Tracks — chunky rubber tracks
+  // Tracks — single connected undercarriage
+  const trackW=bodyW+10*s,trackH=20*s,trackY=0;
+  // Track frame
   ctx.fillStyle='#333';
-  drawRoundRect(-bodyW/2-4*s,2*s,bodyW+8*s,18*s,8*s);ctx.fill();
-  ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.stroke();
-  // Track wheels
-  ctx.fillStyle='#555';
-  for(let i=0;i<4;i++){const wx=-bodyW/2+8*s+i*(bodyW/3.5);ctx.beginPath();ctx.arc(wx,11*s,7*s,0,Math.PI*2);ctx.fill();ctx.fillStyle='#777';ctx.beginPath();ctx.arc(wx,11*s,3*s,0,Math.PI*2);ctx.fill();ctx.fillStyle='#555'}
+  drawRoundRect(-trackW/2,trackY,trackW,trackH,trackH/2);ctx.fill();
+  ctx.strokeStyle='#222';ctx.lineWidth=2.5;ctx.stroke();
+  // Tread pattern
+  ctx.strokeStyle='#444';ctx.lineWidth=1.5;
+  for(let i=0;i<8;i++){const tx2=-trackW/2+8*s+i*(trackW-16*s)/7;ctx.beginPath();ctx.moveTo(tx2,trackY+3);ctx.lineTo(tx2,trackY+trackH-3);ctx.stroke()}
+  // Drive wheels (large at ends, small in middle)
+  const wheelPositions=[[-trackW/2+trackH/2,trackH/2],[trackW/2-trackH/2,trackH/2]];
+  wheelPositions.forEach(([wx,wy])=>{ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(wx,trackY+wy,trackH/2-3,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(wx,trackY+wy,trackH/4,0,Math.PI*2);ctx.fill()});
+  // Smaller rollers in between
+  for(let i=1;i<=3;i++){const rx=-trackW/2+trackH/2+i*(trackW-trackH)/(4);ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(rx,trackY+trackH/2,trackH/3.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(rx,trackY+trackH/2,trackH/6,0,Math.PI*2);ctx.fill()}
 
   // Body (house)
   ctx.fillStyle='#ff8f00';
@@ -442,25 +451,53 @@ function drawExcavator(x,y){
   // Hydraulic on stick
   ctx.fillStyle='#bdbdbd';ctx.fillRect(3*s,stickW*0.1,stickLen*0.5,stickW*0.3);
 
-  // BUCKET — pivots from end of stick
+  // BUCKET — curved scoop shape, pivots from end of stick
   ctx.save();ctx.translate(stickLen,0);ctx.rotate(excBucketAngle);
-  // Bucket body
+  const bkW=bucketW,bkH=bucketH;
+  // Bucket back/spine
+  ctx.fillStyle='#757575';
+  ctx.fillRect(-3*s,-8*s,6*s,bkH*0.6);
+  // Curved scoop
   ctx.fillStyle='#616161';
-  ctx.beginPath();ctx.moveTo(-bucketW/2,-6*s);ctx.lineTo(bucketW/2,-6*s);
-  ctx.lineTo(bucketW/2-4*s,bucketH);ctx.lineTo(-bucketW/2+4*s,bucketH);ctx.closePath();
-  ctx.fill();ctx.strokeStyle='#424242';ctx.lineWidth=2.5;ctx.stroke();
-  // Bucket back plate
-  ctx.fillStyle='#757575';ctx.fillRect(-bucketW/2,-6*s,bucketW,4*s);
+  ctx.beginPath();
+  ctx.moveTo(-bkW/2,-6*s);
+  ctx.lineTo(bkW/2,-6*s);
+  ctx.quadraticCurveTo(bkW/2+2*s,bkH*0.5,bkW*0.3,bkH); // right side curves in
+  ctx.lineTo(-bkW*0.3,bkH); // bottom edge
+  ctx.quadraticCurveTo(-bkW/2-2*s,bkH*0.5,-bkW/2,-6*s); // left side curves in
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle='#424242';ctx.lineWidth=2.5;ctx.stroke();
+  // Side plate ribs
+  ctx.strokeStyle='#555';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(-bkW*0.35,0);ctx.lineTo(-bkW*0.2,bkH*0.8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(bkW*0.35,0);ctx.lineTo(bkW*0.2,bkH*0.8);ctx.stroke();
+  // Cutting edge (bottom lip)
+  ctx.fillStyle='#888';
+  ctx.beginPath();ctx.moveTo(-bkW*0.35,bkH-2*s);ctx.lineTo(bkW*0.35,bkH-2*s);
+  ctx.lineTo(bkW*0.3,bkH+1*s);ctx.lineTo(-bkW*0.3,bkH+1*s);ctx.closePath();ctx.fill();
+  // Teeth — triangular
+  ctx.fillStyle='#aaa';
+  const teethCount=4;
+  for(let i=0;i<teethCount;i++){
+    const tx=-bkW*0.28+i*(bkW*0.56/(teethCount-1));
+    ctx.beginPath();ctx.moveTo(tx-2.5*s,bkH);ctx.lineTo(tx,bkH+7*s);ctx.lineTo(tx+2.5*s,bkH);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.stroke()}
   // Material in bucket
-  if(excBucketMat){const m=DIG_MAT[excBucketMat];ctx.fillStyle=m.color;
-    ctx.beginPath();ctx.moveTo(-bucketW/2+5*s,bucketH*0.3);ctx.lineTo(bucketW/2-5*s,bucketH*0.3);
-    ctx.lineTo(bucketW/2-6*s,bucketH-3*s);ctx.lineTo(-bucketW/2+6*s,bucketH-3*s);ctx.closePath();ctx.fill();
-    // Material mound on top
-    ctx.beginPath();ctx.moveTo(-bucketW/2+5*s,bucketH*0.3);
-    ctx.quadraticCurveTo(0,bucketH*0.1,bucketW/2-5*s,bucketH*0.3);ctx.fill()}
-  // Bucket teeth
-  ctx.fillStyle='#bdbdbd';
-  for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*bucketW*0.25-3*s,bucketH);ctx.lineTo(i*bucketW*0.25,bucketH+6*s);ctx.lineTo(i*bucketW*0.25+3*s,bucketH);ctx.fill()}
+  if(excBucketMat){const m=DIG_MAT[excBucketMat];
+    ctx.save();
+    // Clip to bucket interior
+    ctx.beginPath();
+    ctx.moveTo(-bkW*0.35,bkH*0.2);ctx.lineTo(bkW*0.35,bkH*0.2);
+    ctx.quadraticCurveTo(bkW*0.35,bkH*0.7,bkW*0.2,bkH-4*s);
+    ctx.lineTo(-bkW*0.2,bkH-4*s);
+    ctx.quadraticCurveTo(-bkW*0.35,bkH*0.7,-bkW*0.35,bkH*0.2);
+    ctx.closePath();ctx.clip();
+    ctx.fillStyle=m.color;ctx.fillRect(-bkW/2,bkH*0.2,bkW,bkH);
+    // Mound on top
+    ctx.fillStyle=m.light;ctx.globalAlpha=0.5;
+    ctx.beginPath();ctx.moveTo(-bkW*0.35,bkH*0.2);ctx.quadraticCurveTo(0,bkH*0.05,bkW*0.35,bkH*0.2);ctx.fill();
+    ctx.globalAlpha=1;ctx.restore()}
 
   ctx.restore(); // bucket
   ctx.restore(); // stick
