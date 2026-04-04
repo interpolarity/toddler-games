@@ -59,8 +59,8 @@ function playTone(freq,dur,type,vol){
 function playJingle(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.3,'sine',0.2),i*120))}
 function playPop(){playTone(600+Math.random()*200,0.15,'sine',0.2)}
 function playSplat(){playTone(150,0.2,'triangle',0.2);playTone(100,0.25,'square',0.1)}
-function playChomp(){playTone(200,0.12,'square',0.15);setTimeout(()=>playTone(150,0.1,'square',0.12),130)}
-function playSlurp(){playTone(400,0.3,'sine',0.12);playTone(600,0.2,'triangle',0.08)}
+function playChomp(pitch){const p=pitch||200;playTone(p,0.12,'square',0.15);setTimeout(()=>playTone(p*0.75,0.1,'square',0.12),130)}
+function playSlurp(pitch){const p=pitch||400;playTone(p,0.3,'sine',0.12);playTone(p*1.5,0.2,'triangle',0.08)}
 function playBurp(){if(!audioCtx)return;const n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();g.connect(audioCtx.destination);o.type='sawtooth';o.frequency.setValueAtTime(120,n);o.frequency.exponentialRampToValueAtTime(60,n+0.4);g.gain.setValueAtTime(0.2,n);g.gain.linearRampToValueAtTime(0.25,n+0.1);g.gain.exponentialRampToValueAtTime(0.01,n+0.5);o.connect(g);o.start(n);o.stop(n+0.5)}
 function playMatch(){playTone(523,0.15,'sine',0.2);setTimeout(()=>playTone(659,0.15,'sine',0.2),100);setTimeout(()=>playTone(784,0.2,'sine',0.2),200)}
 function playWrong(){playTone(200,0.2,'square',0.1);setTimeout(()=>playTone(160,0.25,'square',0.1),150)}
@@ -115,6 +115,26 @@ function spawnConfetti(){
 }
 function updateConfetti(){for(let i=confetti.length-1;i>=0;i--){const c=confetti[i];c.x+=c.vx;c.y+=c.vy;c.vy+=0.05;c.vx+=(Math.random()-0.5)*0.3;c.rot+=c.rs;c.life-=c.decay;if(c.life<=0||c.y>H)confetti.splice(i,1)}}
 function drawConfetti(){confetti.forEach(c=>{ctx.globalAlpha=c.life;ctx.fillStyle=c.color;ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.rot);if(c.circ){ctx.beginPath();ctx.arc(0,0,c.size/2,0,Math.PI*2);ctx.fill()}else ctx.fillRect(-c.size/2,-c.size/4,c.size,c.size/2);ctx.restore();ctx.globalAlpha=1})}
+
+// Floating reaction emojis
+let floatingEmojis=[];
+function spawnFloatingEmoji(x,y,emoji){
+  floatingEmojis.push({x:x+(Math.random()-0.5)*40,y,emoji,life:1,vy:-2-Math.random()*2,vx:(Math.random()-0.5)*1.5});
+}
+function updateFloatingEmojis(dt){
+  for(let i=floatingEmojis.length-1;i>=0;i--){
+    const e=floatingEmojis[i];e.y+=e.vy;e.x+=e.vx;e.life-=dt*0.8;
+    if(e.life<=0)floatingEmojis.splice(i,1);
+  }
+}
+function drawFloatingEmojis(){
+  floatingEmojis.forEach(e=>{
+    ctx.globalAlpha=e.life;
+    ctx.font=`${28+e.life*12}px sans-serif`;ctx.textAlign='center';
+    ctx.fillText(e.emoji,e.x,e.y);
+    ctx.globalAlpha=1;ctx.textAlign='left';
+  });
+}
 
 // Button helper
 function addBtn(cls,emoji,label,onclick){
@@ -356,13 +376,13 @@ function playSound_dig(type){
 // HAMBURGER GAME
 // =============================================
 const BURGER_ITEMS = [
-  {id:'patty',  emoji:'🥩', label:'Patty',   color:'#6d4c41', dark:'#4e342e', h:26, shape:'patty'},
-  {id:'cheese', emoji:'🧀', label:'Cheese',  color:'#ffca28', dark:'#f9a825', h:14, shape:'cheese'},
-  {id:'lettuce',emoji:'🥬', label:'Lettuce', color:'#66bb6a', dark:'#43a047', h:18, shape:'lettuce'},
-  {id:'tomato', emoji:'🍅', label:'Tomato',  color:'#ef5350', dark:'#c62828', h:16, shape:'tomato'},
-  {id:'onion',  emoji:'🧅', label:'Onion',   color:'#e0c8ff', dark:'#b39ddb', h:12, shape:'onion'},
-  {id:'bacon',  emoji:'🥓', label:'Bacon',   color:'#d84315', dark:'#bf360c', h:12, shape:'bacon'},
-  {id:'bread',  emoji:'🍞', label:'Bread',   color:'#d7a86e', dark:'#c49556', h:20, shape:'bread'},
+  {id:'patty',  emoji:'🥩', label:'Patty',   color:'#6d4c41', dark:'#4e342e', h:26, shape:'patty',  pitch:150, react:'💪'},
+  {id:'cheese', emoji:'🧀', label:'Cheese',  color:'#ffca28', dark:'#f9a825', h:14, shape:'cheese', pitch:250, react:'❤️'},
+  {id:'lettuce',emoji:'🥬', label:'Lettuce', color:'#66bb6a', dark:'#43a047', h:18, shape:'lettuce',pitch:300, react:'🥗'},
+  {id:'tomato', emoji:'🍅', label:'Tomato',  color:'#ef5350', dark:'#c62828', h:16, shape:'tomato', pitch:280, react:'😊'},
+  {id:'onion',  emoji:'🧅', label:'Onion',   color:'#e0c8ff', dark:'#b39ddb', h:12, shape:'onion',  pitch:180, react:'😭'},
+  {id:'bacon',  emoji:'🥓', label:'Bacon',   color:'#d84315', dark:'#bf360c', h:12, shape:'bacon',  pitch:200, react:'🤩'},
+  {id:'bread',  emoji:'🍞', label:'Bread',   color:'#d7a86e', dark:'#c49556', h:20, shape:'bread',  pitch:220, react:'😋'},
 ];
 let burgerStack, burgerState, burgerCustomerX, burgerCustomerPhase, burgerEatTimer, burgerBounceTimer;
 let burgerCamY, burgerEatCount, burgerTotalLayers;
@@ -413,10 +433,13 @@ function finishBurger(){
 function burgerDoEat(){
   if(burgerState!=='eating'||burgerStack.length===0)return;
   burgerCustomerPhase++;burgerEatCount++;mouthOpenTimer=0.4;
-  playChomp();
   const removed=burgerStack.pop();
   const item=BURGER_ITEMS.find(b=>b.id===removed);
+  playChomp(item?item.pitch:200);
   spawnParticles(W*0.35,H*0.55,6,item?[item.color,item.dark]:['#d7a86e','#c49556'],{vyRange:4,spread:20});
+  // Reaction emoji floats up from character
+  if(item&&item.react)spawnFloatingEmoji(burgerCustomerX,H*0.7-80,item.react);
+  else spawnFloatingEmoji(burgerCustomerX,H*0.7-80,'😋');
   if(burgerStack.length===0){burgerState='done';playJingle();spawnConfetti();sayNumber(burgerEatCount);setTimeout(()=>playBurp(),800);updateBurgerButtons()}
 }
 
@@ -437,7 +460,7 @@ function updateBurgerGame(dt){
     if(Math.abs(burgerCustomerX-W*0.72)<5){burgerCustomerX=W*0.72;burgerState='eating';burgerEatTimer=0;burgerCustomerPhase=0;updateBurgerButtons()}
   }
   if(mouthOpenTimer>0)mouthOpenTimer=Math.max(0,mouthOpenTimer-dt);
-  updateParticles(dt);updateConfetti();
+  updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);
 }
 
 function drawBurgerGame(){
@@ -495,7 +518,7 @@ function drawBurgerGame(){
     drawEatCounter(burgerEatCount,burgerTotalLayers);
   }
 
-  drawParticles(0);drawConfetti();
+  drawParticles(0);drawConfetti();drawFloatingEmojis();
 }
 
 function drawBunBottom(x,y){
@@ -623,14 +646,17 @@ function finishIceCream(){
   playSplat();updateIceButtons();
 }
 
+const ICE_REACTS={vanilla:'😊',chocolate:'🤎',strawberry:'❤️',mint:'💚',blueberry:'💙',sprinkles:'🌈',cherry:'🍒'};
 function iceDoEat(){
   if(iceState!=='eating'||iceStack.length<=1)return;
   iceEatCount++;mouthOpenTimer=0.4;
-  playSlurp();
   const removed=iceStack.pop();
   if(removed==='sprinkles')iceSprinkleSeeds.pop();
   const flav=ICE_FLAVORS.find(f=>f.id===removed);
+  const pitches={vanilla:400,chocolate:300,strawberry:450,mint:500,blueberry:350,sprinkles:600,cherry:550};
+  playSlurp(pitches[removed]||400);
   spawnParticles(W*0.35,H*0.5,8,flav?[flav.color,flav.dark]:['#fff','#f8bbd0'],{vyRange:4,spread:25});
+  spawnFloatingEmoji(iceCustomerX,H*0.7-80,ICE_REACTS[removed]||'😋');
   if(iceStack.length<=1){iceState='done';playJingle();spawnConfetti();sayNumber(iceEatCount);setTimeout(()=>playBurp(),800);updateIceButtons()}
 }
 
@@ -648,7 +674,7 @@ function updateIceCreamGame(dt){
     if(Math.abs(iceCustomerX-W*0.72)<5){iceCustomerX=W*0.72;iceState='eating';iceEatTimer=0;updateIceButtons()}
   }
   if(mouthOpenTimer>0)mouthOpenTimer=Math.max(0,mouthOpenTimer-dt);
-  updateParticles(dt);updateConfetti();
+  updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);
 }
 
 function drawIceCreamGame(){
@@ -703,7 +729,7 @@ function drawIceCreamGame(){
     drawEatCounter(iceEatCount,iceTotalLayers);
   }
 
-  drawParticles(0);drawConfetti();
+  drawParticles(0);drawConfetti();drawFloatingEmojis();
 }
 
 function drawCone(x,y){
@@ -914,20 +940,33 @@ const MATCH_ICONS = [
   {emoji:'🐮',color:'#bcaaa4'},{emoji:'🐵',color:'#a1887f'},
 ];
 let matchCards,matchFlipped,matchMatched,matchLocked,matchTries,matchPairs,matchPeekTimer;
-let matchCelebrated;
+let matchCelebrated,matchNumPairs,matchCols,matchRows;
 
 function startMatchGame(){
   currentMode='match';particles=[];confetti=[];
-  // Create 16 cards (8 pairs), shuffle
-  const icons=[...MATCH_ICONS];
+  // Show difficulty picker
+  matchCards=null;
+  updateMatchButtons();
+}
+
+function startMatchWithPairs(numPairs){
+  matchNumPairs=numPairs;
+  const total=numPairs*2;
+  if(total<=4){matchCols=2;matchRows=2}
+  else if(total<=6){matchCols=3;matchRows=2}
+  else if(total<=8){matchCols=4;matchRows=2}
+  else if(total<=12){matchCols=4;matchRows=3}
+  else{matchCols=4;matchRows=4}
+  // Pick random icons
+  const shuffledIcons=[...MATCH_ICONS];
+  for(let i=shuffledIcons.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffledIcons[i],shuffledIcons[j]]=[shuffledIcons[j],shuffledIcons[i]]}
+  const icons=shuffledIcons.slice(0,numPairs);
   matchCards=[];
   icons.forEach((ic,i)=>{matchCards.push({id:i,...ic});matchCards.push({id:i,...ic})});
-  // Fisher-Yates shuffle
   for(let i=matchCards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[matchCards[i],matchCards[j]]=[matchCards[j],matchCards[i]]}
-  // Add state to each card
   matchCards.forEach((c,i)=>{c.idx=i;c.flipped=false;c.matched=false;c.flipAnim=0;c.shakeAnim=0;c.matchAnim=0});
   matchFlipped=[];matchMatched=0;matchLocked=false;matchTries=0;matchPairs=0;
-  matchPeekTimer=2.5; // show all cards for 2.5 seconds
+  matchPeekTimer=numPairs<=3?2:2.5;
   matchCelebrated=false;
   updateMatchButtons();
 }
@@ -935,7 +974,14 @@ function startMatchGame(){
 function updateMatchButtons(){
   buttonsArea.innerHTML='';
   addBtn('btn-menu','🏠','Menu',()=>showMenu());
-  if(matchMatched>=8){
+  if(!matchCards){
+    // Difficulty picker
+    instruction.textContent='How many pairs?';
+    addBtn('btn-done','😊','Easy (2)',()=>{initAudio();playPop();startMatchWithPairs(2)});
+    addBtn('btn-food','🙂','Med (4)',()=>{initAudio();playPop();startMatchWithPairs(4)});
+    addBtn('btn-icecream','😤','Hard (6)',()=>{initAudio();playPop();startMatchWithPairs(6)});
+    addBtn('btn-dump','🔥','Max (8)',()=>{initAudio();playPop();startMatchWithPairs(8)});
+  }else if(matchMatched>=matchNumPairs){
     instruction.textContent='You did it! 🎉';
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startMatchGame()});
   }else{
@@ -944,7 +990,7 @@ function updateMatchButtons(){
 }
 
 function matchTapCard(idx){
-  if(matchLocked||matchPeekTimer>0)return;
+  if(!matchCards||matchLocked||matchPeekTimer>0)return;
   const card=matchCards[idx];
   if(card.flipped||card.matched)return;
   initAudio();playFlip();
@@ -963,7 +1009,7 @@ function matchTapCard(idx){
         spawnParticles((getCardX(a.idx)+getCardX(b.idx))/2,(getCardY(a.idx)+getCardY(b.idx))/2,12,
           ['#ffeb3b','#ff9800','#4caf50','#e91e63'],{vyRange:6,spread:40});
         matchFlipped=[];matchLocked=false;
-        if(matchMatched>=8){spawnConfetti();playJingle();sayNumber(matchTries);updateMatchButtons()}
+        if(matchMatched>=matchNumPairs){spawnConfetti();playJingle();sayNumber(matchTries);updateMatchButtons()}
       },500);
     }else{
       // No match
@@ -976,8 +1022,8 @@ function matchTapCard(idx){
   }
 }
 
-function getCardX(idx){const cols=4,gap=8,cw=(W-gap*(cols+1))/cols;return gap+(idx%cols)*(cw+gap)+cw/2}
-function getCardY(idx){const cols=4,rows=4,gap=8,cw=(W-gap*(cols+1))/cols,ch=Math.min(cw*1.2,(H*0.7-gap*(rows+1))/rows),topOfs=45;return topOfs+gap+Math.floor(idx/cols)*(ch+gap)+ch/2}
+function getCardX(idx){const cols=matchCols||4,gap=10,cw=(W-gap*(cols+1))/cols;return gap+(idx%cols)*(cw+gap)+cw/2}
+function getCardY(idx){const cols=matchCols||4,rows=matchRows||4,gap=10,cw=(W-gap*(cols+1))/cols,ch=Math.min(cw*1.3,(H*0.7-gap*(rows+1))/rows),topOfs=50;return topOfs+gap+Math.floor(idx/cols)*(ch+gap)+ch/2}
 
 function updateMatchGame(dt){
   if(matchPeekTimer>0){matchPeekTimer-=dt;if(matchPeekTimer<=0){matchCards.forEach(c=>c.flipped=false);updateMatchButtons()}}
@@ -993,10 +1039,12 @@ function drawMatchGame(){
   const grd=ctx.createLinearGradient(0,0,0,H);grd.addColorStop(0,'#e8eaf6');grd.addColorStop(1,'#c5cae9');
   ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
 
-  const cols=4,rows=4,gap=8;
+  if(!matchCards){drawParticles(0);drawConfetti();return} // difficulty picker shown via buttons
+
+  const cols=matchCols||4,rows=matchRows||4,gap=10;
   const cw=(W-gap*(cols+1))/cols;
-  const ch=Math.min(cw*1.2,(H*0.7-gap*(rows+1))/rows);
-  const topOfs=45;
+  const ch=Math.min(cw*1.3,(H*0.7-gap*(rows+1))/rows);
+  const topOfs=50;
 
   matchCards.forEach((card,i)=>{
     const cx=gap+(i%cols)*(cw+gap);
@@ -1051,10 +1099,10 @@ function drawMatchGame(){
   }
 
   // Pairs found
-  if(matchPairs>0&&matchMatched<8){
+  if(matchPairs>0&&matchMatched<matchNumPairs){
     ctx.textAlign='left';
     ctx.font='bold 16px sans-serif';ctx.fillStyle='rgba(0,0,0,0.4)';
-    ctx.fillText('Pairs: '+matchPairs+'/8',12,35);
+    ctx.fillText('Pairs: '+matchPairs+'/'+matchNumPairs,12,35);
   }
 
   drawParticles(0);drawConfetti();
@@ -1065,10 +1113,11 @@ canvas.addEventListener('click',e=>{if(currentMode!=='match')return;handleMatchT
 canvas.addEventListener('touchstart',e=>{if(currentMode!=='match')return;e.preventDefault();const t=e.touches[0];handleMatchTap(t.clientX,t.clientY)},{passive:false});
 
 function handleMatchTap(tx,ty){
-  const cols=4,rows=4,gap=8;
+  if(!matchCards)return;
+  const cols=matchCols||4,rows=matchRows||4,gap=10;
   const cw=(W-gap*(cols+1))/cols;
-  const ch=Math.min(cw*1.2,(H*0.7-gap*(rows+1))/rows);
-  const topOfs=45;
+  const ch=Math.min(cw*1.3,(H*0.7-gap*(rows+1))/rows);
+  const topOfs=50;
   for(let i=0;i<matchCards.length;i++){
     const cx=gap+(i%cols)*(cw+gap);
     const cy=topOfs+gap+Math.floor(i/cols)*(ch+gap);
