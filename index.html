@@ -84,7 +84,7 @@ function sayNumber(n){
     'Eleven!','Twelve!','Thirteen!','Fourteen!','Fifteen!','Sixteen!','Seventeen!','Eighteen!','Nineteen!','Twenty!'];
   const text=n<=20?(words[n]||n+'!'):(n+'!');
   const utt=new SpeechSynthesisUtterance(text);
-  utt.rate=1.2;utt.pitch=1.4;utt.volume=1;
+  utt.lang='en-US';utt.rate=1.2;utt.pitch=1.4;utt.volume=1;
   utt.onstart=()=>{speechBusy=true};
   utt.onend=()=>{speechBusy=false};
   window.speechSynthesis.speak(utt);
