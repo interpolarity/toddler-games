@@ -236,7 +236,7 @@ function startDigGame(){
   if(!dumpHoleLayers)dumpHoleLayers=[];
   excArmAngle=0;excStickAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;screenShakeTimer=0;
   truckBedAngle=0;digTarget=null;animCallback=null;
-  digGroundY=H*0.38;excX=W*0.25;truckX=W*0.62;
+  digGroundY=H*0.55;excX=W*0.08;truckX=W*0.62;
   updateDigButtons();
 }
 
@@ -246,8 +246,7 @@ function updateDigButtons(){
   if(digState==='dig'){
     instruction.textContent=truckLoad.length===0?'Tap to dig!':`Dig more! (${truckLoad.length}/${MAX_SCOOPS})`;
     if(truckLoad.length>=MAX_SCOOPS) instruction.textContent="Full! Let's go!";
-    const full=truckLoad.length>=MAX_SCOOPS;
-    ['sand','rocks','water'].forEach(m=>addBtn(`btn-${m}`,DIG_MAT[m].emoji,DIG_MAT[m].label,()=>{if(digState!=='dig')return;initAudio();digStartDig(m)},full));
+    else instruction.textContent=truckLoad.length===0?'Tap a pile to dig!':'Tap more piles!';
     addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()},truckLoad.length===0);
     const anyLow=pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3;
     addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}},!anyLow);
@@ -267,7 +266,7 @@ function digAnimateExcTo(tx,dur,cb){excStartX=excX;excTargetX=tx;animDuration=du
 function digStartDig(mat){
   digState='digging';digTarget={type:mat,x:W*PILES[mat].xFrac};
   playSound_dig(mat);
-  const tx=W*PILES[mat].xFrac-20,dist=Math.abs(excX-tx);
+  const tx=W*PILES[mat].xFrac-W*0.1,dist=Math.abs(excX-tx);
   digAnimateExcTo(tx,Math.max(0.25,Math.min(0.6,dist/400)),()=>{excAnimPhase=2;excAnimTime=0});
   buttonsArea.innerHTML='';addBtn('btn-menu','🏠','Menu',()=>showMenu());
   instruction.textContent=`Digging ${DIG_MAT[mat].label}!`;
@@ -287,7 +286,7 @@ function digDoDump(){
 }
 
 function updateDigGame(dt){
-  digGroundY=H*0.38;
+  digGroundY=H*0.55;
   // Piles slowly regrow
   ['sand','rocks','water'].forEach(t=>{if(pileSizes[t]<1)pileSizes[t]=Math.min(1,pileSizes[t]+dt*0.04)});
   // Screen shake
@@ -304,7 +303,7 @@ function updateDigGame(dt){
     if(t>=0.3&&excAnimTime<0.15+dt*2&&digTarget){
       // Impact! Big particle burst + screen shake + sound
       screenShakeTimer=0.3;
-      const px=excX+W*0.12,py=digGroundY;
+      const px=digTarget.x,py=digGroundY;
       const mt=digTarget.type,m=DIG_MAT[mt];
       const cols=mt==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64','#b0bec5']:mt==='water'?[m.color,m.light,'#fff','#81d4fa']:[m.color,m.light,m.dark,'#ffe082'];
       spawnParticles(px,py,25,cols,{vyRange:12,spread:30,maxSize:mt==='rocks'?10:6,shape:mt==='rocks'?'square':'circle',gravity:0.35});
@@ -319,7 +318,7 @@ function updateDigGame(dt){
     excArmAngle=lerp(0.5,-0.3,easeInOut(t));excStickAngle=lerp(0.7,-0.2,easeInOut(t));excBucketAngle=lerp(1.2,0.4,easeInOut(t));
     excBucketMat=digTarget?digTarget.type:null;
     // Dripping particles while lifting
-    if(Math.random()<0.3&&excBucketMat){const m=DIG_MAT[excBucketMat];spawnParticles(excX+W*0.1,digGroundY-W*0.06,2,[m.color,m.dark],{vyRange:2,spread:8,maxSize:3,gravity:0.4})}
+    if(Math.random()<0.3&&excBucketMat){const m=DIG_MAT[excBucketMat];spawnParticles(excX+W*0.08,digGroundY-W*0.05,2,[m.color,m.dark],{vyRange:2,spread:8,maxSize:3,gravity:0.4})}
     if(t>=1){excAnimPhase=0;excAnimTime=0;digMoveToTruck()}}
   // Phase 5: Drop into truck
   else if(excAnimPhase===5){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.35);
@@ -345,7 +344,8 @@ function updateDigGame(dt){
       dumpDrainProgress+=dt*pourSpeed;dumpStreamTimer+=dt;
       // Spawn streaming particles every frame
       const holeX=W*0.85;
-      const pourX=truckX+W*0.14,pourY=digGroundY-W*0.04;
+      const ds=W*0.002,bedEnd=75*ds;
+      const pourX=truckX+bedEnd*Math.cos(truckBedAngle),pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-ds*10;
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         const cols=m==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64']:[mat.color,mat.dark,mat.light];
@@ -381,7 +381,7 @@ function updateDigGame(dt){
 }
 
 function drawDigGame(){
-  digGroundY=H*0.38;
+  digGroundY=H*0.55;
   ctx.save();
   ctx.translate(screenShakeX,screenShakeY);
   // Sky
@@ -408,7 +408,7 @@ function drawDigGame(){
     ctx.fillText(DIG_MAT[type].emoji,xc,py-bh-10);
   });
   // Dump hole — bigger
-  const hx=W*0.85,hw=W*0.13,hh=H*0.22;
+  const hx=W*0.85,hw=W*0.13,hh=H*0.15;
   ctx.fillStyle='#3e2723';ctx.beginPath();ctx.moveTo(hx-hw,digGroundY+6);ctx.lineTo(hx-hw+10,digGroundY+hh);ctx.lineTo(hx+hw-10,digGroundY+hh);ctx.lineTo(hx+hw,digGroundY+6);ctx.closePath();ctx.fill();
   ctx.fillStyle='#7cb342';ctx.beginPath();ctx.ellipse(hx,digGroundY+6,hw+5,10,0,0,Math.PI*2);ctx.fill();
   if(dumpHoleLayers.length>0){const ml=10,lh=(hh-12)/ml,vl=dumpHoleLayers.slice(-ml);ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();vl.forEach((mat,i)=>{const ly=digGroundY+hh-(i+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,mat,5000+i*251)});ctx.restore()}
@@ -433,10 +433,10 @@ function drawDigMaterialFill(x,y,w,h,matType,seed){
 }
 
 function drawExcavator(x,y){
-  const s=W*0.0022;
+  const s=W*0.0016;
   const bodyW=75*s,bodyH=35*s,cabW=42*s,cabH=34*s;
-  const boomLen=50*s,boomW=12*s; // upper arm
-  const stickLen=45*s,stickW=10*s; // lower arm
+  const boomLen=55*s,boomW=12*s;
+  const stickLen=50*s,stickW=10*s;
   const bucketW=26*s,bucketH=28*s;
 
   ctx.save();ctx.translate(x,y);
@@ -1417,8 +1417,28 @@ function drawMatchGame(){
 }
 
 // Handle canvas taps for match game
-canvas.addEventListener('click',e=>{if(currentMode!=='match')return;handleMatchTap(e.clientX,e.clientY)});
-canvas.addEventListener('touchstart',e=>{if(currentMode!=='match')return;e.preventDefault();const t=e.touches[0];handleMatchTap(t.clientX,t.clientY)},{passive:false});
+canvas.addEventListener('click',e=>{
+  if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
+  else if(currentMode==='dig')handleDigTap(e.clientX,e.clientY);
+});
+canvas.addEventListener('touchstart',e=>{
+  if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='dig'){e.preventDefault();handleDigTap(e.touches[0].clientX,e.touches[0].clientY)}
+},{passive:false});
+
+function handleDigTap(tx,ty){
+  if(digState!=='dig'||truckLoad.length>=MAX_SCOOPS)return;
+  // Check if tap is near a mound
+  const gy=digGroundY;
+  Object.keys(PILES).forEach(type=>{
+    const xc=W*PILES[type].xFrac,sz=pileSizes[type];
+    const bw=W*0.11*sz,bh=W*0.09*sz;
+    // Hit area: rectangle around the mound + emoji
+    if(tx>xc-bw-15&&tx<xc+bw+15&&ty>gy-bh-40&&ty<gy+15){
+      initAudio();digStartDig(type);
+    }
+  });
+}
 
 function handleMatchTap(tx,ty){
   if(!matchCards)return;
