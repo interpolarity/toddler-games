@@ -402,28 +402,37 @@ function updateDigGame(dt){
         rollingRocks.push({...rock,x:rx,y:ry,vx:3+Math.random()*2,vy:-3-Math.random()*2,rotV:0.08+Math.random()*0.12,grounded:false});
         playTone(90+Math.random()*40,0.1,'square',0.15);screenShakeTimer=0.06}
       if(truckRocks.length===0&&dumpTimer>0.5){dumpPhase=2;dumpTime=0}}
-    else if(dumpPhase===2){// lower bed
+    else if(dumpPhase===2){// lower bed, then celebrate
       const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));
-      if(t>=1&&rollingRocks.length===0){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
+      // Celebrate once bed is down — don't wait for rocks, force-clear them
+      if(t>=1){truckBedAngle=0;
+        rollingRocks.forEach(r=>holeRocks.push(makeRock(0,0,r.r)));
+        rollingRocks=[];
+        digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
   }
 
   // Rolling rock physics
-  const holeX=W*0.85,holeLft=holeX-W*0.1,holeRgt=holeX+W*0.1;
+  const holeX=W*0.85,holeLft=holeX-W*0.12,holeRgt=holeX+W*0.12;
   for(let i=rollingRocks.length-1;i>=0;i--){
     const r=rollingRocks[i];
-    r.vy+=500*dt;r.x+=r.vx*50*dt;r.y+=r.vy*dt;r.rot+=r.rotV;
+    r.vy+=600*dt;r.x+=r.vx*60*dt;r.y+=r.vy*dt;r.rot+=r.rotV;
+    // Ground bounce
     if(r.y>=digGroundY-r.r&&!r.grounded){
-      r.y=digGroundY-r.r;r.vy*=-0.25;r.vx*=0.85;
-      if(Math.abs(r.vy)<15){r.grounded=true;r.vy=0}
+      r.y=digGroundY-r.r;r.vy*=-0.2;r.vx*=0.8;
+      if(Math.abs(r.vy)<10){r.grounded=true;r.vy=0}
       playTone(70+Math.random()*30,0.05,'triangle',0.05)}
-    if(r.grounded){r.vx=lerp(r.vx,(holeX-r.x)*0.6,dt*2);r.rotV=r.vx*0.015}
-    if(r.grounded&&r.x>holeLft&&r.x<holeRgt){
-      r.grounded=false;r.vy=50}
-    if(r.y>digGroundY+W*0.06){
+    // Roll toward hole
+    if(r.grounded){r.vx=lerp(r.vx,(holeX-r.x)*1.0,dt*3);r.rotV=r.vx*0.015}
+    // Fall into hole — wide catch zone, fast drop
+    if(r.x>holeLft&&r.x<holeRgt&&r.grounded){
+      r.grounded=false;r.vy=200;r.vx*=0.1}
+    // Remove when deep enough
+    if(r.y>digGroundY+r.r*2){
       holeRocks.push(makeRock(0,0,r.r));rollingRocks.splice(i,1);
       spawnParticles(holeX,digGroundY+8,3,['#78909c','#546e7a'],{vyRange:2,spread:8,maxSize:3});
       playTone(60,0.08,'triangle',0.06);continue}
-    if(r.x>W+50||r.y>H+50){rollingRocks.splice(i,1)}
+    // Cleanup offscreen
+    if(r.x>W+100||r.y>H+100){holeRocks.push(makeRock(0,0,r.r));rollingRocks.splice(i,1)}
   }
   updateParticles(dt);updateConfetti();
 }
