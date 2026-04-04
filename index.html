@@ -49,8 +49,11 @@ function seededRand(s){return function(){s=(s*16807)%2147483647;return(s-1)/2147
 function drawRoundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()}
 
 // Audio
-let audioCtx=null;
-function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+let audioCtx=null,speechUnlocked=false;
+function initAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(!speechUnlocked&&window.speechSynthesis){speechUnlocked=true;const u=new SpeechSynthesisUtterance('');u.volume=0;window.speechSynthesis.speak(u)}
+}
 function playTone(freq,dur,type,vol){
   if(!audioCtx)return;const n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();
   g.connect(audioCtx.destination);o.type=type||'sine';o.frequency.setValueAtTime(freq,n);
