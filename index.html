@@ -215,8 +215,12 @@ let dumpTime,dumpPhase,dumpParticleTimer;
 let digGroundY;
 
 function startDigGame(){
+  const fromMenu=currentMode!=='dig';
   currentMode='dig';particles=[];confetti=[];
-  digState='dig';truckLoad=[];dumpHoleLayers=[];pileSizes={sand:1,rocks:1,water:1};
+  digState='dig';truckLoad=[];
+  if(fromMenu){pileSizes={sand:1,rocks:1,water:1};dumpHoleLayers=[]}
+  if(!pileSizes)pileSizes={sand:1,rocks:1,water:1};
+  if(!dumpHoleLayers)dumpHoleLayers=[];
   excArmAngle=0;excStickAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;screenShakeTimer=0;
   truckBedAngle=0;digTarget=null;animCallback=null;
   digGroundY=H*0.38;excX=W*0.25;truckX=W*0.62;
