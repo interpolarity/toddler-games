@@ -246,7 +246,9 @@ function updateDigButtons(){
   if(digState==='dig'){
     instruction.textContent=truckLoad.length===0?'Tap to dig!':`Dig more! (${truckLoad.length}/${MAX_SCOOPS})`;
     if(truckLoad.length>=MAX_SCOOPS) instruction.textContent="Full! Let's go!";
-    else instruction.textContent=truckLoad.length===0?'Tap a pile to dig!':'Tap more piles!';
+    else instruction.textContent=truckLoad.length===0?'Tap to dig!':'Keep digging!';
+    const full=truckLoad.length>=MAX_SCOOPS;
+    ['sand','rocks','water'].forEach(m=>addBtn(`btn-${m}`,DIG_MAT[m].emoji,DIG_MAT[m].label,()=>{if(digState!=='dig')return;initAudio();digStartDig(m)},full));
     addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()},truckLoad.length===0);
     const anyLow=pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3;
     addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}},!anyLow);
