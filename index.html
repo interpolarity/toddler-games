@@ -212,6 +212,7 @@ let truckX,truckBedAngle,truckBedTargetAngle;
 let digTarget,animDuration,animCallback;
 let driveTime,driveStartTruckX,driveStartExcX,driveTargetTruckX;
 let dumpTime,dumpPhase,dumpParticleTimer;
+let dumpDrainProgress=0,dumpStreamTimer=0,dumpTotalToDump=0;
 let digGroundY;
 
 function startDigGame(){
@@ -325,9 +326,45 @@ function updateDigGame(dt){
   if(digState==='drive'){driveTime+=dt;const t=Math.min(1,driveTime/1.5);truckX=lerp(driveStartTruckX,driveTargetTruckX,easeInOut(t));excX=lerp(driveStartExcX,-120,easeInOut(t));if(t>=1){truckX=driveTargetTruckX;digState='dump';updateDigButtons()}}
   // Dump
   if(digState==='dumping'){dumpTime+=dt;
-    if(dumpPhase===0){const t=Math.min(1,dumpTime/0.6);truckBedAngle=lerp(0,truckBedTargetAngle,easeInOut(t));if(t>=1){truckBedAngle=truckBedTargetAngle;dumpPhase=1;dumpTime=0}}
-    else if(dumpPhase===1){dumpParticleTimer+=dt;if(dumpParticleTimer>0.3&&truckLoad.length>0){dumpParticleTimer=0;const m=truckLoad.pop();dumpHoleLayers.push(m);spawnParticles(truckX+W*0.15,digGroundY-15,14,m==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64']:[DIG_MAT[m].color,DIG_MAT[m].dark,DIG_MAT[m].light],{vxRange:4,vyRange:5,gravity:0.35,shape:m==='rocks'?'square':'circle',spread:20});screenShakeTimer=0.12;playSound_dig(m)}if(truckLoad.length===0&&dumpParticleTimer>0.5){dumpPhase=2;dumpTime=0}}
-    else if(dumpPhase===2){const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
+    if(dumpPhase===0){// Tilt bed up
+      const t=Math.min(1,dumpTime/0.6);truckBedAngle=lerp(0,truckBedTargetAngle,easeInOut(t));
+      if(t>=1){truckBedAngle=truckBedTargetAngle;dumpPhase=1;dumpTime=0;dumpDrainProgress=0;dumpTotalToDump=truckLoad.length;dumpStreamTimer=0}}
+    else if(dumpPhase===1){// Continuous pour — stream particles from truck to hole
+      const pourSpeed=1.8; // full drain in ~totalToDump/pourSpeed seconds
+      dumpDrainProgress+=dt*pourSpeed;dumpStreamTimer+=dt;
+      // Spawn streaming particles every frame
+      const holeX=W*0.85;
+      const pourX=truckX+W*0.14,pourY=digGroundY-W*0.04;
+      if(truckLoad.length>0){
+        const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
+        const cols=m==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64']:[mat.color,mat.dark,mat.light];
+        // 3-5 particles per frame in a stream toward the hole
+        for(let i=0;i<(m==='water'?5:3);i++){
+          particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,
+            vx:(holeX-pourX)*0.015+(Math.random()-0.5)*2,
+            vy:Math.random()*2+1,
+            size:m==='rocks'?3+Math.random()*6:2+Math.random()*4,
+            color:cols[Math.floor(Math.random()*cols.length)],
+            life:1,decay:0.018+Math.random()*0.01,gravity:0.3,
+            shape:m==='rocks'?'square':'circle'});
+        }
+        // Pop a layer when enough has drained
+        if(dumpDrainProgress>=1){dumpDrainProgress-=1;
+          const popped=truckLoad.pop();dumpHoleLayers.push(popped);
+          screenShakeTimer=0.08;
+          // Sound per material
+          if(popped==='rocks')playTone(80+Math.random()*40,0.12,'square',0.15);
+          else if(popped==='water')playTone(500+Math.random()*300,0.1,'sine',0.08);
+          else playTone(200+Math.random()*100,0.1,'triangle',0.1);
+        }
+      }
+      // Continuous rumble sound
+      if(dumpStreamTimer>0.25&&truckLoad.length>0){dumpStreamTimer=0;playTone(60+Math.random()*30,0.2,'triangle',0.08)}
+      if(truckLoad.length===0&&dumpDrainProgress>0.3){dumpPhase=2;dumpTime=0}
+    }
+    else if(dumpPhase===2){// Lower bed back
+      const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));
+      if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
   }
   updateParticles(dt);updateConfetti();
 }
