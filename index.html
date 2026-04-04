@@ -238,7 +238,7 @@ function updateDigButtons(){
     }
     ['sand','rocks','water'].forEach(m=>addBtn(`btn-${m}`,DIG_MAT[m].emoji,DIG_MAT[m].label,()=>{if(digState!=='dig')return;initAudio();digStartDig(m)}));
     if(truckLoad.length>0)addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()});
-    if(pileSizes.sand<0.9||pileSizes.rocks<0.9||pileSizes.water<0.9)addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}});
+    if(pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3)addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}});
   }else if(digState==='dump'){
     instruction.textContent='Tap to DUMP!';
     addBtn('btn-dump','⬇️','DUMP!',()=>{initAudio();digDoDump()});
