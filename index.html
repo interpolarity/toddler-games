@@ -22,6 +22,7 @@
   .btn-nom{background:linear-gradient(180deg,#ff7043,#d84315);min-width:160px;min-height:90px;font-size:24px}
   .btn-nom .emoji{font-size:40px}
   .btn-char{background:linear-gradient(180deg,#ffe082,#f9a825);color:#5d4037;min-width:70px}
+  .game-btn.disabled{opacity:0.35;pointer-events:none;box-shadow:0 3px 0 rgba(0,0,0,0.15)}
   .instruction{position:fixed;top:8px;left:50%;transform:translateX(-50%);font-size:clamp(18px,4vw,28px);font-weight:900;color:white;text-shadow:2px 2px 6px rgba(0,0,0,0.5);z-index:50;text-align:center;pointer-events:none;white-space:nowrap}
 </style>
 </head>
@@ -143,11 +144,13 @@ function drawFloatingEmojis(){
 }
 
 // Button helper
-function addBtn(cls,emoji,label,onclick){
-  const btn=document.createElement('button');btn.className=`game-btn ${cls}`;
+function addBtn(cls,emoji,label,onclick,disabled){
+  const btn=document.createElement('button');btn.className=`game-btn ${cls}${disabled?' disabled':''}`;
   btn.innerHTML=`<span class="emoji">${emoji}</span>${label}`;
-  const handler=e=>{e.preventDefault();btn.style.transform='translateY(4px) scale(0.93)';setTimeout(()=>btn.style.transform='',150);onclick()};
-  btn.addEventListener('click',handler);btn.addEventListener('touchstart',handler,{passive:false});
+  if(!disabled){
+    const handler=e=>{e.preventDefault();btn.style.transform='translateY(4px) scale(0.93)';setTimeout(()=>btn.style.transform='',150);onclick()};
+    btn.addEventListener('click',handler);btn.addEventListener('touchstart',handler,{passive:false});
+  }
   buttonsArea.appendChild(btn);
 }
 
@@ -239,13 +242,12 @@ function updateDigButtons(){
   addBtn('btn-menu','🏠','Menu',()=>{initAudio();showMenu()});
   if(digState==='dig'){
     instruction.textContent=truckLoad.length===0?'Tap to dig!':`Dig more! (${truckLoad.length}/${MAX_SCOOPS})`;
-    if(truckLoad.length>=MAX_SCOOPS){
-      instruction.textContent="Full! Let's go!";
-      addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()});return;
-    }
-    ['sand','rocks','water'].forEach(m=>addBtn(`btn-${m}`,DIG_MAT[m].emoji,DIG_MAT[m].label,()=>{if(digState!=='dig')return;initAudio();digStartDig(m)}));
-    if(truckLoad.length>0)addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()});
-    if(pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3)addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}});
+    if(truckLoad.length>=MAX_SCOOPS) instruction.textContent="Full! Let's go!";
+    const full=truckLoad.length>=MAX_SCOOPS;
+    ['sand','rocks','water'].forEach(m=>addBtn(`btn-${m}`,DIG_MAT[m].emoji,DIG_MAT[m].label,()=>{if(digState!=='dig')return;initAudio();digStartDig(m)},full));
+    addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()},truckLoad.length===0);
+    const anyLow=pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3;
+    addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}},!anyLow);
   }else if(digState==='dump'){
     instruction.textContent='Tap to DUMP!';
     addBtn('btn-dump','⬇️','DUMP!',()=>{initAudio();digDoDump()});
@@ -697,7 +699,7 @@ function updateBurgerButtons(){
   if(burgerState==='building'){
     instruction.textContent=burgerStack.length<=1?'Build a burger!':'Keep stacking!';
     BURGER_ITEMS.forEach(item=>addBtn('btn-food',item.emoji,item.label,()=>{initAudio();addBurgerItem(item.id)}));
-    if(burgerStack.length>1)addBtn('btn-done','🍞','Done!',()=>{initAudio();finishBurger()});
+    addBtn('btn-done','🍞','Done!',()=>{initAudio();finishBurger()},burgerStack.length<=1);
   }else if(burgerState==='pick_char'){
     instruction.textContent='Who eats it?';
     CHARACTERS.forEach(c=>addBtn('btn-char',c.emoji,c.label,()=>{initAudio();currentChar=c.id;playPop();burgerState='customer_walking';burgerCustomerX=W+80;updateBurgerButtons()}));
@@ -914,11 +916,13 @@ function updateIceButtons(){
   if(iceState==='building'){
     instruction.textContent=iceStack.length<=1?'Build ice cream!':'Add more!';
     ICE_FLAVORS.forEach(f=>addBtn('btn-icecream',f.emoji,f.label,()=>{initAudio();addIceItem(f.id)}));
-    // Only show toppings if there's at least one scoop, and no back-to-back sprinkles
     const hasScoops=iceStack.some(id=>id!=='cone'&&id!=='sprinkles'&&id!=='cherry');
     const lastIsSprinkles=iceStack[iceStack.length-1]==='sprinkles';
-    if(hasScoops)ICE_TOPPINGS.forEach(t=>{if(t.id==='sprinkles'&&lastIsSprinkles)return;addBtn('btn-food',t.emoji,t.label,()=>{initAudio();addIceItem(t.id)})});
-    if(iceStack.length>1)addBtn('btn-done','✅','Done!',()=>{initAudio();finishIceCream()});
+    ICE_TOPPINGS.forEach(t=>{
+      const dis=!hasScoops||(t.id==='sprinkles'&&lastIsSprinkles);
+      addBtn('btn-food',t.emoji,t.label,()=>{initAudio();addIceItem(t.id)},dis);
+    });
+    addBtn('btn-done','✅','Done!',()=>{initAudio();finishIceCream()},iceStack.length<=1);
   }else if(iceState==='pick_char'){
     instruction.textContent='Who eats it?';
     CHARACTERS.forEach(c=>addBtn('btn-char',c.emoji,c.label,()=>{initAudio();currentChar=c.id;playPop();iceState='customer_walking';iceCustomerX=W+80;updateIceButtons()}));
