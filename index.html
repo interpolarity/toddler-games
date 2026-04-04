@@ -204,9 +204,10 @@ const DIG_MAT={
   rocks:{color:'#78909c',dark:'#546e7a',light:'#b0bec5',emoji:'🪨',label:'Rocks'},
   water:{color:'#29b6f6',dark:'#0288d1',light:'#81d4fa',emoji:'💧',label:'Water'},
 };
-const PILES={sand:{xFrac:0.10},rocks:{xFrac:0.25},water:{xFrac:0.40}};
+const PILES={sand:{xFrac:0.15},rocks:{xFrac:0.40},water:{xFrac:0.65}};
 let digState,truckLoad,dumpHoleLayers,pileSizes;
-let excX,excTargetX,excStartX,excArmAngle,excBucketAngle,excBucketMat,excAnimPhase,excAnimTime;
+let excX,excTargetX,excStartX,excArmAngle,excStickAngle,excBucketAngle,excBucketMat,excAnimPhase,excAnimTime;
+let screenShakeX=0,screenShakeY=0,screenShakeTimer=0;
 let truckX,truckBedAngle,truckBedTargetAngle;
 let digTarget,animDuration,animCallback;
 let driveTime,driveStartTruckX,driveStartExcX,driveTargetTruckX;
@@ -216,9 +217,9 @@ let digGroundY;
 function startDigGame(){
   currentMode='dig';particles=[];confetti=[];
   digState='dig';truckLoad=[];dumpHoleLayers=[];pileSizes={sand:1,rocks:1,water:1};
-  excArmAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;
+  excArmAngle=0;excStickAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;screenShakeTimer=0;
   truckBedAngle=0;digTarget=null;animCallback=null;
-  digGroundY=H*0.52;excX=W*0.22;truckX=W*0.58;
+  digGroundY=H*0.38;excX=W*0.25;truckX=W*0.62;
   updateDigButtons();
 }
 
@@ -255,7 +256,7 @@ function digStartDig(mat){
   instruction.textContent=`Digging ${DIG_MAT[mat].label}!`;
 }
 function digMoveToTruck(){
-  const tx=truckX-65,dist=Math.abs(excX-tx);
+  const tx=truckX-W*0.18,dist=Math.abs(excX-tx);
   digAnimateExcTo(tx,Math.max(0.3,Math.min(0.7,dist/400)),()=>{excAnimPhase=5;excAnimTime=0});
 }
 function digStartDrive(){
@@ -269,58 +270,104 @@ function digDoDump(){
 }
 
 function updateDigGame(dt){
-  digGroundY=H*0.52;
+  digGroundY=H*0.38;
+  // Screen shake
+  if(screenShakeTimer>0){screenShakeTimer-=dt;screenShakeX=(Math.random()-0.5)*screenShakeTimer*40;screenShakeY=(Math.random()-0.5)*screenShakeTimer*25}else{screenShakeX=0;screenShakeY=0}
   // Excavator movement
   if(excAnimPhase===1){excAnimTime+=dt;const t=Math.min(1,excAnimTime/animDuration);excX=lerp(excStartX,excTargetX,easeInOut(t));if(t>=1){excX=excTargetX;excAnimPhase=0;if(animCallback){const cb=animCallback;animCallback=null;cb()}}}
-  else if(excAnimPhase===2){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.4);excArmAngle=lerp(0,0.6,easeInOut(t));excBucketAngle=lerp(0,0.8,easeInOut(t));if(t>=1){excAnimPhase=3;excAnimTime=0;if(digTarget){spawnParticles(excX+60,digGroundY,14,digTarget.type==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64']:[DIG_MAT[digTarget.type].color,DIG_MAT[digTarget.type].light],{vyRange:9,spread:20,maxSize:digTarget.type==='rocks'?8:4,shape:digTarget.type==='rocks'?'square':'circle'});pileSizes[digTarget.type]=Math.max(0.4,pileSizes[digTarget.type]-0.12)}}}
-  else if(excAnimPhase===3){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.35);excArmAngle=lerp(0.6,-0.35,easeInOut(t));excBucketAngle=lerp(0.8,-0.3,easeInOut(t));excBucketMat=digTarget?digTarget.type:null;if(t>=1){excAnimPhase=0;excAnimTime=0;digMoveToTruck()}}
-  else if(excAnimPhase===5){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.3);excArmAngle=lerp(-0.35,0.2,easeInOut(t));excBucketAngle=lerp(-0.3,1.0,easeInOut(t));if(t>=0.5&&excBucketMat){truckLoad.push(excBucketMat);playTone(400,0.15,'sine',0.15);spawnParticles(truckX,digGroundY-H*0.1,8,[DIG_MAT[excBucketMat].color,DIG_MAT[excBucketMat].light]);excBucketMat=null}if(t>=1){excAnimPhase=6;excAnimTime=0}}
-  else if(excAnimPhase===6){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.25);excArmAngle=lerp(0.2,0,easeInOut(t));excBucketAngle=lerp(1,0,easeInOut(t));if(t>=1){excAnimPhase=0;digState='dig';updateDigButtons()}}
+  // Phase 2: Boom lowers, stick extends down
+  else if(excAnimPhase===2){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.35);
+    excArmAngle=lerp(0,0.5,easeInOut(t));excStickAngle=lerp(0,0.7,easeInOut(t));excBucketAngle=lerp(0,0.3,easeInOut(t));
+    if(t>=1){excAnimPhase=3;excAnimTime=0}}
+  // Phase 3: Bucket curls to scoop — IMPACT! particles + shake
+  else if(excAnimPhase===3){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.25);
+    excBucketAngle=lerp(0.3,1.2,easeInOut(t));
+    if(t>=0.3&&excAnimTime<0.15+dt*2&&digTarget){
+      // Impact! Big particle burst + screen shake + sound
+      screenShakeTimer=0.3;
+      const px=excX+W*0.12,py=digGroundY;
+      const mt=digTarget.type,m=DIG_MAT[mt];
+      const cols=mt==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64','#b0bec5']:mt==='water'?[m.color,m.light,'#fff','#81d4fa']:[m.color,m.light,m.dark,'#ffe082'];
+      spawnParticles(px,py,25,cols,{vyRange:12,spread:30,maxSize:mt==='rocks'?10:6,shape:mt==='rocks'?'square':'circle',gravity:0.35});
+      // Extra dirt particles
+      spawnParticles(px,py,8,['#8d6e63','#6d4c41','#a1887f'],{vyRange:8,spread:25,maxSize:4});
+      pileSizes[digTarget.type]=Math.max(0.35,pileSizes[digTarget.type]-0.12);
+      playSound_dig(digTarget.type);
+    }
+    if(t>=1){excAnimPhase=4;excAnimTime=0}}
+  // Phase 4: Lift up with material
+  else if(excAnimPhase===4){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.4);
+    excArmAngle=lerp(0.5,-0.3,easeInOut(t));excStickAngle=lerp(0.7,-0.2,easeInOut(t));excBucketAngle=lerp(1.2,0.4,easeInOut(t));
+    excBucketMat=digTarget?digTarget.type:null;
+    // Dripping particles while lifting
+    if(Math.random()<0.3&&excBucketMat){const m=DIG_MAT[excBucketMat];spawnParticles(excX+W*0.1,digGroundY-W*0.06,2,[m.color,m.dark],{vyRange:2,spread:8,maxSize:3,gravity:0.4})}
+    if(t>=1){excAnimPhase=0;excAnimTime=0;digMoveToTruck()}}
+  // Phase 5: Drop into truck
+  else if(excAnimPhase===5){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.35);
+    excArmAngle=lerp(-0.3,0.15,easeInOut(t));excStickAngle=lerp(-0.2,0.3,easeInOut(t));excBucketAngle=lerp(0.4,1.5,easeInOut(t));
+    if(t>=0.5&&excBucketMat){truckLoad.push(excBucketMat);
+      playTone(300,0.12,'triangle',0.2);playTone(200,0.15,'square',0.1);
+      spawnParticles(truckX,digGroundY-W*0.08,12,[DIG_MAT[excBucketMat].color,DIG_MAT[excBucketMat].light,DIG_MAT[excBucketMat].dark],{vyRange:6,spread:15});
+      screenShakeTimer=0.1;excBucketMat=null}
+    if(t>=1){excAnimPhase=6;excAnimTime=0}}
+  // Phase 6: Return to neutral
+  else if(excAnimPhase===6){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.3);
+    excArmAngle=lerp(0.15,0,easeInOut(t));excStickAngle=lerp(0.3,0,easeInOut(t));excBucketAngle=lerp(1.5,0,easeInOut(t));
+    if(t>=1){excAnimPhase=0;digState='dig';updateDigButtons()}}
   // Drive
   if(digState==='drive'){driveTime+=dt;const t=Math.min(1,driveTime/1.5);truckX=lerp(driveStartTruckX,driveTargetTruckX,easeInOut(t));excX=lerp(driveStartExcX,-120,easeInOut(t));if(t>=1){truckX=driveTargetTruckX;digState='dump';updateDigButtons()}}
   // Dump
   if(digState==='dumping'){dumpTime+=dt;
     if(dumpPhase===0){const t=Math.min(1,dumpTime/0.6);truckBedAngle=lerp(0,truckBedTargetAngle,easeInOut(t));if(t>=1){truckBedAngle=truckBedTargetAngle;dumpPhase=1;dumpTime=0}}
-    else if(dumpPhase===1){dumpParticleTimer+=dt;if(dumpParticleTimer>0.3&&truckLoad.length>0){dumpParticleTimer=0;const m=truckLoad.pop();dumpHoleLayers.push(m);const s=Math.min(W,H)*0.001;spawnParticles(truckX+75*s,digGroundY-15,10,m==='rocks'?['#78909c','#546e7a','#90a4ae']:[DIG_MAT[m].color,DIG_MAT[m].dark],{vxRange:3,vyRange:3,gravity:0.35,shape:m==='rocks'?'square':'circle'});playSound_dig(m)}if(truckLoad.length===0&&dumpParticleTimer>0.5){dumpPhase=2;dumpTime=0}}
+    else if(dumpPhase===1){dumpParticleTimer+=dt;if(dumpParticleTimer>0.3&&truckLoad.length>0){dumpParticleTimer=0;const m=truckLoad.pop();dumpHoleLayers.push(m);spawnParticles(truckX+W*0.15,digGroundY-15,14,m==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64']:[DIG_MAT[m].color,DIG_MAT[m].dark,DIG_MAT[m].light],{vxRange:4,vyRange:5,gravity:0.35,shape:m==='rocks'?'square':'circle',spread:20});screenShakeTimer=0.12;playSound_dig(m)}if(truckLoad.length===0&&dumpParticleTimer>0.5){dumpPhase=2;dumpTime=0}}
     else if(dumpPhase===2){const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
   }
   updateParticles(dt);updateConfetti();
 }
 
 function drawDigGame(){
-  digGroundY=H*0.52;
+  digGroundY=H*0.38;
+  ctx.save();
+  ctx.translate(screenShakeX,screenShakeY);
   // Sky
   let grd=ctx.createLinearGradient(0,0,0,digGroundY);grd.addColorStop(0,'#4fc3f7');grd.addColorStop(0.7,'#81d4fa');grd.addColorStop(1,'#b3e5fc');
   ctx.fillStyle=grd;ctx.fillRect(0,0,W,digGroundY);
-  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.88,H*0.08,35,0,Math.PI*2);ctx.fill();
-  drawCloud(W*0.12,H*0.06,0.8);drawCloud(W*0.55,H*0.1,0.6);
+  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.88,H*0.06,25,0,Math.PI*2);ctx.fill();
+  drawCloud(W*0.1,H*0.04,0.7);drawCloud(W*0.5,H*0.07,0.5);
   // Ground
-  ctx.fillStyle='#8bc34a';ctx.fillRect(0,digGroundY-6,W,10);
-  grd=ctx.createLinearGradient(0,digGroundY+4,0,H);grd.addColorStop(0,'#8d6e63');grd.addColorStop(0.3,'#6d4c41');grd.addColorStop(1,'#4e342e');
-  ctx.fillStyle=grd;ctx.fillRect(0,digGroundY+4,W,H-digGroundY);
-  // Piles
+  ctx.fillStyle='#8bc34a';ctx.fillRect(0,digGroundY-6,W,12);
+  grd=ctx.createLinearGradient(0,digGroundY+6,0,H);grd.addColorStop(0,'#8d6e63');grd.addColorStop(0.3,'#6d4c41');grd.addColorStop(1,'#4e342e');
+  ctx.fillStyle=grd;ctx.fillRect(0,digGroundY+6,W,H-digGroundY);
+  // Piles — bigger, spread across width
   Object.keys(PILES).forEach(type=>{
-    const xc=W*PILES[type].xFrac,m=DIG_MAT[type],sz=pileSizes[type],bw=W*0.1*sz,bh=H*0.07*sz,py=digGroundY;
-    if(type==='sand'){ctx.fillStyle=m.color;ctx.beginPath();ctx.moveTo(xc-bw,py+4);ctx.quadraticCurveTo(xc,py-bh*1.2,xc+bw,py+4);ctx.fill()}
-    else if(type==='rocks'){[[-0.4,-0.2,0.35],[0.3,-0.15,0.3],[0,-0.5,0.28]].forEach(([dx,dy,r])=>{ctx.fillStyle=m.dark;ctx.beginPath();ctx.arc(xc+bw*dx,py+bh*dy,bw*r,0,Math.PI*2);ctx.fill();ctx.fillStyle=m.light;ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(xc+bw*dx-bw*r*0.2,py+bh*dy-bw*r*0.2,bw*r*0.4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1})}
-    else{ctx.fillStyle=m.color;ctx.globalAlpha=0.7;ctx.beginPath();ctx.ellipse(xc,py+2,bw,bh*0.4,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
-    ctx.font=`${Math.max(18,W*0.035)}px sans-serif`;ctx.textAlign='center';ctx.fillText(DIG_MAT[type].emoji,xc,py-bh-6);
+    const xc=W*PILES[type].xFrac,m=DIG_MAT[type],sz=pileSizes[type];
+    const bw=W*0.11*sz,bh=W*0.09*sz,py=digGroundY;
+    if(type==='sand'){ctx.fillStyle=m.color;ctx.beginPath();ctx.moveTo(xc-bw,py+4);ctx.quadraticCurveTo(xc,py-bh*1.2,xc+bw,py+4);ctx.fill();
+      ctx.fillStyle=m.light;ctx.globalAlpha=0.4;ctx.beginPath();ctx.moveTo(xc-bw*0.4,py);ctx.quadraticCurveTo(xc,py-bh*0.8,xc+bw*0.2,py);ctx.fill();ctx.globalAlpha=1}
+    else if(type==='rocks'){[[-0.4,-0.2,0.38],[0.3,-0.15,0.33],[0,-0.55,0.3],[-0.15,-0.1,0.28],[0.18,-0.4,0.24]].forEach(([dx,dy,r])=>{ctx.fillStyle=m.dark;ctx.beginPath();ctx.arc(xc+bw*dx,py+bh*dy,bw*r,0,Math.PI*2);ctx.fill();ctx.fillStyle=m.light;ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(xc+bw*dx-bw*r*0.2,py+bh*dy-bw*r*0.2,bw*r*0.4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1})}
+    else{ctx.fillStyle=m.color;ctx.globalAlpha=0.7;ctx.beginPath();ctx.ellipse(xc,py+2,bw,bh*0.35,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      // Waves
+      const t=Date.now()/500;ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(xc+(i-1)*bw*0.4,py+Math.sin(t+i)*2,bw*0.15,0.2,Math.PI-0.2);ctx.stroke()}}
+    ctx.font=`${Math.max(24,W*0.06)}px sans-serif`;ctx.textAlign='center';
+    ctx.fillText(DIG_MAT[type].emoji,xc,py-bh-10);
   });
-  // Dump hole
-  const hx=W*0.82,hw=W*0.12,hh=H*0.16;
-  ctx.fillStyle='#3e2723';ctx.beginPath();ctx.moveTo(hx-hw,digGroundY+4);ctx.lineTo(hx-hw+8,digGroundY+hh);ctx.lineTo(hx+hw-8,digGroundY+hh);ctx.lineTo(hx+hw,digGroundY+4);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#7cb342';ctx.beginPath();ctx.ellipse(hx,digGroundY+4,hw+4,8,0,0,Math.PI*2);ctx.fill();
-  if(dumpHoleLayers.length>0){const ml=10,lh=(hh-10)/ml,vl=dumpHoleLayers.slice(-ml);ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+6);ctx.lineTo(hx-hw+10,digGroundY+hh-2);ctx.lineTo(hx+hw-10,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+6);ctx.clip();vl.forEach((mat,i)=>{const ly=digGroundY+hh-(i+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,mat,5000+i*251)});ctx.restore()}
+  // Dump hole — bigger
+  const hx=W*0.85,hw=W*0.13,hh=H*0.22;
+  ctx.fillStyle='#3e2723';ctx.beginPath();ctx.moveTo(hx-hw,digGroundY+6);ctx.lineTo(hx-hw+10,digGroundY+hh);ctx.lineTo(hx+hw-10,digGroundY+hh);ctx.lineTo(hx+hw,digGroundY+6);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#7cb342';ctx.beginPath();ctx.ellipse(hx,digGroundY+6,hw+5,10,0,0,Math.PI*2);ctx.fill();
+  if(dumpHoleLayers.length>0){const ml=10,lh=(hh-12)/ml,vl=dumpHoleLayers.slice(-ml);ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();vl.forEach((mat,i)=>{const ly=digGroundY+hh-(i+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,mat,5000+i*251)});ctx.restore()}
   // Excavator
   drawExcavator(excX,digGroundY);
   // Truck
   drawDumpTruck(truckX,digGroundY);
-  // Truck indicator
-  if(digState==='dig'||digState==='digging'){const s=Math.min(W,H)*0.001,bs=14*s,gap=3*s,tw=MAX_SCOOPS*(bs+gap)-gap,sx=truckX-tw/2,iy=digGroundY-H*0.2;
-    for(let i=0;i<MAX_SCOOPS;i++){const bx=sx+i*(bs+gap);ctx.fillStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].color:'rgba(255,255,255,0.2)';drawRoundRect(bx,iy,bs,bs,3*s);ctx.fill();ctx.strokeStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].dark:'rgba(255,255,255,0.15)';ctx.lineWidth=2;ctx.stroke()}
-    if(truckLoad.length>=MAX_SCOOPS){ctx.fillStyle='#fff';ctx.font=`bold ${16*s}px sans-serif`;ctx.textAlign='center';ctx.fillText('FULL!',truckX,iy-8*s)}
+  // Truck indicator — bigger squares
+  if(digState==='dig'||digState==='digging'){const bs=W*0.05,gap=W*0.015,tw=MAX_SCOOPS*(bs+gap)-gap,sx=truckX-tw/2,iy=digGroundY-W*0.18;
+    for(let i=0;i<MAX_SCOOPS;i++){const bx=sx+i*(bs+gap);ctx.fillStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].color:'rgba(255,255,255,0.2)';drawRoundRect(bx,iy,bs,bs,4);ctx.fill();ctx.strokeStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].dark:'rgba(255,255,255,0.15)';ctx.lineWidth=2;ctx.stroke()}
+    if(truckLoad.length>=MAX_SCOOPS){ctx.fillStyle='#fff';ctx.font=`bold ${W*0.04}px sans-serif`;ctx.textAlign='center';ctx.fillText('FULL!',truckX,iy-W*0.02)}
   }
   drawParticles(0);drawConfetti();
+  ctx.restore(); // screen shake
 }
 
 function drawDigMaterialFill(x,y,w,h,matType,seed){
@@ -331,26 +378,99 @@ function drawDigMaterialFill(x,y,w,h,matType,seed){
 }
 
 function drawExcavator(x,y){
-  const s=Math.min(W,H)*0.001,bw=70*s,bh=32*s,cw=38*s,ch=30*s,al=55*s,ah=10*s,buw=22*s,buh=24*s;
+  const s=W*0.0022;
+  const bodyW=75*s,bodyH=35*s,cabW=42*s,cabH=34*s;
+  const boomLen=50*s,boomW=12*s; // upper arm
+  const stickLen=45*s,stickW=10*s; // lower arm
+  const bucketW=26*s,bucketH=28*s;
+
   ctx.save();ctx.translate(x,y);
-  ctx.fillStyle='#424242';drawRoundRect(-bw/2-2*s,0,bw/3,14*s,6*s);ctx.fill();drawRoundRect(bw/6,0,bw/3,14*s,6*s);ctx.fill();
-  ctx.fillStyle='#ff8f00';drawRoundRect(-bw/2,-bh,bw,bh,6*s);ctx.fill();ctx.strokeStyle='#e65100';ctx.lineWidth=3;ctx.stroke();
-  ctx.fillStyle='#ffa726';drawRoundRect(-bw/2+8*s,-bh-ch,cw,ch,6*s);ctx.fill();ctx.stroke();
-  ctx.fillStyle='#b3e5fc';drawRoundRect(-bw/2+12*s,-bh-ch+5*s,cw*0.55,ch*0.55,3*s);ctx.fill();
-  const px=bw/2-5*s,py2=-bh-ch*0.4;
-  ctx.save();ctx.translate(px,py2);ctx.rotate(excArmAngle);
-  ctx.fillStyle='#ffa726';ctx.fillRect(0,-ah/2,al,ah);ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.strokeRect(0,-ah/2,al,ah);
-  ctx.save();ctx.translate(al,0);ctx.rotate(excBucketAngle);
-  ctx.fillStyle='#757575';ctx.beginPath();ctx.moveTo(-buw/2,-5*s);ctx.lineTo(buw/2,-5*s);ctx.lineTo(buw/2-3*s,buh);ctx.lineTo(-buw/2+3*s,buh);ctx.closePath();ctx.fill();ctx.strokeStyle='#424242';ctx.lineWidth=2.5;ctx.stroke();
-  if(excBucketMat){ctx.fillStyle=DIG_MAT[excBucketMat].color;ctx.beginPath();ctx.moveTo(-buw/2+4*s,buh*0.35);ctx.lineTo(buw/2-4*s,buh*0.35);ctx.lineTo(buw/2-5*s,buh-2*s);ctx.lineTo(-buw/2+5*s,buh-2*s);ctx.closePath();ctx.fill()}
-  ctx.fillStyle='#bdbdbd';for(let i=-1;i<=1;i++)ctx.fillRect(i*buw*0.25-2*s,buh,4*s,5*s);
-  ctx.restore();ctx.restore();
-  ctx.fillStyle='#e65100';ctx.beginPath();ctx.arc(px,py2,4*s,0,Math.PI*2);ctx.fill();
-  ctx.restore();
+
+  // Tracks — chunky rubber tracks
+  ctx.fillStyle='#333';
+  drawRoundRect(-bodyW/2-4*s,2*s,bodyW+8*s,18*s,8*s);ctx.fill();
+  ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.stroke();
+  // Track wheels
+  ctx.fillStyle='#555';
+  for(let i=0;i<4;i++){const wx=-bodyW/2+8*s+i*(bodyW/3.5);ctx.beginPath();ctx.arc(wx,11*s,7*s,0,Math.PI*2);ctx.fill();ctx.fillStyle='#777';ctx.beginPath();ctx.arc(wx,11*s,3*s,0,Math.PI*2);ctx.fill();ctx.fillStyle='#555'}
+
+  // Body (house)
+  ctx.fillStyle='#ff8f00';
+  drawRoundRect(-bodyW/2,-bodyH,bodyW,bodyH,8*s);ctx.fill();
+  ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.stroke();
+  // Body detail stripe
+  ctx.fillStyle='#e65100';ctx.fillRect(-bodyW/2+4*s,-8*s,bodyW-8*s,4*s);
+
+  // Cabin
+  ctx.fillStyle='#ffa726';
+  drawRoundRect(-bodyW/2+6*s,-bodyH-cabH+4*s,cabW,cabH,6*s);ctx.fill();
+  ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.stroke();
+  // Window
+  ctx.fillStyle='#b3e5fc';
+  drawRoundRect(-bodyW/2+12*s,-bodyH-cabH+10*s,cabW*0.55,cabH*0.5,4*s);ctx.fill();
+  ctx.strokeStyle='#0288d1';ctx.lineWidth=1.5;ctx.stroke();
+  // Exhaust pipe
+  ctx.fillStyle='#616161';ctx.fillRect(-bodyW/2+cabW+10*s,-bodyH-14*s,5*s,14*s);
+  // Exhaust puff (animated)
+  if(excAnimPhase>0){const t=Date.now()/300;ctx.fillStyle='rgba(200,200,200,0.3)';
+    ctx.beginPath();ctx.arc(-bodyW/2+cabW+12*s,-bodyH-16*s-Math.sin(t)*3,4*s+Math.sin(t*2)*2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(-bodyW/2+cabW+10*s,-bodyH-22*s-Math.cos(t)*4,3*s,0,Math.PI*2);ctx.fill()}
+
+  // === ARTICULATED ARM ===
+  const pivotX=bodyW/2-8*s,pivotY=-bodyH-cabH*0.3;
+
+  // BOOM (upper arm) — pivots from cabin
+  ctx.save();ctx.translate(pivotX,pivotY);ctx.rotate(excArmAngle);
+  // Hydraulic cylinder on boom
+  ctx.fillStyle='#bdbdbd';ctx.fillRect(5*s,-boomW*0.3,boomLen*0.6,boomW*0.35);
+  ctx.strokeStyle='#9e9e9e';ctx.lineWidth=1.5;ctx.stroke();
+  // Boom arm
+  ctx.fillStyle='#ffa726';
+  ctx.fillRect(0,-boomW/2,boomLen,boomW);
+  ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.strokeRect(0,-boomW/2,boomLen,boomW);
+
+  // STICK (lower arm) — pivots from end of boom
+  ctx.save();ctx.translate(boomLen,0);ctx.rotate(excStickAngle);
+  // Stick arm
+  ctx.fillStyle='#ffa726';
+  ctx.fillRect(0,-stickW/2,stickLen,stickW);
+  ctx.strokeStyle='#e65100';ctx.lineWidth=2;ctx.strokeRect(0,-stickW/2,stickLen,stickW);
+  // Hydraulic on stick
+  ctx.fillStyle='#bdbdbd';ctx.fillRect(3*s,stickW*0.1,stickLen*0.5,stickW*0.3);
+
+  // BUCKET — pivots from end of stick
+  ctx.save();ctx.translate(stickLen,0);ctx.rotate(excBucketAngle);
+  // Bucket body
+  ctx.fillStyle='#616161';
+  ctx.beginPath();ctx.moveTo(-bucketW/2,-6*s);ctx.lineTo(bucketW/2,-6*s);
+  ctx.lineTo(bucketW/2-4*s,bucketH);ctx.lineTo(-bucketW/2+4*s,bucketH);ctx.closePath();
+  ctx.fill();ctx.strokeStyle='#424242';ctx.lineWidth=2.5;ctx.stroke();
+  // Bucket back plate
+  ctx.fillStyle='#757575';ctx.fillRect(-bucketW/2,-6*s,bucketW,4*s);
+  // Material in bucket
+  if(excBucketMat){const m=DIG_MAT[excBucketMat];ctx.fillStyle=m.color;
+    ctx.beginPath();ctx.moveTo(-bucketW/2+5*s,bucketH*0.3);ctx.lineTo(bucketW/2-5*s,bucketH*0.3);
+    ctx.lineTo(bucketW/2-6*s,bucketH-3*s);ctx.lineTo(-bucketW/2+6*s,bucketH-3*s);ctx.closePath();ctx.fill();
+    // Material mound on top
+    ctx.beginPath();ctx.moveTo(-bucketW/2+5*s,bucketH*0.3);
+    ctx.quadraticCurveTo(0,bucketH*0.1,bucketW/2-5*s,bucketH*0.3);ctx.fill()}
+  // Bucket teeth
+  ctx.fillStyle='#bdbdbd';
+  for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*bucketW*0.25-3*s,bucketH);ctx.lineTo(i*bucketW*0.25,bucketH+6*s);ctx.lineTo(i*bucketW*0.25+3*s,bucketH);ctx.fill()}
+
+  ctx.restore(); // bucket
+  ctx.restore(); // stick
+  // Joint bolt at boom-stick connection
+  ctx.fillStyle='#e65100';ctx.beginPath();ctx.arc(boomLen,0,3.5*s,0,Math.PI*2);ctx.fill();
+  ctx.restore(); // boom
+  // Joint bolt at pivot
+  ctx.fillStyle='#e65100';ctx.beginPath();ctx.arc(pivotX,pivotY,4*s,0,Math.PI*2);ctx.fill();
+
+  ctx.restore(); // main
 }
 
 function drawDumpTruck(x,y){
-  const s=Math.min(W,H)*0.001,cw=42*s,ch=42*s,bedW=75*s,bedH=45*s,wr=13*s;
+  const s=W*0.002,cw=42*s,ch=42*s,bedW=75*s,bedH=45*s,wr=13*s;
   ctx.save();ctx.translate(x,y);
   [[-cw*0.3,4*s],[bedW*0.4,4*s]].forEach(([wx,wy])=>{ctx.fillStyle='#424242';ctx.beginPath();ctx.arc(wx,wy,wr,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#212121';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#9e9e9e';ctx.beginPath();ctx.arc(wx,wy,wr*0.35,0,Math.PI*2);ctx.fill()});
   ctx.fillStyle='#e53935';drawRoundRect(-cw-2*s,-ch,cw,ch,6*s);ctx.fill();ctx.strokeStyle='#b71c1c';ctx.lineWidth=3;ctx.stroke();
@@ -364,12 +484,26 @@ function drawDumpTruck(x,y){
 }
 
 function playSound_dig(type){
-  if(!audioCtx)return;const n=audioCtx.currentTime;
-  if(type==='sand'){playTone(400,0.35,'sine',0.3);playTone(800,0.25,'triangle',0.1)}
-  else if(type==='rocks'){for(let i=0;i<3;i++)setTimeout(()=>playTone(120+Math.random()*80,0.15,'square',0.2),i*70)}
-  else if(type==='water'){playTone(900,0.5,'sine',0.15);for(let i=0;i<4;i++)setTimeout(()=>playTone(600+Math.random()*400,0.12,'sine',0.08),100+i*80)}
-  else if(type==='honk'){playTone(280,0.2,'square',0.12);setTimeout(()=>playTone(350,0.2,'square',0.12),220)}
-  else if(type==='dump'){for(let i=0;i<8;i++)setTimeout(()=>playTone(70+Math.random()*50,0.12,'triangle',0.15),i*100)}
+  if(!audioCtx)return;
+  if(type==='sand'){
+    // Satisfying scoop swoosh + thud
+    playTone(300,0.15,'triangle',0.25);playTone(100,0.2,'sine',0.3);
+    setTimeout(()=>{playTone(500,0.2,'sine',0.15);playTone(200,0.15,'triangle',0.1)},60);
+  }else if(type==='rocks'){
+    // Crunchy impact — multiple sharp hits
+    playTone(80,0.15,'square',0.3);
+    for(let i=0;i<4;i++)setTimeout(()=>playTone(100+Math.random()*120,0.12,'square',0.2),40+i*50);
+    setTimeout(()=>playTone(60,0.2,'triangle',0.2),30); // bass thud
+  }else if(type==='water'){
+    // Big splash
+    playTone(800,0.08,'sine',0.2);playTone(600,0.4,'sine',0.15);
+    for(let i=0;i<6;i++)setTimeout(()=>playTone(400+Math.random()*600,0.1,'sine',0.08),50+i*60);
+    setTimeout(()=>playTone(200,0.3,'triangle',0.1),80);
+  }else if(type==='honk'){
+    playTone(280,0.25,'square',0.15);setTimeout(()=>playTone(350,0.25,'square',0.15),250);
+  }else if(type==='dump'){
+    for(let i=0;i<10;i++)setTimeout(()=>{playTone(60+Math.random()*50,0.12,'triangle',0.18);playTone(100+Math.random()*60,0.08,'square',0.05)},i*80);
+  }
 }
 
 // =============================================
