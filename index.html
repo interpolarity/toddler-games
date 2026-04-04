@@ -1475,7 +1475,7 @@ let wreckSmashed=false;
 function startWreckGame(){
   currentMode='wreck';particles=[];confetti=[];
   wreckState='building';wreckTower=[];wreckFlyingBlocks=[];
-  wreckBallAngle=-0.8;wreckBallVel=0;wreckBallReleased=false;
+  wreckBallAngle=0.8;wreckBallVel=0;wreckBallReleased=false;
   wreckSmashed=false;wreckShakeTimer=0;
   wreckGroundY=H*0.65;
   updateWreckButtons();
@@ -1510,7 +1510,7 @@ function addWreckBlock(id){
 function startSmashing(){
   if(wreckTower.length===0)return;
   wreckState='swinging';
-  wreckBallAngle=-0.8;wreckBallVel=0;wreckBallReleased=false;wreckSmashed=false;
+  wreckBallAngle=0.8;wreckBallVel=0;wreckBallReleased=false;wreckSmashed=false;
   updateWreckButtons();
 }
 
@@ -1521,8 +1521,12 @@ function releaseWreckBall(){
   const craneX=W*0.82,craneY=H*0.08,ropeLen=H*0.35;
   wreckBallX=craneX+Math.sin(wreckBallAngle)*ropeLen;
   wreckBallY=craneY+Math.cos(wreckBallAngle)*ropeLen;
-  wreckBallVX=wreckBallVel*Math.cos(wreckBallAngle)*ropeLen*1.2;
-  wreckBallVY=-wreckBallVel*Math.sin(wreckBallAngle)*ropeLen*0.3;
+  // Tangential velocity from pendulum — should fly leftward toward tower
+  const tangentSpeed=wreckBallVel*ropeLen;
+  wreckBallVX=tangentSpeed*Math.cos(wreckBallAngle);
+  wreckBallVY=tangentSpeed*Math.sin(wreckBallAngle);
+  // If ball isn't heading toward tower, force it left
+  if(wreckBallVX>-50){wreckBallVX=-300;wreckBallVY=-50}
   playTone(100,0.3,'square',0.25);
 }
 
