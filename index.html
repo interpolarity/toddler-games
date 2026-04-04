@@ -617,7 +617,10 @@ function updateIceButtons(){
   if(iceState==='building'){
     instruction.textContent=iceStack.length<=1?'Build ice cream!':'Add more!';
     ICE_FLAVORS.forEach(f=>addBtn('btn-icecream',f.emoji,f.label,()=>{initAudio();addIceItem(f.id)}));
-    ICE_TOPPINGS.forEach(t=>addBtn('btn-food',t.emoji,t.label,()=>{initAudio();addIceItem(t.id)}));
+    // Only show toppings if there's at least one scoop, and no back-to-back sprinkles
+    const hasScoops=iceStack.some(id=>id!=='cone'&&id!=='sprinkles'&&id!=='cherry');
+    const lastIsSprinkles=iceStack[iceStack.length-1]==='sprinkles';
+    if(hasScoops)ICE_TOPPINGS.forEach(t=>{if(t.id==='sprinkles'&&lastIsSprinkles)return;addBtn('btn-food',t.emoji,t.label,()=>{initAudio();addIceItem(t.id)})});
     if(iceStack.length>1)addBtn('btn-done','✅','Done!',()=>{initAudio();finishIceCream()});
   }else if(iceState==='pick_char'){
     instruction.textContent='Who eats it?';
