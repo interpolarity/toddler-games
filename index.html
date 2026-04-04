@@ -174,7 +174,7 @@ let mouthOpenTimer = 0; // for mouth animation on tap
 // =============================================
 // CURRENT GAME MODE
 // =============================================
-let currentMode = 'menu'; // 'menu','dig','burger','icecream','match'
+let currentMode = 'menu'; // 'menu','dig','burger','icecream','match','wreck'
 let wobbleAngle = 0, wobbleVel = 0; // wobbly stack physics
 
 // =============================================
@@ -189,6 +189,7 @@ function showMenu(){
   addBtn('btn-food','🍔','Burger!',()=>{initAudio();playPop();startBurgerGame()});
   addBtn('btn-icecream','🍦','Ice Cream!',()=>{initAudio();playPop();startIceCreamGame()});
   addBtn('btn-done','🃏','Match!',()=>{initAudio();playPop();startMatchGame()});
+  addBtn('btn-dump','💥','Smash!',()=>{initAudio();playPop();startWreckGame()});
 }
 
 function drawMenuBg(){
@@ -1422,10 +1423,12 @@ function drawMatchGame(){
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
   else if(currentMode==='dig')handleDigTap(e.clientX,e.clientY);
+  else if(currentMode==='wreck')handleWreckTap(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='dig'){e.preventDefault();handleDigTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='wreck'){e.preventDefault();handleWreckTap(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
 
 function handleDigTap(tx,ty){
@@ -1456,6 +1459,264 @@ function handleMatchTap(tx,ty){
 }
 
 // =============================================
+// WRECKING BALL GAME
+// =============================================
+const WRECK_BLOCKS=[
+  {id:'brick', emoji:'🧱',label:'Brick', color:'#c62828',dark:'#8e0000',light:'#ef5350',w:50,h:25},
+  {id:'wood',  emoji:'🪵',label:'Wood',  color:'#8d6e63',dark:'#5d4037',light:'#bcaaa4',w:50,h:20},
+  {id:'glass', emoji:'🪟',label:'Glass', color:'#90caf9',dark:'#42a5f5',light:'#e3f2fd',w:50,h:18},
+  {id:'stone', emoji:'🪨',label:'Stone', color:'#78909c',dark:'#455a64',light:'#b0bec5',w:50,h:28},
+];
+let wreckState,wreckTower,wreckFlyingBlocks,wreckBallAngle,wreckBallVel,wreckBallReleased;
+let wreckBallX,wreckBallY,wreckBallVX,wreckBallVY,wreckGroundY;
+let wreckShakeTimer=0,wreckShakeX=0,wreckShakeY=0;
+let wreckSmashed=false;
+
+function startWreckGame(){
+  currentMode='wreck';particles=[];confetti=[];
+  wreckState='building';wreckTower=[];wreckFlyingBlocks=[];
+  wreckBallAngle=-0.8;wreckBallVel=0;wreckBallReleased=false;
+  wreckSmashed=false;wreckShakeTimer=0;
+  wreckGroundY=H*0.65;
+  updateWreckButtons();
+}
+
+function updateWreckButtons(){
+  buttonsArea.innerHTML='';
+  addBtn('btn-menu','🏠','Menu',()=>showMenu());
+  if(wreckState==='building'){
+    instruction.textContent=wreckTower.length===0?'Build a tower!':'Stack higher!';
+    WRECK_BLOCKS.forEach(b=>addBtn('btn-food',b.emoji,b.label,()=>{initAudio();addWreckBlock(b.id)}));
+    addBtn('btn-dump','💥','Smash!',()=>{initAudio();startSmashing()},wreckTower.length===0);
+  }else if(wreckState==='swinging'){
+    instruction.textContent='Tap to SMASH!';
+    addBtn('btn-dump','💥','SMASH!',()=>{initAudio();releaseWreckBall()});
+  }else if(wreckState==='smashing'){
+    instruction.textContent='BOOM! 💥';
+  }else if(wreckState==='done'){
+    instruction.textContent='Destroyed! 🎉';
+    addBtn('btn-again','🔄','Again!',()=>{initAudio();startWreckGame()});
+  }
+}
+
+function addWreckBlock(id){
+  const block=WRECK_BLOCKS.find(b=>b.id===id);
+  wreckTower.push({...block,wobble:0});
+  wobbleVel+=(Math.random()-0.5)*0.06;
+  playPop();
+  updateWreckButtons();
+}
+
+function startSmashing(){
+  if(wreckTower.length===0)return;
+  wreckState='swinging';
+  wreckBallAngle=-0.8;wreckBallVel=0;wreckBallReleased=false;wreckSmashed=false;
+  updateWreckButtons();
+}
+
+function releaseWreckBall(){
+  if(wreckBallReleased)return;
+  wreckBallReleased=true;
+  // Ball velocity from pendulum
+  const craneX=W*0.82,craneY=H*0.08,ropeLen=H*0.35;
+  wreckBallX=craneX+Math.sin(wreckBallAngle)*ropeLen;
+  wreckBallY=craneY+Math.cos(wreckBallAngle)*ropeLen;
+  wreckBallVX=wreckBallVel*Math.cos(wreckBallAngle)*ropeLen*1.2;
+  wreckBallVY=-wreckBallVel*Math.sin(wreckBallAngle)*ropeLen*0.3;
+  playTone(100,0.3,'square',0.25);
+}
+
+function smashTower(){
+  if(wreckSmashed)return;
+  wreckSmashed=true;wreckState='smashing';
+  // Convert tower blocks to flying physics objects
+  const towerX=W*0.38;
+  let by=wreckGroundY;
+  wreckTower.forEach((block,i)=>{
+    by-=block.h;
+    const impactForce=1.5+i*0.3; // higher blocks fly further
+    const dir=wreckBallVX>0?1:-1;
+    wreckFlyingBlocks.push({
+      x:towerX+(Math.random()-0.5)*20,y:by,
+      w:block.w,h:block.h,color:block.color,dark:block.dark,light:block.light,id:block.id,
+      vx:dir*(3+Math.random()*6)*impactForce,
+      vy:-(4+Math.random()*8+i*1.5),
+      rot:0,rotV:(Math.random()-0.5)*0.4,
+      life:1,decay:0.008+Math.random()*0.005
+    });
+    // Shatter particles per block
+    const cols=block.id==='glass'?['#e3f2fd','#90caf9','#42a5f5','#fff']:
+               block.id==='wood'?['#8d6e63','#a1887f','#d7ccc8','#5d4037']:
+               block.id==='brick'?['#c62828','#ef5350','#e57373','#8e0000']:
+               ['#78909c','#455a64','#b0bec5','#546e7a'];
+    spawnParticles(towerX,by+block.h/2,8,cols,{vyRange:10,vxRange:8,spread:30,maxSize:block.id==='glass'?4:6,shape:block.id==='glass'?'circle':'square',gravity:0.3});
+  });
+  wreckTower=[];
+  // Big impact effects
+  wreckShakeTimer=0.5;
+  spawnParticles(towerX,wreckGroundY-20,30,['#8d6e63','#a1887f','#6d4c41','#d7ccc8'],{vyRange:12,spread:50,maxSize:5,gravity:0.35}); // dust cloud
+  // Crash sound
+  playTone(60,0.4,'sawtooth',0.3);
+  for(let i=0;i<5;i++)setTimeout(()=>{playTone(80+Math.random()*60,0.15,'square',0.15);playTone(40+Math.random()*30,0.1,'triangle',0.1)},i*80);
+  setTimeout(()=>{wreckState='done';playJingle();spawnConfetti();playTaDa();updateWreckButtons()},2000);
+  updateWreckButtons();
+}
+
+function updateWreckGame(dt){
+  wreckGroundY=H*0.65;
+  // Wobble
+  wobbleVel+=-wobbleAngle*2.5*dt;wobbleVel*=0.95;wobbleAngle+=wobbleVel;
+  // Screen shake
+  if(wreckShakeTimer>0){wreckShakeTimer-=dt;wreckShakeX=(Math.random()-0.5)*wreckShakeTimer*60;wreckShakeY=(Math.random()-0.5)*wreckShakeTimer*40}else{wreckShakeX=0;wreckShakeY=0}
+  // Pendulum swing
+  if(wreckState==='swinging'&&!wreckBallReleased){
+    const gravity=4.5;
+    wreckBallVel+=gravity*Math.sin(wreckBallAngle)*dt;
+    wreckBallVel*=0.998; // slight damping
+    wreckBallAngle+=wreckBallVel*dt;
+  }
+  // Released ball physics
+  if(wreckBallReleased&&!wreckSmashed){
+    wreckBallVY+=600*dt; // gravity
+    wreckBallX+=wreckBallVX*dt;
+    wreckBallY+=wreckBallVY*dt;
+    // Check collision with tower
+    const towerX=W*0.38,towerW=55;
+    if(wreckBallX>towerX-towerW&&wreckBallX<towerX+towerW&&wreckBallY>wreckGroundY-wreckTower.length*25-30){
+      smashTower();
+    }
+    // Ball hit ground
+    if(wreckBallY>wreckGroundY){
+      wreckBallY=wreckGroundY;wreckBallVY=0;wreckBallVX*=0.5;
+      if(!wreckSmashed&&wreckTower.length>0){smashTower()} // close enough
+      else if(!wreckSmashed){wreckSmashed=true;wreckState='done';updateWreckButtons()}
+    }
+  }
+  // Flying blocks
+  for(let i=wreckFlyingBlocks.length-1;i>=0;i--){
+    const b=wreckFlyingBlocks[i];
+    b.vy+=500*dt;b.x+=b.vx*dt*60;b.y+=b.vy*dt;b.rot+=b.rotV;b.life-=b.decay;
+    // Bounce off ground
+    if(b.y>wreckGroundY-b.h/2){
+      b.y=wreckGroundY-b.h/2;b.vy*=-0.4;b.vx*=0.7;b.rotV*=0.6;
+      if(Math.abs(b.vy)>2)playTone(100+Math.random()*80,0.06,'triangle',0.05);
+    }
+    if(b.life<=0)wreckFlyingBlocks.splice(i,1);
+  }
+  updateParticles(dt);updateConfetti();
+}
+
+function drawWreckGame(){
+  wreckGroundY=H*0.65;
+  ctx.save();ctx.translate(wreckShakeX,wreckShakeY);
+  // Sky
+  let grd=ctx.createLinearGradient(0,0,0,wreckGroundY);
+  grd.addColorStop(0,'#4fc3f7');grd.addColorStop(1,'#b3e5fc');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,wreckGroundY);
+  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.12,H*0.08,30,0,Math.PI*2);ctx.fill();
+  drawCloud(W*0.3,H*0.05,0.6);drawCloud(W*0.6,H*0.09,0.5);
+  // Ground
+  ctx.fillStyle='#8bc34a';ctx.fillRect(0,wreckGroundY-4,W,8);
+  grd=ctx.createLinearGradient(0,wreckGroundY+4,0,H);grd.addColorStop(0,'#8d6e63');grd.addColorStop(1,'#5d4037');
+  ctx.fillStyle=grd;ctx.fillRect(0,wreckGroundY+4,W,H);
+
+  // Tower
+  const towerX=W*0.38;
+  let ty=wreckGroundY;
+  ctx.save();
+  ctx.translate(towerX,wreckGroundY);
+  ctx.rotate(wobbleAngle*(wreckTower.length*0.02));
+  ctx.translate(-towerX,-wreckGroundY);
+  wreckTower.forEach((block,idx)=>{
+    ty-=block.h;
+    const lw=wobbleAngle*idx*0.5;
+    const bx=towerX-block.w/2+lw,by2=ty;
+    // Block shadow
+    ctx.fillStyle='rgba(0,0,0,0.1)';
+    drawRoundRect(bx+2,by2+2,block.w,block.h,3);ctx.fill();
+    // Block
+    ctx.fillStyle=block.color;
+    drawRoundRect(bx,by2,block.w,block.h,3);ctx.fill();
+    ctx.strokeStyle=block.dark;ctx.lineWidth=2;ctx.stroke();
+    // Highlight
+    ctx.fillStyle=block.light;ctx.globalAlpha=0.3;
+    ctx.fillRect(bx+3,by2+2,block.w-6,block.h*0.35);
+    ctx.globalAlpha=1;
+    // Texture
+    if(block.id==='brick'){
+      ctx.strokeStyle=block.dark;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+block.w*0.5,by2);ctx.lineTo(bx+block.w*0.5,by2+block.h);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(bx,by2+block.h*0.5);ctx.lineTo(bx+block.w,by2+block.h*0.5);ctx.stroke();
+    }else if(block.id==='wood'){
+      ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;
+      for(let g=0;g<3;g++){ctx.beginPath();ctx.moveTo(bx+5+g*15,by2);ctx.lineTo(bx+5+g*15,by2+block.h);ctx.stroke()}
+    }else if(block.id==='glass'){
+      ctx.fillStyle='rgba(255,255,255,0.4)';
+      ctx.beginPath();ctx.moveTo(bx+5,by2+3);ctx.lineTo(bx+15,by2+3);ctx.lineTo(bx+8,by2+block.h-3);ctx.closePath();ctx.fill();
+    }
+  });
+  ctx.restore();
+
+  // Flying blocks
+  wreckFlyingBlocks.forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);ctx.globalAlpha=b.life;
+    ctx.fillStyle=b.color;
+    drawRoundRect(-b.w/2,-b.h/2,b.w,b.h,3);ctx.fill();
+    ctx.strokeStyle=b.dark;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.globalAlpha=1;ctx.restore();
+  });
+
+  // Crane
+  const craneX=W*0.82,craneTopY=H*0.05;
+  // Crane arm
+  ctx.fillStyle='#ffa726';
+  ctx.fillRect(craneX-5,craneTopY,10,wreckGroundY-craneTopY); // vertical mast
+  ctx.fillRect(towerX-20,craneTopY,craneX-towerX+25,8); // horizontal jib
+  ctx.strokeStyle='#e65100';ctx.lineWidth=2;
+  ctx.strokeRect(craneX-5,craneTopY,10,wreckGroundY-craneTopY);
+  ctx.strokeRect(towerX-20,craneTopY,craneX-towerX+25,8);
+
+  // Wrecking ball
+  const ropeLen=H*0.35,ballR=W*0.04;
+  let ballX,ballY;
+  if(!wreckBallReleased){
+    ballX=craneX+Math.sin(wreckBallAngle)*ropeLen;
+    ballY=craneTopY+4+Math.cos(wreckBallAngle)*ropeLen;
+    // Rope/chain
+    ctx.strokeStyle='#616161';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(craneX,craneTopY+4);ctx.lineTo(ballX,ballY);ctx.stroke();
+    // Chain links
+    const links=8;
+    for(let i=1;i<links;i++){
+      const t=i/links;
+      const lx=lerp(craneX,ballX,t),ly=lerp(craneTopY+4,ballY,t);
+      ctx.fillStyle=i%2?'#757575':'#616161';
+      ctx.beginPath();ctx.arc(lx,ly,2.5,0,Math.PI*2);ctx.fill();
+    }
+  }else{
+    ballX=wreckBallX;ballY=wreckBallY;
+  }
+  // Ball
+  ctx.fillStyle='#424242';
+  ctx.beginPath();ctx.arc(ballX,ballY,ballR,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#212121';ctx.lineWidth=3;ctx.stroke();
+  // Ball highlight
+  ctx.fillStyle='rgba(255,255,255,0.2)';
+  ctx.beginPath();ctx.arc(ballX-ballR*0.25,ballY-ballR*0.25,ballR*0.4,0,Math.PI*2);ctx.fill();
+  // Ball ring
+  ctx.fillStyle='#616161';
+  ctx.beginPath();ctx.arc(ballX,ballY-ballR+3,5,0,Math.PI*2);ctx.fill();
+
+  drawParticles(0);drawConfetti();
+  ctx.restore(); // shake
+}
+
+// Wreck game tap handler
+function handleWreckTap(tx,ty){
+  if(wreckState==='swinging'&&!wreckBallReleased){initAudio();releaseWreckBall()}
+}
+
+// =============================================
 // MAIN LOOP
 // =============================================
 let lastTime=0;
@@ -1468,6 +1729,7 @@ function gameLoop(ts){
   else if(currentMode==='burger'){updateBurgerGame(dt);drawBurgerGame()}
   else if(currentMode==='icecream'){updateIceCreamGame(dt);drawIceCreamGame()}
   else if(currentMode==='match'){updateMatchGame(dt);drawMatchGame()}
+  else if(currentMode==='wreck'){updateWreckGame(dt);drawWreckGame()}
 
   requestAnimationFrame(gameLoop);
 }
