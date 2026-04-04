@@ -492,49 +492,115 @@ function drawExcavator(x,y){
   // BUCKET — curved scoop shape, pivots from end of stick
   ctx.save();ctx.translate(stickLen,0);ctx.rotate(excBucketAngle);
   const bkW=bucketW,bkH=bucketH;
-  // Bucket back/spine
-  ctx.fillStyle='#757575';
-  ctx.fillRect(-3*s,-8*s,6*s,bkH*0.6);
-  // Curved scoop
-  ctx.fillStyle='#616161';
+  // Mounting ears/lugs — two plates with pin hole connecting to stick
+  ctx.fillStyle='#555';
+  ctx.fillRect(-4*s,-10*s,3.5*s,12*s); // left ear
+  ctx.fillRect(1*s,-10*s,3.5*s,12*s);  // right ear
+  ctx.fillStyle='#777';
+  ctx.beginPath();ctx.arc(-2.5*s,-4*s,2.5*s,0,Math.PI*2);ctx.fill(); // left pin hole
+  ctx.beginPath();ctx.arc(2.5*s,-4*s,2.5*s,0,Math.PI*2);ctx.fill();  // right pin hole
+  ctx.fillStyle='#444';
+  ctx.beginPath();ctx.arc(-2.5*s,-4*s,1.2*s,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(2.5*s,-4*s,1.2*s,0,Math.PI*2);ctx.fill();
+
+  // Back plate — flat, connects mounting ears to the scoop curve
+  ctx.fillStyle='#505050';
   ctx.beginPath();
-  ctx.moveTo(-bkW/2,-6*s);
-  ctx.lineTo(bkW/2,-6*s);
-  ctx.quadraticCurveTo(bkW/2+2*s,bkH*0.5,bkW*0.3,bkH); // right side curves in
-  ctx.lineTo(-bkW*0.3,bkH); // bottom edge
-  ctx.quadraticCurveTo(-bkW/2-2*s,bkH*0.5,-bkW/2,-6*s); // left side curves in
-  ctx.closePath();
+  ctx.moveTo(-bkW*0.3,-6*s);    // top-left of back plate
+  ctx.lineTo(bkW*0.3,-6*s);     // top-right
+  ctx.lineTo(bkW*0.45,bkH*0.15);// angled out to side plate
+  ctx.lineTo(-bkW*0.45,bkH*0.15);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#3a3a3a';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Side plates — tall trapezoidal walls forming the scoop sides
+  // Left side plate
+  ctx.fillStyle='#484848';
+  ctx.beginPath();
+  ctx.moveTo(-bkW*0.45,bkH*0.15);
+  ctx.lineTo(-bkW*0.5,bkH*0.85);   // widens toward mouth
+  ctx.lineTo(-bkW*0.42,bkH);        // bottom corner
+  ctx.lineTo(-bkW*0.3,-6*s);        // back to top
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#3a3a3a';ctx.lineWidth=1.5;ctx.stroke();
+  // Right side plate
+  ctx.fillStyle='#484848';
+  ctx.beginPath();
+  ctx.moveTo(bkW*0.45,bkH*0.15);
+  ctx.lineTo(bkW*0.5,bkH*0.85);
+  ctx.lineTo(bkW*0.42,bkH);
+  ctx.lineTo(bkW*0.3,-6*s);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#3a3a3a';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Scoop floor — curves from back plate down and forward
+  ctx.fillStyle='#555';
+  ctx.beginPath();
+  ctx.moveTo(-bkW*0.45,bkH*0.15);
+  ctx.quadraticCurveTo(-bkW*0.48,bkH*0.6,-bkW*0.42,bkH); // left curve
+  ctx.lineTo(bkW*0.42,bkH);                                  // bottom edge
+  ctx.quadraticCurveTo(bkW*0.48,bkH*0.6,bkW*0.45,bkH*0.15);// right curve
+  ctx.closePath();ctx.fill();
+  // Wear plate highlight
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.moveTo(-bkW*0.35,bkH*0.3);
+  ctx.quadraticCurveTo(0,bkH*0.2,bkW*0.35,bkH*0.3);
+  ctx.quadraticCurveTo(bkW*0.38,bkH*0.5,bkW*0.3,bkH*0.7);
+  ctx.lineTo(-bkW*0.3,bkH*0.7);
+  ctx.quadraticCurveTo(-bkW*0.38,bkH*0.5,-bkW*0.35,bkH*0.3);
   ctx.fill();
-  ctx.strokeStyle='#424242';ctx.lineWidth=2.5;ctx.stroke();
-  // Side plate ribs
-  ctx.strokeStyle='#555';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(-bkW*0.35,0);ctx.lineTo(-bkW*0.2,bkH*0.8);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(bkW*0.35,0);ctx.lineTo(bkW*0.2,bkH*0.8);ctx.stroke();
-  // Cutting edge (bottom lip)
-  ctx.fillStyle='#888';
-  ctx.beginPath();ctx.moveTo(-bkW*0.35,bkH-2*s);ctx.lineTo(bkW*0.35,bkH-2*s);
-  ctx.lineTo(bkW*0.3,bkH+1*s);ctx.lineTo(-bkW*0.3,bkH+1*s);ctx.closePath();ctx.fill();
-  // Teeth — triangular
-  ctx.fillStyle='#aaa';
-  const teethCount=4;
+
+  // Cutting edge — thick reinforced lip at the mouth
+  ctx.fillStyle='#666';
+  ctx.beginPath();
+  ctx.moveTo(-bkW*0.48,bkH-2*s);ctx.lineTo(bkW*0.48,bkH-2*s);
+  ctx.lineTo(bkW*0.45,bkH+2*s);ctx.lineTo(-bkW*0.45,bkH+2*s);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#444';ctx.lineWidth=1;ctx.stroke();
+
+  // Teeth — chunky rectangular with pointed tips
+  ctx.fillStyle='#777';
+  const teethCount=5,teethW=bkW*0.08,teethH=8*s;
+  const teethSpan=bkW*0.7;
   for(let i=0;i<teethCount;i++){
-    const tx=-bkW*0.28+i*(bkW*0.56/(teethCount-1));
-    ctx.beginPath();ctx.moveTo(tx-2.5*s,bkH);ctx.lineTo(tx,bkH+7*s);ctx.lineTo(tx+2.5*s,bkH);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.stroke()}
+    const tx=-teethSpan/2+i*(teethSpan/(teethCount-1));
+    // Tooth body — rectangular base
+    ctx.fillStyle='#777';
+    ctx.fillRect(tx-teethW/2,bkH+1*s,teethW,teethH*0.6);
+    // Pointed tip
+    ctx.beginPath();
+    ctx.moveTo(tx-teethW/2,bkH+1*s+teethH*0.6);
+    ctx.lineTo(tx,bkH+1*s+teethH);
+    ctx.lineTo(tx+teethW/2,bkH+1*s+teethH*0.6);
+    ctx.closePath();ctx.fill();
+    // Tooth outline
+    ctx.strokeStyle='#555';ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(tx-teethW/2,bkH+1*s);ctx.lineTo(tx-teethW/2,bkH+1*s+teethH*0.6);
+    ctx.lineTo(tx,bkH+1*s+teethH);ctx.lineTo(tx+teethW/2,bkH+1*s+teethH*0.6);
+    ctx.lineTo(tx+teethW/2,bkH+1*s);ctx.stroke();
+  }
+
   // Material in bucket
   if(excBucketMat){const m=DIG_MAT[excBucketMat];
     ctx.save();
-    // Clip to bucket interior
+    // Clip to scoop interior
     ctx.beginPath();
-    ctx.moveTo(-bkW*0.35,bkH*0.2);ctx.lineTo(bkW*0.35,bkH*0.2);
-    ctx.quadraticCurveTo(bkW*0.35,bkH*0.7,bkW*0.2,bkH-4*s);
-    ctx.lineTo(-bkW*0.2,bkH-4*s);
-    ctx.quadraticCurveTo(-bkW*0.35,bkH*0.7,-bkW*0.35,bkH*0.2);
+    ctx.moveTo(-bkW*0.38,bkH*0.25);
+    ctx.quadraticCurveTo(-bkW*0.42,bkH*0.6,-bkW*0.36,bkH-3*s);
+    ctx.lineTo(bkW*0.36,bkH-3*s);
+    ctx.quadraticCurveTo(bkW*0.42,bkH*0.6,bkW*0.38,bkH*0.25);
     ctx.closePath();ctx.clip();
+    // Fill
     ctx.fillStyle=m.color;ctx.fillRect(-bkW/2,bkH*0.2,bkW,bkH);
-    // Mound on top
-    ctx.fillStyle=m.light;ctx.globalAlpha=0.5;
-    ctx.beginPath();ctx.moveTo(-bkW*0.35,bkH*0.2);ctx.quadraticCurveTo(0,bkH*0.05,bkW*0.35,bkH*0.2);ctx.fill();
+    // Mound heaped above the rim
+    ctx.fillStyle=m.dark;ctx.globalAlpha=0.6;
+    ctx.beginPath();
+    ctx.moveTo(-bkW*0.38,bkH*0.25);
+    ctx.quadraticCurveTo(-bkW*0.15,bkH*0.05,0,bkH*0.1);
+    ctx.quadraticCurveTo(bkW*0.15,bkH*0.05,bkW*0.38,bkH*0.25);
+    ctx.fill();
     ctx.globalAlpha=1;ctx.restore()}
 
   ctx.restore(); // bucket
