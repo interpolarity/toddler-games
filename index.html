@@ -1029,6 +1029,7 @@ function getCardX(idx){const cols=matchCols||4,gap=10,cw=(W-gap*(cols+1))/cols;r
 function getCardY(idx){const cols=matchCols||4,rows=matchRows||4,gap=10,cw=(W-gap*(cols+1))/cols,ch=Math.min(cw*1.3,(H*0.7-gap*(rows+1))/rows),topOfs=50;return topOfs+gap+Math.floor(idx/cols)*(ch+gap)+ch/2}
 
 function updateMatchGame(dt){
+  if(!matchCards){updateParticles(dt);updateConfetti();return}
   if(matchPeekTimer>0){matchPeekTimer-=dt;if(matchPeekTimer<=0){matchCards.forEach(c=>c.flipped=false);updateMatchButtons()}}
   matchCards.forEach(c=>{
     if(c.flipAnim>0)c.flipAnim=Math.max(0,c.flipAnim-dt*4);
