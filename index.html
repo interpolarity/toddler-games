@@ -61,6 +61,10 @@ function playPop(){playTone(600+Math.random()*200,0.15,'sine',0.2)}
 function playSplat(){playTone(150,0.2,'triangle',0.2);playTone(100,0.25,'square',0.1)}
 function playChomp(){playTone(200,0.12,'square',0.15);setTimeout(()=>playTone(150,0.1,'square',0.12),130)}
 function playSlurp(){playTone(400,0.3,'sine',0.12);playTone(600,0.2,'triangle',0.08)}
+function playBurp(){if(!audioCtx)return;const n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();g.connect(audioCtx.destination);o.type='sawtooth';o.frequency.setValueAtTime(120,n);o.frequency.exponentialRampToValueAtTime(60,n+0.4);g.gain.setValueAtTime(0.2,n);g.gain.linearRampToValueAtTime(0.25,n+0.1);g.gain.exponentialRampToValueAtTime(0.01,n+0.5);o.connect(g);o.start(n);o.stop(n+0.5)}
+function playMatch(){playTone(523,0.15,'sine',0.2);setTimeout(()=>playTone(659,0.15,'sine',0.2),100);setTimeout(()=>playTone(784,0.2,'sine',0.2),200)}
+function playWrong(){playTone(200,0.2,'square',0.1);setTimeout(()=>playTone(160,0.25,'square',0.1),150)}
+function playFlip(){playTone(800,0.08,'sine',0.1)}
 let speechBusy=false;
 function sayNumber(n){
   if(!window.speechSynthesis)return;
@@ -138,7 +142,8 @@ let mouthOpenTimer = 0; // for mouth animation on tap
 // =============================================
 // CURRENT GAME MODE
 // =============================================
-let currentMode = 'menu'; // 'menu','dig','burger','icecream'
+let currentMode = 'menu'; // 'menu','dig','burger','icecream','match'
+let wobbleAngle = 0, wobbleVel = 0; // wobbly stack physics
 
 // =============================================
 // MENU
@@ -151,6 +156,7 @@ function showMenu(){
   addBtn('btn-sand','🚜','Dig!',()=>{initAudio();playPop();startDigGame()});
   addBtn('btn-food','🍔','Burger!',()=>{initAudio();playPop();startBurgerGame()});
   addBtn('btn-icecream','🍦','Ice Cream!',()=>{initAudio();playPop();startIceCreamGame()});
+  addBtn('btn-done','🃏','Match!',()=>{initAudio();playPop();startMatchGame()});
 }
 
 function drawMenuBg(){
@@ -389,11 +395,12 @@ function updateBurgerButtons(){
 
 function addBurgerItem(id){
   burgerStack.push(id);burgerBounceTimer=0.3;
+  wobbleVel+=(Math.random()-0.5)*0.08; // wobble on add
   playPop();
   const totalH=getBurgerHeight();
   const visibleH=H*0.7-30; // counter top to top of screen
   burgerCamY=Math.max(0,totalH-visibleH+60);
-  spawnParticles(W/2,H*0.5-totalH+burgerCamY,8,['#ffca28','#ff9800','#66bb6a','#ef5350'],{vyRange:5,spread:30});
+  spawnParticles(W*0.35,H*0.7-15-totalH,8,['#ffca28','#ff9800','#66bb6a','#ef5350'],{vyRange:5,spread:30});
   updateBurgerButtons();
 }
 
@@ -409,8 +416,8 @@ function burgerDoEat(){
   playChomp();
   const removed=burgerStack.pop();
   const item=BURGER_ITEMS.find(b=>b.id===removed);
-  spawnParticles(W/2,H*0.55,6,item?[item.color,item.dark]:['#d7a86e','#c49556'],{vyRange:4,spread:20});
-  if(burgerStack.length===0){burgerState='done';playJingle();spawnConfetti();sayNumber(burgerEatCount);updateBurgerButtons()}
+  spawnParticles(W*0.35,H*0.55,6,item?[item.color,item.dark]:['#d7a86e','#c49556'],{vyRange:4,spread:20});
+  if(burgerStack.length===0){burgerState='done';playJingle();spawnConfetti();sayNumber(burgerEatCount);setTimeout(()=>playBurp(),800);updateBurgerButtons()}
 }
 
 function getBurgerHeight(){
@@ -421,6 +428,10 @@ function getBurgerHeight(){
 
 function updateBurgerGame(dt){
   if(burgerBounceTimer>0)burgerBounceTimer=Math.max(0,burgerBounceTimer-dt);
+  // Wobbly stack physics
+  wobbleVel+=-wobbleAngle*2.5*dt; // spring
+  wobbleVel*=0.95; // damping
+  wobbleAngle+=wobbleVel;
   if(burgerState==='customer_walking'){
     burgerCustomerX=lerp(burgerCustomerX,W*0.72,dt*4);
     if(Math.abs(burgerCustomerX-W*0.72)<5){burgerCustomerX=W*0.72;burgerState='eating';burgerEatTimer=0;burgerCustomerPhase=0;updateBurgerButtons()}
@@ -454,17 +465,23 @@ function drawBurgerGame(){
 
   ctx.save();
   ctx.translate(0,camShiftB);
+  // Wobble pivot at base
+  ctx.translate(stackX,bunBase);
+  ctx.rotate(wobbleAngle*(burgerStack.length*0.03)); // more wobble when taller
+  ctx.translate(-stackX,-bunBase);
   let curY=bunBase;
   const bounce=burgerBounceTimer>0?Math.sin(burgerBounceTimer*20)*3:0;
 
   burgerStack.forEach((id,idx)=>{
     const isTop=idx===burgerStack.length-1;
+    const layerWobble=wobbleAngle*idx*0.3; // each layer wobbles more
     const bY=curY+(isTop?bounce:0);
-    if(id==='bun_bottom'){drawBunBottom(stackX,bY);curY-=35}
-    else if(id==='bun_top'){drawBunTop(stackX,bY);curY-=55}
+    const bX=stackX+layerWobble;
+    if(id==='bun_bottom'){drawBunBottom(bX,bY);curY-=35}
+    else if(id==='bun_top'){drawBunTop(bX,bY);curY-=55}
     else{
       const item=BURGER_ITEMS.find(b=>b.id===id);
-      if(item){drawBurgerLayer(stackX,bY,item);curY-=item.h}
+      if(item){drawBurgerLayer(bX,bY,item);curY-=item.h}
     }
   });
   ctx.restore();
@@ -589,14 +606,14 @@ function updateIceButtons(){
 }
 
 function addIceItem(id){
-  iceStack.push(id);iceBounceTimer=0.3;
+  iceStack.push(id);iceBounceTimer=0.3;wobbleVel+=(Math.random()-0.5)*0.08;
   if(id==='sprinkles')iceSprinkleSeeds.push(Math.floor(Math.random()*10000));
   playPop();
   const totalH=getIceHeight();
   const visH=H*0.7-30;
   iceCamY=Math.max(0,totalH-visH+60);
   const cols=id==='sprinkles'?['#f44336','#4caf50','#2196f3','#ffeb3b','#e91e63']:id==='cherry'?['#c62828','#e53935']:(ICE_FLAVORS.find(f=>f.id===id)||{color:'#fff',dark:'#eee'});
-  spawnParticles(W/2,H*0.45-totalH+iceCamY,10,Array.isArray(cols)?cols:[cols.color,cols.dark],{vyRange:5,spread:30});
+  spawnParticles(W*0.35,H*0.7-10-totalH,10,Array.isArray(cols)?cols:[cols.color,cols.dark],{vyRange:5,spread:30});
   updateIceButtons();
 }
 
@@ -613,8 +630,8 @@ function iceDoEat(){
   const removed=iceStack.pop();
   if(removed==='sprinkles')iceSprinkleSeeds.pop();
   const flav=ICE_FLAVORS.find(f=>f.id===removed);
-  spawnParticles(W/2,H*0.5,8,flav?[flav.color,flav.dark]:['#fff','#f8bbd0'],{vyRange:4,spread:25});
-  if(iceStack.length<=1){iceState='done';playJingle();spawnConfetti();sayNumber(iceEatCount);updateIceButtons()}
+  spawnParticles(W*0.35,H*0.5,8,flav?[flav.color,flav.dark]:['#fff','#f8bbd0'],{vyRange:4,spread:25});
+  if(iceStack.length<=1){iceState='done';playJingle();spawnConfetti();sayNumber(iceEatCount);setTimeout(()=>playBurp(),800);updateIceButtons()}
 }
 
 function getIceHeight(){
@@ -625,6 +642,7 @@ function getIceHeight(){
 
 function updateIceCreamGame(dt){
   if(iceBounceTimer>0)iceBounceTimer=Math.max(0,iceBounceTimer-dt);
+  wobbleVel+=-wobbleAngle*2.5*dt;wobbleVel*=0.95;wobbleAngle+=wobbleVel;
   if(iceState==='customer_walking'){
     iceCustomerX=lerp(iceCustomerX,W*0.72,dt*4);
     if(Math.abs(iceCustomerX-W*0.72)<5){iceCustomerX=W*0.72;iceState='eating';iceEatTimer=0;updateIceButtons()}
@@ -658,6 +676,9 @@ function drawIceCreamGame(){
 
   ctx.save();
   ctx.translate(0,camShift);
+  ctx.translate(plateX,coneBase);
+  ctx.rotate(wobbleAngle*(iceStack.length*0.025));
+  ctx.translate(-plateX,-coneBase);
   let curY=coneBase;
   const bounce=iceBounceTimer>0?Math.sin(iceBounceTimer*20)*4:0;
   let sprinkleIdx=0;
@@ -665,10 +686,11 @@ function drawIceCreamGame(){
   iceStack.forEach((id,idx)=>{
     const isTop=idx===iceStack.length-1;
     const iY=curY+(isTop?bounce:0);
-    if(id==='cone'){drawCone(plateX,iY);curY-=90}
-    else if(id==='cherry'){drawCherry(plateX,iY);curY-=20}
-    else if(id==='sprinkles'){drawSprinkles(plateX,iY+5,iceSprinkleSeeds[sprinkleIdx]||0);sprinkleIdx++}
-    else{const flav=ICE_FLAVORS.find(f=>f.id===id);if(flav){drawScoop(plateX,iY,flav);curY-=42}}
+    const lw=wobbleAngle*idx*0.4; // per-layer sway
+    if(id==='cone'){drawCone(plateX+lw*0.2,iY);curY-=90}
+    else if(id==='cherry'){drawCherry(plateX+lw,iY);curY-=20}
+    else if(id==='sprinkles'){drawSprinkles(plateX+lw,iY+5,iceSprinkleSeeds[sprinkleIdx]||0);sprinkleIdx++}
+    else{const flav=ICE_FLAVORS.find(f=>f.id===id);if(flav){drawScoop(plateX+lw,iY,flav);curY-=42}}
   });
   ctx.restore();
 
@@ -884,6 +906,177 @@ function drawEatCounter(eaten,total){
 }
 
 // =============================================
+// MATCHING GAME
+// =============================================
+const MATCH_ICONS = [
+  {emoji:'🐶',color:'#8d6e63'},{emoji:'🐱',color:'#ff8a65'},{emoji:'🐸',color:'#66bb6a'},
+  {emoji:'🦊',color:'#ff7043'},{emoji:'🐼',color:'#90a4ae'},{emoji:'🐷',color:'#f48fb1'},
+  {emoji:'🐮',color:'#bcaaa4'},{emoji:'🐵',color:'#a1887f'},
+];
+let matchCards,matchFlipped,matchMatched,matchLocked,matchTries,matchPairs,matchPeekTimer;
+let matchCelebrated;
+
+function startMatchGame(){
+  currentMode='match';particles=[];confetti=[];
+  // Create 16 cards (8 pairs), shuffle
+  const icons=[...MATCH_ICONS];
+  matchCards=[];
+  icons.forEach((ic,i)=>{matchCards.push({id:i,...ic});matchCards.push({id:i,...ic})});
+  // Fisher-Yates shuffle
+  for(let i=matchCards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[matchCards[i],matchCards[j]]=[matchCards[j],matchCards[i]]}
+  // Add state to each card
+  matchCards.forEach((c,i)=>{c.idx=i;c.flipped=false;c.matched=false;c.flipAnim=0;c.shakeAnim=0;c.matchAnim=0});
+  matchFlipped=[];matchMatched=0;matchLocked=false;matchTries=0;matchPairs=0;
+  matchPeekTimer=2.5; // show all cards for 2.5 seconds
+  matchCelebrated=false;
+  updateMatchButtons();
+}
+
+function updateMatchButtons(){
+  buttonsArea.innerHTML='';
+  addBtn('btn-menu','🏠','Menu',()=>showMenu());
+  if(matchMatched>=8){
+    instruction.textContent='You did it! 🎉';
+    addBtn('btn-again','🔄','Again!',()=>{initAudio();startMatchGame()});
+  }else{
+    instruction.textContent=matchPeekTimer>0?'Remember them!':'Find the pairs!';
+  }
+}
+
+function matchTapCard(idx){
+  if(matchLocked||matchPeekTimer>0)return;
+  const card=matchCards[idx];
+  if(card.flipped||card.matched)return;
+  initAudio();playFlip();
+  card.flipped=true;card.flipAnim=1;
+  matchFlipped.push(idx);
+
+  if(matchFlipped.length===2){
+    matchLocked=true;matchTries++;
+    const a=matchCards[matchFlipped[0]],b=matchCards[matchFlipped[1]];
+    if(a.id===b.id){
+      // Match!
+      setTimeout(()=>{
+        a.matched=true;b.matched=true;a.matchAnim=1;b.matchAnim=1;
+        matchPairs++;matchMatched++;
+        playMatch();
+        spawnParticles((getCardX(a.idx)+getCardX(b.idx))/2,(getCardY(a.idx)+getCardY(b.idx))/2,12,
+          ['#ffeb3b','#ff9800','#4caf50','#e91e63'],{vyRange:6,spread:40});
+        matchFlipped=[];matchLocked=false;
+        if(matchMatched>=8){spawnConfetti();playJingle();sayNumber(matchTries);updateMatchButtons()}
+      },500);
+    }else{
+      // No match
+      setTimeout(()=>{
+        a.shakeAnim=1;b.shakeAnim=1;
+        playWrong();
+        setTimeout(()=>{a.flipped=false;b.flipped=false;a.shakeAnim=0;b.shakeAnim=0;matchFlipped=[];matchLocked=false},600);
+      },700);
+    }
+  }
+}
+
+function getCardX(idx){const cols=4,gap=8,cw=(W-gap*(cols+1))/cols;return gap+(idx%cols)*(cw+gap)+cw/2}
+function getCardY(idx){const cols=4,rows=4,gap=8,cw=(W-gap*(cols+1))/cols,ch=Math.min(cw*1.2,(H*0.7-gap*(rows+1))/rows),topOfs=45;return topOfs+gap+Math.floor(idx/cols)*(ch+gap)+ch/2}
+
+function updateMatchGame(dt){
+  if(matchPeekTimer>0){matchPeekTimer-=dt;if(matchPeekTimer<=0){matchCards.forEach(c=>c.flipped=false);updateMatchButtons()}}
+  matchCards.forEach(c=>{
+    if(c.flipAnim>0)c.flipAnim=Math.max(0,c.flipAnim-dt*4);
+    if(c.matchAnim>0)c.matchAnim=Math.max(0,c.matchAnim-dt*2);
+  });
+  updateParticles(dt);updateConfetti();
+}
+
+function drawMatchGame(){
+  // Background
+  const grd=ctx.createLinearGradient(0,0,0,H);grd.addColorStop(0,'#e8eaf6');grd.addColorStop(1,'#c5cae9');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+
+  const cols=4,rows=4,gap=8;
+  const cw=(W-gap*(cols+1))/cols;
+  const ch=Math.min(cw*1.2,(H*0.7-gap*(rows+1))/rows);
+  const topOfs=45;
+
+  matchCards.forEach((card,i)=>{
+    const cx=gap+(i%cols)*(cw+gap);
+    const cy=topOfs+gap+Math.floor(i/cols)*(ch+gap);
+    const show=card.flipped||card.matched||matchPeekTimer>0;
+
+    // Shake animation
+    let sx=0;
+    if(card.shakeAnim>0)sx=Math.sin(card.shakeAnim*30)*5;
+
+    // Match glow
+    if(card.matchAnim>0){
+      ctx.fillStyle='rgba(255,235,59,'+card.matchAnim*0.5+')';
+      drawRoundRect(cx-4+sx,cy-4,cw+8,ch+8,16);ctx.fill();
+    }
+
+    // Card back or front
+    if(show){
+      // Front — white with emoji
+      ctx.fillStyle=card.matched?'#e8f5e9':'#fff';
+      drawRoundRect(cx+sx,cy,cw,ch,12);ctx.fill();
+      ctx.strokeStyle=card.matched?'#66bb6a':'#bdbdbd';ctx.lineWidth=3;ctx.stroke();
+      // Emoji
+      const emojiSize=Math.min(cw,ch)*0.45;
+      ctx.font=`${emojiSize}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(card.emoji,cx+cw/2+sx,cy+ch/2);
+      ctx.textBaseline='alphabetic';
+      // Matched check
+      if(card.matched){
+        ctx.font=`bold ${emojiSize*0.4}px sans-serif`;
+        ctx.fillText('✓',cx+cw-15+sx,cy+18);
+      }
+    }else{
+      // Back — colored with pattern
+      ctx.fillStyle='#5c6bc0';
+      drawRoundRect(cx+sx,cy,cw,ch,12);ctx.fill();
+      ctx.strokeStyle='#3949ab';ctx.lineWidth=3;ctx.stroke();
+      // Star pattern
+      ctx.fillStyle='rgba(255,255,255,0.15)';
+      ctx.font=`${Math.min(cw,ch)*0.3}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('⭐',cx+cw/2+sx,cy+ch/2);
+      ctx.textBaseline='alphabetic';
+    }
+  });
+
+  // Tries counter
+  if(matchTries>0){
+    ctx.textAlign='right';
+    ctx.font='bold 16px sans-serif';ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.fillText('Tries: '+matchTries,W-12,35);
+    ctx.textAlign='left';
+  }
+
+  // Pairs found
+  if(matchPairs>0&&matchMatched<8){
+    ctx.textAlign='left';
+    ctx.font='bold 16px sans-serif';ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.fillText('Pairs: '+matchPairs+'/8',12,35);
+  }
+
+  drawParticles(0);drawConfetti();
+}
+
+// Handle canvas taps for match game
+canvas.addEventListener('click',e=>{if(currentMode!=='match')return;handleMatchTap(e.clientX,e.clientY)});
+canvas.addEventListener('touchstart',e=>{if(currentMode!=='match')return;e.preventDefault();const t=e.touches[0];handleMatchTap(t.clientX,t.clientY)},{passive:false});
+
+function handleMatchTap(tx,ty){
+  const cols=4,rows=4,gap=8;
+  const cw=(W-gap*(cols+1))/cols;
+  const ch=Math.min(cw*1.2,(H*0.7-gap*(rows+1))/rows);
+  const topOfs=45;
+  for(let i=0;i<matchCards.length;i++){
+    const cx=gap+(i%cols)*(cw+gap);
+    const cy=topOfs+gap+Math.floor(i/cols)*(ch+gap);
+    if(tx>=cx&&tx<=cx+cw&&ty>=cy&&ty<=cy+ch){matchTapCard(i);return}
+  }
+}
+
+// =============================================
 // MAIN LOOP
 // =============================================
 let lastTime=0;
@@ -895,6 +1088,7 @@ function gameLoop(ts){
   else if(currentMode==='dig'){updateDigGame(dt);drawDigGame()}
   else if(currentMode==='burger'){updateBurgerGame(dt);drawBurgerGame()}
   else if(currentMode==='icecream'){updateIceCreamGame(dt);drawIceCreamGame()}
+  else if(currentMode==='match'){updateMatchGame(dt);drawMatchGame()}
 
   requestAnimationFrame(gameLoop);
 }
