@@ -274,9 +274,8 @@ function startDigGame(){
 
 function updateDigButtons(){
   buttonsArea.innerHTML='';
-  addBtn('btn-menu','🏠','Menu',()=>{initAudio();showMenu()});
   if(digState==='dig'){
-    instruction.textContent=truckLoad.length===0?'Tap to dig!':`Dig more! (${truckLoad.length}/${MAX_SCOOPS})`;
+    addBtn('btn-menu','🏠','Menu',()=>{initAudio();showMenu()});
     if(truckLoad.length>=MAX_SCOOPS) instruction.textContent="Full! Let's go!";
     else instruction.textContent=truckLoad.length===0?'Tap to dig!':'Keep digging!';
     const full=truckLoad.length>=MAX_SCOOPS;
@@ -285,12 +284,15 @@ function updateDigButtons(){
     const anyLow=pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3;
     addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}},!anyLow);
   }else if(digState==='dump'){
+    addBtn('btn-menu','🏠','Menu',()=>{initAudio();showMenu()});
     instruction.textContent='Tap to DUMP!';
     addBtn('btn-dump','⬇️','DUMP!',()=>{initAudio();digDoDump()});
   }else if(digState==='celebrate'){
+    addBtn('btn-menu','🏠','Menu',()=>{initAudio();showMenu()});
     instruction.textContent='YAY! 🎉';
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startDigGame()});
   }else{
+    // Digging/driving/dumping animation — no buttons, nothing to accidentally tap
     instruction.textContent=digState==='drive'?'Vroom! 🚛💨':'Digging...';
   }
 }
@@ -302,7 +304,7 @@ function digStartDig(mat){
   playSound_dig(mat);
   const tx=W*PILES[mat].xFrac-W*0.1,dist=Math.abs(excX-tx);
   digAnimateExcTo(tx,Math.max(0.25,Math.min(0.6,dist/400)),()=>{excAnimPhase=2;excAnimTime=0});
-  buttonsArea.innerHTML='';addBtn('btn-menu','🏠','Menu',()=>showMenu());
+  buttonsArea.innerHTML=''; // clear buttons during dig animation
   instruction.textContent=`Digging ${DIG_MAT[mat].label}!`;
 }
 function digMoveToTruck(){
@@ -732,20 +734,26 @@ function startBurgerGame(){
 
 function updateBurgerButtons(){
   buttonsArea.innerHTML='';
-  addBtn('btn-menu','🏠','Menu',()=>showMenu());
   if(burgerState==='building'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent=burgerStack.length<=1?'Build a burger!':'Keep stacking!';
     BURGER_ITEMS.forEach(item=>addBtn('btn-food',item.emoji,item.label,()=>{initAudio();addBurgerItem(item.id)}));
     addBtn('btn-done','🍞','Done!',()=>{initAudio();finishBurger()},burgerStack.length<=1);
   }else if(burgerState==='pick_char'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Who eats it?';
     CHARACTERS.forEach(c=>addBtn('btn-char',c.emoji,c.label,()=>{initAudio();currentChar=c.id;playPop();burgerState='customer_walking';burgerCustomerX=W+80;updateBurgerButtons()}));
   }else if(burgerState==='eating'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Tap NOM!';
     addBtn('btn-nom','😋','NOM!',()=>{initAudio();burgerDoEat()});
   }else if(burgerState==='done'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Delicious! 🎉';
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startBurgerGame()});
+  }else{
+    // customer_walking — no buttons
+    instruction.textContent='Here they come!';
   }
 }
 
@@ -952,8 +960,8 @@ function startIceCreamGame(){
 
 function updateIceButtons(){
   buttonsArea.innerHTML='';
-  addBtn('btn-menu','🏠','Menu',()=>showMenu());
   if(iceState==='building'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent=iceStack.length<=1?'Build ice cream!':'Add more!';
     ICE_FLAVORS.forEach(f=>addBtn('btn-icecream',f.emoji,f.label,()=>{initAudio();addIceItem(f.id)}));
     const hasScoops=iceStack.some(id=>id!=='cone'&&id!=='sprinkles'&&id!=='cherry');
@@ -964,12 +972,20 @@ function updateIceButtons(){
     });
     addBtn('btn-done','✅','Done!',()=>{initAudio();finishIceCream()},iceStack.length<=1);
   }else if(iceState==='pick_char'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Who eats it?';
     CHARACTERS.forEach(c=>addBtn('btn-char',c.emoji,c.label,()=>{initAudio();currentChar=c.id;playPop();iceState='customer_walking';iceCustomerX=W+80;updateIceButtons()}));
   }else if(iceState==='eating'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Tap NOM!';
     addBtn('btn-nom','😋','NOM!',()=>{initAudio();iceDoEat()});
-  }else if(iceState==='done'){instruction.textContent='Yummy! 🎉';addBtn('btn-again','🔄','Again!',()=>{initAudio();startIceCreamGame()})}
+  }else if(iceState==='done'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
+    instruction.textContent='Yummy! 🎉';addBtn('btn-again','🔄','Again!',()=>{initAudio();startIceCreamGame()});
+  }else{
+    // customer_walking — no buttons
+    instruction.textContent='Here they come!';
+  }
 }
 
 function addIceItem(id){
@@ -1521,17 +1537,20 @@ function startWreckGame(){
 
 function updateWreckButtons(){
   buttonsArea.innerHTML='';
-  addBtn('btn-menu','🏠','Menu',()=>showMenu());
   if(wreckState==='building'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent=wreckTower.length===0?'Build a tower!':'Stack higher!';
     WRECK_BLOCKS.forEach(b=>addBtn('btn-food',b.emoji,b.label,()=>{initAudio();addWreckBlock(b.id)}));
     addBtn('btn-dump','💥','Smash!',()=>{initAudio();startSmashing()},wreckTower.length===0);
   }else if(wreckState==='swinging'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Tap to SMASH!';
     addBtn('btn-dump','💥','SMASH!',()=>{initAudio();releaseWreckBall()});
   }else if(wreckState==='smashing'){
+    // No buttons during destruction — nothing to accidentally tap
     instruction.textContent='BOOM! 💥';
   }else if(wreckState==='done'){
+    addBtn('btn-menu','🏠','Menu',()=>showMenu());
     instruction.textContent='Destroyed! 🎉';
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startWreckGame()});
   }
