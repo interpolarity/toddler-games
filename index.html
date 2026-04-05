@@ -635,11 +635,15 @@ function drawDigGame(){
       ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
       ctx.fillStyle='#b0bec5';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(r.x-r.radius*0.15,r.y-r.radius*0.2,r.radius*0.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
     });
-    // Sand and water layers on top of rocks
-    const nonRock=[];dumpHoleLayers.forEach((mat,i)=>{if(mat!=='rocks')nonRock.push({mat,i})});
-    nonRock.sort((a,b)=>(a.mat==='water'?1:0)-(b.mat==='water'?1:0));
-    const nrLh=Math.max(8,(hh-12)/Math.max(nonRock.length,1));
-    nonRock.forEach((nr,di)=>{const ly=digGroundY+hh-(di+1)*nrLh;drawDigMaterialFill(hx-hw,ly,hw*2,nrLh+1,nr.mat,5000+nr.i*251)});
+    // Sand layers can mingle with rocks (both sink). Water always floats on top.
+    const sandLayers=[];const waterLayers=[];
+    dumpHoleLayers.forEach((mat,i)=>{if(mat==='sand')sandLayers.push({mat,i});else if(mat==='water')waterLayers.push({mat,i})});
+    const solidCount=sandLayers.length+dumpHoleLayers.filter(m=>m==='rocks').length;
+    const sandLh=Math.max(6,(hh-12)/Math.max(solidCount+waterLayers.length,1));
+    // Sand among the rocks
+    sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-(di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,s.mat,5000+s.i*251)});
+    // Water always on top
+    waterLayers.forEach((w,di)=>{const ly=digGroundY+hh-(solidCount+di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,w.mat,5000+w.i*251)});
     ctx.restore()}
   // Excavator
   drawExcavator(excX,digGroundY);
