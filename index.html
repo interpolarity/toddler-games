@@ -3175,7 +3175,6 @@ function drawGardenGame(){
       ctx.textAlign='left';ctx.textBaseline='alphabetic';
     }
     // Water droplets
-    const p=gardenPlants[i];
     if(p.waterAnim>0){
       ctx.globalAlpha=p.waterAnim;ctx.fillStyle='#64b5f6';
       for(let d=0;d<4;d++){ctx.beginPath();ctx.arc(sx-15+d*10,sy-20-d*8-p.waterAnim*15,3,0,Math.PI*2);ctx.fill()}
