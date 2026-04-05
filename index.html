@@ -2694,38 +2694,37 @@ function drawWreckGame(){
     if(shade>0){ctx.fillStyle=`rgba(255,255,255,${shade})`;if(d.shape==='tri'){ctx.fill()}else{drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill()}}
     else if(shade<0){ctx.fillStyle=`rgba(0,0,0,${-shade})`;if(d.shape==='tri'){ctx.fill()}else{drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill()}}
 
-    if(d.detail===0&&d.w>14){
-      // Window — bright yellow or blue, always visible
-      const ww=d.w*0.6,wh=d.h*0.65;
-      ctx.fillStyle=d.id==='glass'?'#90caf9':'#fff176';
-      ctx.fillRect(-ww/2,-wh/2,ww,wh);
-      ctx.strokeStyle='#333';ctx.lineWidth=1.2;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
-      ctx.beginPath();ctx.moveTo(0,-wh/2);ctx.lineTo(0,wh/2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(-ww/2,0);ctx.lineTo(ww/2,0);ctx.stroke();
-    }else if(d.detail===1){
-      // Big diagonal cracks — white for contrast
-      ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(-hw*0.8,-hh*0.9);ctx.lineTo(hw*0.6,hh*0.8);ctx.stroke();
-      ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(-hw*0.2,-hh);ctx.lineTo(hw*0.8,hh*0.4);ctx.stroke();
-    }else if(d.detail===2){
-      // Brick pattern — contrasting mortar lines
-      ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=1;
-      for(let bl=-1;bl<=1;bl++){ctx.beginPath();ctx.moveTo(-hw,hh*bl*0.45);ctx.lineTo(hw,hh*bl*0.45);ctx.stroke()}
-      ctx.beginPath();ctx.moveTo(hw*0.3,-hh);ctx.lineTo(hw*0.3,hh);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(-hw*0.4,-hh);ctx.lineTo(-hw*0.4,hh);ctx.stroke();
-    }else if(d.detail===3){
-      // Exposed rebar — rusty orange, sticking out
-      ctx.strokeStyle='#bf6030';ctx.lineWidth=2.5;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(-hw*0.4,-hh*1.3);ctx.lineTo(-hw*0.15,hh*0.5);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(hw*0.25,-hh*0.6);ctx.lineTo(hw*0.1,hh*1.2);ctx.stroke();
-      ctx.lineCap='butt';
-    }else if(d.detail===4){
-      // Floor/ceiling slab — lighter top stripe
-      ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fillRect(-hw+1,-hh+1,d.w-2,d.h*0.35);
-      ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(-hw+1,hh-d.h*0.2,d.w-2,d.h*0.2);
+    // Material-appropriate details
+    if(d.id==='glass'){
+      // Glass: shiny reflections, cracks, shards
+      if(d.detail<2){ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillRect(-hw+2,-hh+2,d.w*0.35,d.h*0.4);} // glare
+      if(d.detail===2||d.detail===3){// Spider crack
+        ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-hw*0.8,-hh*0.7);ctx.moveTo(0,0);ctx.lineTo(hw*0.6,hh*0.5);
+        ctx.moveTo(0,0);ctx.lineTo(hw*0.3,-hh*0.8);ctx.moveTo(0,0);ctx.lineTo(-hw*0.5,hh*0.6);ctx.stroke();}
+    }else if(d.id==='wood'){
+      // Wood: grain lines, splinters
+      ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=0.8;
+      for(let g=0;g<3;g++){const gx=-hw*0.5+g*hw*0.5;ctx.beginPath();ctx.moveTo(gx,-hh);ctx.lineTo(gx+hw*0.1,hh);ctx.stroke()}
+      if(d.detail<2){ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-hw*0.3,-hh*1.1);ctx.lineTo(-hw*0.1,hh*0.3);ctx.stroke();} // splinter
+    }else if(d.id==='brick'){
+      // Brick: mortar lines, window
+      if(d.detail<2&&d.w>14){const ww=d.w*0.5,wh=d.h*0.55;ctx.fillStyle='#fff176';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
+        ctx.beginPath();ctx.moveTo(0,-wh/2);ctx.lineTo(0,wh/2);ctx.stroke();ctx.beginPath();ctx.moveTo(-ww/2,0);ctx.lineTo(ww/2,0);ctx.stroke();}
+      else{ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=0.8;
+        ctx.beginPath();ctx.moveTo(-hw,0);ctx.lineTo(hw,0);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,-hh);ctx.lineTo(0,hh);ctx.stroke();}
+    }else if(d.id==='stone'){
+      // Stone: rough texture, cracks
+      if(d.detail<2){ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(-hw*0.7,-hh*0.8);ctx.lineTo(hw*0.5,hh*0.6);ctx.stroke();}
+      if(d.detail===2||d.detail===3){ctx.fillStyle='rgba(0,0,0,0.1)';
+        ctx.beginPath();ctx.arc(hw*0.2,-hh*0.3,d.w*0.15,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(-hw*0.3,hh*0.2,d.w*0.1,0,Math.PI*2);ctx.fill();}
+      if(d.detail===4&&d.w>14){const ww=d.w*0.5,wh=d.h*0.55;ctx.fillStyle='#fff176';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);}
     }
-    // detail===5: plain chunk
     ctx.restore();
   });
   // Flying blocks
