@@ -2588,20 +2588,19 @@ function updateWreckGame(dt){
         const sizeVar=0.15+Math.random()*1.0;
         const cw=b.w*sizeVar*0.4+3;
         const ch=b.h*sizeVar*0.5+3;
-        let detail=Math.floor(Math.random()*6);
-        // Guarantee at least one window piece (detail 0 or 4) — make it large
-        const isWindow=(detail===0||detail===4);
-        if(c===chunks-1&&!hasWindow){detail=0}
-        if(isWindow)hasWindow=true;
+        let detail=Math.floor(Math.random()*8); // 0=window, 1-7=other (12.5% window)
+        // Guarantee exactly one window piece per block on last chunk if none yet
+        if(c===chunks-1&&!hasWindow)detail=0;
+        if(detail===0)hasWindow=true;
         const shape=Math.random();
-        const isWinPiece=detail===0||detail===4;
-        const pw=isWinPiece?Math.max(cw,b.w*0.35):cw; // windows get bigger chunks
-        const ph=isWinPiece?Math.max(ch,b.h*0.5):ch;
+        const isWin=detail===0;
+        const pw=isWin?Math.max(cw,b.w*0.3):cw;
+        const ph=isWin?Math.max(ch,b.h*0.45):ch;
         wreckDebris.push({x:b.x+(Math.random()-0.5)*b.w*0.9,y:b.y-Math.random()*10,
           w:pw,h:shape<0.5?ph:(shape<0.75?Math.min(pw,ph):ph),
-          color:b.color,dark:b.dark,light:b.light,id:b.id,detail,
-          shape:isWinPiece?'rect':(shape<0.5?'rect':shape<0.75?'sq':'tri'),
-          zTop:isWinPiece,rot:b.rot+(Math.random()-0.5)*1.5});
+          color:b.color,dark:b.dark,light:b.light,id:b.id,detail:isWin?0:1+Math.floor(Math.random()*5),
+          shape:isWin?'rect':(shape<0.5?'rect':shape<0.75?'sq':'tri'),
+          zTop:isWin,rot:b.rot+(Math.random()-0.5)*1.5});
       }
       wreckFlyingBlocks.splice(i,1);
     }
@@ -2707,13 +2706,13 @@ function drawWreckGame(){
     // Material-appropriate details
     if(d.id==='glass'){
       // Glass: windows (no cross panes), reflections, cracks
-      if((d.detail===0||d.detail===4)&&d.w>14){
-        // Glass window — bright blue, no cross lines
-        const ww=d.w*0.6,wh=d.h*0.6;
-        ctx.fillStyle='#bbdefb';ctx.fillRect(-ww/2,-wh/2,ww,wh);
-        ctx.strokeStyle='#42a5f5';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
-        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.fillRect(-ww/2+1,-wh/2+1,ww*0.35,wh*0.4);
-      }else if(d.detail<2){ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillRect(-hw+2,-hh+2,d.w*0.35,d.h*0.4);}
+      if(d.detail===0&&d.w>14){
+        // Glass window — tall blue rectangle matching building style
+        const ww=d.w*0.4,wh=d.h*0.7;
+        ctx.fillStyle='#e3f2fd';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.strokeStyle='#42a5f5';ctx.lineWidth=1.2;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
+        ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillRect(-ww/2+1,-wh/2+1,ww*0.35,wh*0.45);
+      }else if(d.detail<3){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fillRect(-hw+2,-hh+2,d.w*0.3,d.h*0.35);}
       else{// Spider crack
         ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1;
         ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-hw*0.8,-hh*0.7);ctx.moveTo(0,0);ctx.lineTo(hw*0.6,hh*0.5);
@@ -2724,22 +2723,23 @@ function drawWreckGame(){
       for(let g=0;g<3;g++){const gx=-hw*0.5+g*hw*0.5;ctx.beginPath();ctx.moveTo(gx,-hh);ctx.lineTo(gx+hw*0.1,hh);ctx.stroke()}
       if(d.detail<2){ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-hw*0.3,-hh*1.1);ctx.lineTo(-hw*0.1,hh*0.3);ctx.stroke();} // splinter
     }else if(d.id==='brick'){
-      // Brick: mortar lines, window
-      if(d.detail<2&&d.w>14){const ww=d.w*0.5,wh=d.h*0.55;ctx.fillStyle='#fff176';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+      // Brick: window or mortar
+      if(d.detail===0&&d.w>14){const ww=d.w*0.4,wh=d.h*0.6;ctx.fillStyle='#fff176';ctx.fillRect(-ww/2,-wh/2,ww,wh);
         ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
         ctx.beginPath();ctx.moveTo(0,-wh/2);ctx.lineTo(0,wh/2);ctx.stroke();ctx.beginPath();ctx.moveTo(-ww/2,0);ctx.lineTo(ww/2,0);ctx.stroke();}
       else{ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=0.8;
         ctx.beginPath();ctx.moveTo(-hw,0);ctx.lineTo(hw,0);ctx.stroke();
         ctx.beginPath();ctx.moveTo(0,-hh);ctx.lineTo(0,hh);ctx.stroke();}
     }else if(d.id==='stone'){
-      // Stone: rough texture, cracks
-      if(d.detail<2){ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;
+      // Stone: window, texture, or cracks
+      if(d.detail===0&&d.w>14){const ww=d.w*0.4,wh=d.h*0.6;ctx.fillStyle='#fff176';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
+        ctx.beginPath();ctx.moveTo(0,-wh/2);ctx.lineTo(0,wh/2);ctx.stroke();ctx.beginPath();ctx.moveTo(-ww/2,0);ctx.lineTo(ww/2,0);ctx.stroke();}
+      else if(d.detail<3){ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;
         ctx.beginPath();ctx.moveTo(-hw*0.7,-hh*0.8);ctx.lineTo(hw*0.5,hh*0.6);ctx.stroke();}
-      if(d.detail===2||d.detail===3){ctx.fillStyle='rgba(0,0,0,0.1)';
+      else{ctx.fillStyle='rgba(0,0,0,0.1)';
         ctx.beginPath();ctx.arc(hw*0.2,-hh*0.3,d.w*0.15,0,Math.PI*2);ctx.fill();
         ctx.beginPath();ctx.arc(-hw*0.3,hh*0.2,d.w*0.1,0,Math.PI*2);ctx.fill();}
-      if(d.detail===4&&d.w>14){const ww=d.w*0.5,wh=d.h*0.55;ctx.fillStyle='#fff176';ctx.fillRect(-ww/2,-wh/2,ww,wh);
-        ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);}
     }
     ctx.restore();
   });
