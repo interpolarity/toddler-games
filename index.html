@@ -2869,7 +2869,7 @@ function updateMusicButtons(){
   buttonsArea.innerHTML='';
   addBtn('btn-go','🎵','Song',()=>{initAudio();musicMode='song';musicSongIdx=0;musicSongPlaying=true;musicSongTimer=0;instruction.textContent='Follow along! 🎶'});
   addBtn('btn-again','🎹','Free Play',()=>{initAudio();musicMode='free';musicSongPlaying=false;instruction.textContent='Tap the bars! 🎵'});
-  addBtn('btn-menu','🏠','Menu',()=>{showMenu()});
+
 }
 function handleMusicTap(tx,ty){
   const btnH=100,topY=H*0.08,areaH=H-topY-btnH-20;
@@ -2998,7 +2998,7 @@ function newMaze(){
 function updateMazeButtons(){
   buttonsArea.innerHTML='';
   addBtn('btn-again','🔄','New',()=>{initAudio();newMaze();updateMazeButtons()});
-  addBtn('btn-menu','🏠','Menu',()=>{showMenu()});
+
 }
 function getMazeCell(px,py){
   const c=Math.floor((px-mazeOfsX)/mazeCellW),r=Math.floor((py-mazeOfsY)/mazeCellH);
@@ -3153,6 +3153,7 @@ function drawGardenGame(){
   // Soil spots and plants
   for(let i=0;i<5;i++){
     const sx=getGardenSpotX(i),sy=H*0.78;
+    const p=gardenPlants[i];
     // Soil mound — bigger
     ctx.fillStyle='#5d4037';ctx.beginPath();ctx.ellipse(sx,sy,W*0.08,H*0.03,0,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#795548';ctx.beginPath();ctx.ellipse(sx,sy-H*0.005,W*0.07,H*0.022,0,0,Math.PI*2);ctx.fill();
