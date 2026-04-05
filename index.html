@@ -1975,6 +1975,32 @@ function drawPizzaGame(){
       else{drawPizzaScatter(cx,cy,innerR,id)}
     });
   }
+  // Cutting state: draw cut lines and interactive hint on top of pizza
+  if(pizzaState==='cutting'){
+    // Draw existing cut lines prominently
+    pizzaCutAngles.forEach(a=>{
+      ctx.strokeStyle='rgba(80,40,10,0.6)';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a)*(R+4),cy+Math.sin(a)*(R+4));
+      ctx.lineTo(cx+Math.cos(a+Math.PI)*(R+4),cy+Math.sin(a+Math.PI)*(R+4));
+      ctx.stroke();
+      // White inner line for visibility
+      ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);
+      ctx.lineTo(cx+Math.cos(a+Math.PI)*R,cy+Math.sin(a+Math.PI)*R);
+      ctx.stroke();
+    });
+    // Pulsing ring to show pizza is tappable
+    const pulse=0.4+0.3*Math.sin(Date.now()/200);
+    ctx.strokeStyle=`rgba(255,200,40,${pulse})`;ctx.lineWidth=4;
+    ctx.setLineDash([8,8]);
+    ctx.beginPath();ctx.arc(cx,cy,R+8,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([]);
+    // Knife hint text
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.font=`bold ${Math.max(14,W*0.035)}px sans-serif`;ctx.textAlign='center';
+    ctx.fillText('🔪 Tap to cut!',cx,cy+R+30);ctx.textAlign='left';
+  }
   // Bake glow
   if(pizzaState==='baking'){
     const glow=0.2+0.2*Math.sin(pizzaBakeTimer*8);
