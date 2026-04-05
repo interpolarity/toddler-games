@@ -204,7 +204,7 @@ function addBtn(cls,emoji,label,onclick,disabled){
   btn.innerHTML=`<span class="emoji">${emoji}</span>${label}`;
   if(!disabled){
     const handler=e=>{e.preventDefault();btn.style.transform='translateY(4px) scale(0.93)';setTimeout(()=>btn.style.transform='',150);onclick()};
-    btn.addEventListener('click',handler);btn.addEventListener('touchstart',handler,{passive:false});
+    btn.addEventListener('click',handler);
   }
   buttonsArea.appendChild(btn);
 }
