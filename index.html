@@ -320,7 +320,7 @@ function drawDumpRocks(){
 
 function startDigGame(){
   const fromMenu=currentMode!=='dig';
-  currentMode='dig';particles=[];confetti=[];dumpRocks=[];holeRocks=[];
+  currentMode='dig';particles=[];confetti=[];dumpRocks=[];
   digState='dig';truckLoad=[];
   if(fromMenu){pileSizes={sand:1,rocks:1,water:1};dumpHoleLayers=[];holeRocks=[]}
   if(!pileSizes)pileSizes={sand:1,rocks:1,water:1};
@@ -947,37 +947,10 @@ function drawDumpTruck(x,y){
   ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-1*s,-3*s,2*s,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#888';ctx.beginPath();ctx.arc(-1*s,-3*s,1*s,0,Math.PI*2);ctx.fill();
   ctx.restore();
-  // Load inside bed
+  // Load inside bed — draw each layer at its stacked position
   if(truckLoad.length>0){const lh=(bedH-4*s)/MAX_SCOOPS;
     ctx.save();ctx.beginPath();ctx.rect(6*s,-bedH+2*s,bedW-14*s,bedH-4*s);ctx.clip();
-    // Draw non-rock layers normally, combine rocks into one fill
-    let rockCount=0;
-    truckLoad.forEach((mat,i)=>{
-      if(mat==='rocks'){rockCount++}
-      else{drawDigMaterialFill(6*s,-4*s-(i+1)*lh,bedW-14*s,lh,mat,1000+i*137)}
-    });
-    if(rockCount>0){
-      const fillH=rockCount*lh,fillY=-4*s-fillH;
-      const rng3=seededRand(2024),loadW=bedW-14*s,loadX=6*s;
-      // Base fill
-      ctx.fillStyle='#607d8b';ctx.fillRect(loadX,fillY,loadW,fillH);
-      // Draw natural stones filling the area
-      const numRocks=Math.max(6,rockCount*5);
-      for(let ri=0;ri<numRocks;ri++){
-        const rx=loadX+rng3()*(loadW-4)+2,ry=fillY+rng3()*(fillH-2)+1;
-        const rr=3+rng3()*Math.min(loadW,fillH)*0.18;
-        const cols=['#546e7a','#5d6d7e','#455a64','#78909c','#607d8b'];
-        ctx.fillStyle=cols[Math.floor(rng3()*cols.length)];
-        const pts=6;const vxr=[],vyr=[];
-        for(let p=0;p<pts;p++){const a=(p/pts)*Math.PI*2+(rng3()-0.5)*0.2,d=rr*(0.7+rng3()*0.3);
-          vxr.push(rx+Math.cos(a)*d);vyr.push(ry+Math.sin(a)*d)}
-        ctx.beginPath();ctx.moveTo((vxr[pts-1]+vxr[0])/2,(vyr[pts-1]+vyr[0])/2);
-        for(let p=0;p<pts;p++){const nx=(vxr[p]+vxr[(p+1)%pts])/2,ny=(vyr[p]+vyr[(p+1)%pts])/2;
-          ctx.quadraticCurveTo(vxr[p],vyr[p],nx,ny)}
-        ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=0.8;ctx.stroke();
-        ctx.fillStyle='#b0bec5';ctx.globalAlpha=0.2;ctx.beginPath();ctx.arc(rx-rr*0.1,ry-rr*0.15,rr*0.25,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-      }
-    }
+    truckLoad.forEach((mat,i)=>{drawDigMaterialFill(6*s,-4*s-(i+1)*lh,bedW-14*s,lh,mat,1000+i*137)});
     ctx.restore()}
   ctx.restore();ctx.restore();
 }
