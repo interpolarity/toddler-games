@@ -1799,9 +1799,9 @@ function drawMatchGame(){
 // =============================================
 const PANCAKE_SYRUPS=[
   {id:'maple',emoji:'🍯',label:'Maple',color:'#c49556',dark:'#8d6e63',react:'😊'},
-  {id:'chocolate',emoji:'🍫',label:'Choco',color:'#5d4037',dark:'#3e2723',react:'🤎'},
-  {id:'strawberry',emoji:'🍓',label:'Berry',color:'#e91e63',dark:'#c2185b',react:'❤️'},
-  {id:'blueberry',emoji:'🫐',label:'Blue',color:'#5c6bc0',dark:'#3949ab',react:'💙'},
+  {id:'chocolate',emoji:'🍫',label:'Choco',voice:'Chocolate',color:'#5d4037',dark:'#3e2723',react:'🤎'},
+  {id:'strawberry',emoji:'🍓',label:'Strawberry',voice:'Strawberry',color:'#f48fb1',dark:'#ec407a',react:'❤️'},
+  {id:'blueberry',emoji:'🫐',label:'Blueberry',voice:'Blueberry',color:'#5c6bc0',dark:'#3949ab',react:'💙'},
 ];
 const PANCAKE_FRUITS=[
   {id:'strawberry',emoji:'🍓',label:'Strawberry',color:'#e53935'},
@@ -1848,7 +1848,7 @@ function addPancakeItem(id){
   pancakeStack.push(id);pancakeBounceTimer=0.3;
   wobbleVel+=(Math.random()-0.5)*0.06;
   if(id==='pancake'){playTone(200,0.15,'triangle',0.2);playTone(150,0.1,'square',0.1);sayWord('Pancake!')}
-  else{const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);if(s){playTone(400,0.1,'sine',0.12);sayWord(s.label)}}
+  else{const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);if(s){playTone(400,0.1,'sine',0.12);sayWord(s.voice||s.label)}}
   const totalH=getPancakeHeight();const visH=H*0.7-60;
   pancakeCamY=Math.max(0,totalH-visH+60);
   spawnParticles(W*0.35,H*0.7-15-totalH,8,['#d7a86e','#c49556','#ffca28'],{vyRange:4,spread:20});
