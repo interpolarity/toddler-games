@@ -279,6 +279,9 @@ function showMenu(){
     {emoji:'🫧',label:'Bubbles!',bg:'linear-gradient(180deg,#64b5f6,#1976d2)',fn:startBalloonGame},
     {emoji:'🧺',label:'Catch!',bg:'linear-gradient(180deg,#81c784,#43a047)',fn:startCatchGame},
     {emoji:'✏️',label:'Trace!',bg:'linear-gradient(180deg,#fff176,#f9a825)',color:'#5d4037',fn:startTraceGame},
+    {emoji:'🎹',label:'Music!',bg:'linear-gradient(180deg,#ce93d8,#6a1b9a)',fn:startMusicGame},
+    {emoji:'🏁',label:'Maze!',bg:'linear-gradient(180deg,#a5d6a7,#2e7d32)',fn:startMazeGame},
+    {emoji:'🌱',label:'Garden!',bg:'linear-gradient(180deg,#c8e6c9,#66bb6a)',fn:startGardenGame},
   ];
   games.forEach(g=>{
     const card=document.createElement('div');
@@ -2843,6 +2846,378 @@ function drawTraceGame(){
   drawParticles(0);drawConfetti();
 }
 
+// =============================================
+// MUSIC GAME
+// =============================================
+const MUSIC_NOTES=[
+  {name:'C4',freq:262,color:'#f44336'},{name:'D4',freq:294,color:'#ff9800'},
+  {name:'E4',freq:330,color:'#ffeb3b'},{name:'F4',freq:349,color:'#4caf50'},
+  {name:'G4',freq:392,color:'#00bcd4'},{name:'A4',freq:440,color:'#2196f3'},
+  {name:'B4',freq:494,color:'#9c27b0'},{name:'C5',freq:523,color:'#e91e63'}
+];
+const TWINKLE=[0,0,4,4,5,5,4,3,3,2,2,1,1,0];
+let musicBars=[],musicMode='free',musicSongIdx=0,musicSongTimer=0,musicSongPlaying=false;
+
+function startMusicGame(){
+  currentMode='music';particles=[];confetti=[];
+  musicMode='free';musicSongIdx=0;musicSongPlaying=false;musicSongTimer=0;
+  musicBars=MUSIC_NOTES.map((_,i)=>({pulse:0}));
+  updateMusicButtons();
+  instruction.textContent='Tap the bars! 🎵';
+}
+function updateMusicButtons(){
+  buttonsArea.innerHTML='';
+  addBtn('btn-go','🎵','Song',()=>{initAudio();musicMode='song';musicSongIdx=0;musicSongPlaying=true;musicSongTimer=0;instruction.textContent='Follow along! 🎶'});
+  addBtn('btn-again','🎹','Free Play',()=>{initAudio();musicMode='free';musicSongPlaying=false;instruction.textContent='Tap the bars! 🎵'});
+  addBtn('btn-menu','🏠','Menu',()=>{showMenu()});
+}
+function handleMusicTap(tx,ty){
+  const btnH=100,topY=H*0.08,areaH=H-topY-btnH-20;
+  const barW=W/MUSIC_NOTES.length;
+  const idx=Math.floor(tx/barW);
+  if(idx<0||idx>=MUSIC_NOTES.length)return;
+  const note=MUSIC_NOTES[idx];
+  const barH=areaH*(1-(idx*0.06));
+  const barY=topY+areaH-barH;
+  if(ty<barY-10)return;
+  initAudio();
+  playTone(note.freq,0.5,'sine',0.25);playTone(note.freq*2,0.3,'sine',0.08,0.05);
+  musicBars[idx].pulse=1;
+  spawnParticles(tx,ty,10,[note.color,'#ffffff'],{vyRange:6,spread:20,maxSize:7});
+  if(musicMode==='song'&&musicSongPlaying){
+    if(idx===TWINKLE[musicSongIdx]){
+      musicSongIdx++;musicSongTimer=0;
+      if(musicSongIdx>=TWINKLE.length){
+        musicSongPlaying=false;instruction.textContent='Great job! 🌟';
+        spawnConfetti();playJingle();
+      }
+    }
+  }
+}
+function updateMusicGame(dt){
+  musicBars.forEach(b=>{if(b.pulse>0)b.pulse=Math.max(0,b.pulse-dt*4)});
+  if(musicMode==='song'&&musicSongPlaying){
+    musicSongTimer+=dt;
+    if(musicSongTimer>3){musicSongTimer=0;}
+  }
+  updateParticles(dt);updateConfetti();
+}
+function drawMusicGame(){
+  // Dark stage background
+  ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,W,H);
+  // Spotlights
+  for(let i=0;i<3;i++){
+    const grd=ctx.createRadialGradient(W*(0.2+i*0.3),0,0,W*(0.2+i*0.3),0,H*0.7);
+    grd.addColorStop(0,'rgba(255,255,255,0.06)');grd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+  }
+  const btnH=100,topY=H*0.08,areaH=H-topY-btnH-20;
+  const barW=W/MUSIC_NOTES.length;
+  const pad=barW*0.1;
+  MUSIC_NOTES.forEach((note,i)=>{
+    const barH=areaH*(1-(i*0.06));
+    const barY=topY+areaH-barH;
+    const p=musicBars[i].pulse;
+    const scale=1+p*0.08;
+    const bx=i*barW+pad,bw=barW-pad*2;
+    ctx.save();ctx.translate(bx+bw/2,barY+barH);ctx.scale(scale,scale);ctx.translate(-(bx+bw/2),-(barY+barH));
+    ctx.fillStyle=note.color;
+    drawRoundRect(bx,barY,bw,barH,8);ctx.fill();
+    // Highlight
+    ctx.fillStyle='rgba(255,255,255,'+(0.15+p*0.3)+')';
+    drawRoundRect(bx+4,barY+4,bw-8,barH*0.3,6);ctx.fill();
+    ctx.restore();
+    // Note name
+    ctx.fillStyle='#fff';ctx.font='bold '+Math.max(14,barW*0.3)+'px sans-serif';
+    ctx.textAlign='center';ctx.fillText(note.name.replace('4','').replace('5',''),bx+bw/2,barY+barH-10);
+  });
+  // Song highlight
+  if(musicMode==='song'&&musicSongPlaying&&musicSongIdx<TWINKLE.length){
+    const hi=TWINKLE[musicSongIdx];
+    const bx=hi*barW+pad,bw=barW-pad*2;
+    const barH=areaH*(1-(hi*0.06));
+    const barY=topY+areaH-barH;
+    ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.setLineDash([8,4]);
+    drawRoundRect(bx-2,barY-2,bw+4,barH+4,10);ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrow
+    ctx.fillStyle='#fff';ctx.font='bold '+Math.max(20,W*0.05)+'px sans-serif';
+    ctx.textAlign='center';ctx.fillText('⬇',bx+bw/2,barY-8);
+  }
+  ctx.textAlign='left';
+  drawParticles(0);drawConfetti();
+}
+
+// =============================================
+// MAZE GAME
+// =============================================
+let mazeGrid=[],mazeCols=5,mazeRows=5,mazeCellW,mazeCellH,mazeOfsX,mazeOfsY;
+let mazeBall={x:0,y:0},mazeGoal={c:0,r:0},mazeDragging=false,mazeWon=false,mazeLevel=0;
+
+function generateMaze(cols,rows){
+  const grid=[];
+  for(let r=0;r<rows;r++){grid[r]=[];for(let c=0;c<cols;c++)grid[r][c]={top:true,right:true,bottom:true,left:true,visited:false};}
+  const stack=[];let cur={r:0,c:0};grid[0][0].visited=true;
+  function neighbors(r,c){
+    const n=[];
+    if(r>0&&!grid[r-1][c].visited)n.push({r:r-1,c});
+    if(r<rows-1&&!grid[r+1][c].visited)n.push({r:r+1,c});
+    if(c>0&&!grid[r][c-1].visited)n.push({r,c:c-1});
+    if(c<cols-1&&!grid[r][c+1].visited)n.push({r,c:c+1});
+    return n;
+  }
+  let total=cols*rows,visited=1;
+  while(visited<total){
+    const nb=neighbors(cur.r,cur.c);
+    if(nb.length>0){
+      const next=nb[Math.floor(Math.random()*nb.length)];stack.push(cur);
+      if(next.r<cur.r){grid[cur.r][cur.c].top=false;grid[next.r][next.c].bottom=false}
+      else if(next.r>cur.r){grid[cur.r][cur.c].bottom=false;grid[next.r][next.c].top=false}
+      else if(next.c<cur.c){grid[cur.r][cur.c].left=false;grid[next.r][next.c].right=false}
+      else{grid[cur.r][cur.c].right=false;grid[next.r][next.c].left=false}
+      cur=next;grid[cur.r][cur.c].visited=true;visited++;
+    } else if(stack.length>0){cur=stack.pop()}
+  }
+  return grid;
+}
+function startMazeGame(){
+  currentMode='maze';particles=[];confetti=[];mazeWon=false;mazeLevel=0;
+  newMaze();updateMazeButtons();
+}
+function newMaze(){
+  mazeWon=false;
+  mazeGrid=generateMaze(mazeCols,mazeRows);
+  const btnH=100,topY=H*0.1;
+  const areaH=H-topY-btnH-20,areaW=W*0.9;
+  mazeCellW=Math.min(areaW/mazeCols,areaH/mazeRows);mazeCellH=mazeCellW;
+  mazeOfsX=(W-mazeCols*mazeCellW)/2;mazeOfsY=topY+(areaH-mazeRows*mazeCellH)/2;
+  mazeBall={x:mazeOfsX+mazeCellW*0.5,y:mazeOfsY+mazeCellH*0.5};
+  mazeGoal={c:mazeCols-1,r:mazeRows-1};
+  instruction.textContent='Drag to the flag! 🏁';
+}
+function updateMazeButtons(){
+  buttonsArea.innerHTML='';
+  addBtn('btn-again','🔄','New',()=>{initAudio();newMaze();updateMazeButtons()});
+  addBtn('btn-menu','🏠','Menu',()=>{showMenu()});
+}
+function getMazeCell(px,py){
+  const c=Math.floor((px-mazeOfsX)/mazeCellW),r=Math.floor((py-mazeOfsY)/mazeCellH);
+  return{c:Math.max(0,Math.min(mazeCols-1,c)),r:Math.max(0,Math.min(mazeRows-1,r))};
+}
+function handleMazeMove(tx,ty){
+  if(mazeWon)return;
+  mazeDragging=true;
+  // Move ball toward finger, checking walls
+  const speed=4;
+  const dx=tx-mazeBall.x,dy=ty-mazeBall.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<2)return;
+  const steps=Math.ceil(dist/speed);
+  const sx=dx/steps,sy=dy/steps;
+  for(let i=0;i<steps;i++){
+    const nx=mazeBall.x+sx,ny=mazeBall.y+sy;
+    const curCell=getMazeCell(mazeBall.x,mazeBall.y);
+    const newCell=getMazeCell(nx,ny);
+    const r=curCell.r,c=curCell.c;
+    if(r<0||r>=mazeRows||c<0||c>=mazeCols)break;
+    const cell=mazeGrid[r][c];
+    let blocked=false;
+    // Check wall crossings
+    const cellLeft=mazeOfsX+c*mazeCellW,cellTop=mazeOfsY+r*mazeCellH;
+    const cellRight=cellLeft+mazeCellW,cellBottom=cellTop+mazeCellH;
+    const br=W*0.03;
+    if(nx<cellLeft+br&&cell.left)blocked=true;
+    if(nx>cellRight-br&&cell.right)blocked=true;
+    if(ny<cellTop+br&&cell.top)blocked=true;
+    if(ny>cellBottom-br&&cell.bottom)blocked=true;
+    if(!blocked){mazeBall.x=nx;mazeBall.y=ny}else break;
+  }
+  // Check win
+  const gc=getMazeCell(mazeBall.x,mazeBall.y);
+  if(gc.c===mazeGoal.c&&gc.r===mazeGoal.r&&!mazeWon){
+    mazeWon=true;spawnConfetti();playJingle();
+    instruction.textContent='You did it! 🎉';
+    mazeLevel++;
+    if(mazeLevel<5){setTimeout(()=>{newMaze();updateMazeButtons()},2000)}
+    else{setTimeout(()=>{instruction.textContent='All mazes done! 🌟'},2200)}
+  }
+}
+function handleMazeEnd(){mazeDragging=false}
+function updateMazeGame(dt){updateParticles(dt);updateConfetti()}
+function drawMazeGame(){
+  // Graph paper background
+  ctx.fillStyle='#f5f5f0';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#d0d0c8';ctx.lineWidth=0.5;
+  const gs=20;
+  for(let x=0;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  // Maze cells
+  ctx.strokeStyle='#5d4037';ctx.lineWidth=Math.max(4,mazeCellW*0.08);ctx.lineCap='round';
+  for(let r=0;r<mazeRows;r++){for(let c=0;c<mazeCols;c++){
+    const x=mazeOfsX+c*mazeCellW,y=mazeOfsY+r*mazeCellH,cell=mazeGrid[r][c];
+    if(cell.top){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+mazeCellW,y);ctx.stroke()}
+    if(cell.left){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+mazeCellH);ctx.stroke()}
+    if(c===mazeCols-1&&cell.right){ctx.beginPath();ctx.moveTo(x+mazeCellW,y);ctx.lineTo(x+mazeCellW,y+mazeCellH);ctx.stroke()}
+    if(r===mazeRows-1&&cell.bottom){ctx.beginPath();ctx.moveTo(x,y+mazeCellH);ctx.lineTo(x+mazeCellW,y+mazeCellH);ctx.stroke()}
+  }}
+  // Start marker
+  ctx.fillStyle='#4caf50';ctx.beginPath();ctx.arc(mazeOfsX+mazeCellW*0.5,mazeOfsY+mazeCellH*0.5,W*0.025,0,Math.PI*2);ctx.fill();
+  // Goal flag
+  const gx=mazeOfsX+(mazeGoal.c+0.5)*mazeCellW,gy=mazeOfsY+(mazeGoal.r+0.5)*mazeCellH;
+  ctx.font='bold '+Math.max(22,mazeCellW*0.5)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🏁',gx,gy);
+  // Ball
+  const br=W*0.04;
+  ctx.fillStyle='#2196f3';ctx.beginPath();ctx.arc(mazeBall.x,mazeBall.y,br,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.35)';ctx.beginPath();ctx.arc(mazeBall.x-br*0.2,mazeBall.y-br*0.25,br*0.35,0,Math.PI*2);ctx.fill();
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  // Level
+  ctx.fillStyle='#5d4037';ctx.font='bold '+Math.max(16,W*0.035)+'px sans-serif';ctx.textAlign='center';
+  ctx.fillText('Maze '+(mazeLevel+1)+' of 5',W/2,mazeOfsY-10);ctx.textAlign='left';
+  drawParticles(0);drawConfetti();
+}
+
+// =============================================
+// GARDEN GAME
+// =============================================
+const GARDEN_STAGES=['seed','sprout','stem','bud','flower'];
+const GARDEN_STAGE_WORDS=['Seed!','Sprout!','Growing!','Bud!','Flower!'];
+const FLOWER_COLORS=['#f44336','#e91e63','#ff9800','#ffeb3b','#9c27b0','#2196f3','#ff5722'];
+let gardenPlants=[],gardenButterflies=[],gardenDone=false;
+
+function startGardenGame(){
+  currentMode='garden';particles=[];confetti=[];gardenDone=false;
+  gardenButterflies=[];
+  gardenPlants=[];
+  for(let i=0;i<5;i++)gardenPlants.push({stage:-1,water:0,color:FLOWER_COLORS[Math.floor(Math.random()*FLOWER_COLORS.length)],scaleAnim:0,waterAnim:0});
+  updateGardenButtons();
+  instruction.textContent='Tap soil to plant! 🌱';
+}
+function updateGardenButtons(){
+  buttonsArea.innerHTML='';
+  addBtn('btn-water','💧','Water',()=>{initAudio();waterNextPlant()});
+  addBtn('btn-again','🌱','New Garden',()=>{initAudio();startGardenGame()});
+  addBtn('btn-menu','🏠','Menu',()=>{showMenu()});
+}
+function waterNextPlant(){
+  for(let i=0;i<gardenPlants.length;i++){
+    const p=gardenPlants[i];
+    if(p.stage>=0&&p.stage<4){waterPlant(i);return}
+  }
+}
+function waterPlant(idx){
+  const p=gardenPlants[idx];if(p.stage<0||p.stage>=4)return;
+  p.stage++;p.scaleAnim=0;p.waterAnim=1;
+  playTone(400+p.stage*80,0.3,'sine',0.15);
+  sayWord(GARDEN_STAGE_WORDS[p.stage]);
+  const spotX=getGardenSpotX(idx),spotY=H*0.72;
+  spawnParticles(spotX,spotY-20,8,['#64b5f6','#bbdefb','#e3f2fd'],{vyRange:5,spread:15,maxSize:5});
+  checkGardenDone();
+}
+function getGardenSpotX(i){return W*0.12+i*(W*0.76/4)}
+function handleGardenTap(tx,ty){
+  for(let i=0;i<gardenPlants.length;i++){
+    const sx=getGardenSpotX(i),sy=H*0.72;
+    const dx=tx-sx,dy=ty-sy;
+    if(dx*dx+dy*dy<(W*0.08)*(W*0.08)){
+      initAudio();
+      const p=gardenPlants[i];
+      if(p.stage===-1){
+        p.stage=0;p.scaleAnim=0;playPop();sayWord('Seed!');
+        instruction.textContent='Tap to water! 💧';
+      } else if(p.stage<4){waterPlant(i)}
+      return;
+    }
+  }
+}
+function checkGardenDone(){
+  if(gardenPlants.every(p=>p.stage>=4)&&!gardenDone){
+    gardenDone=true;spawnConfetti();playJingle();
+    instruction.textContent='Beautiful garden! 🌸';
+    for(let i=0;i<5;i++)gardenButterflies.push({x:Math.random()*W,y:H*0.2+Math.random()*H*0.3,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*1,wing:0});
+  }
+}
+function updateGardenGame(dt){
+  gardenPlants.forEach(p=>{
+    if(p.scaleAnim<1)p.scaleAnim=Math.min(1,p.scaleAnim+dt*3);
+    if(p.waterAnim>0)p.waterAnim=Math.max(0,p.waterAnim-dt*2);
+  });
+  gardenButterflies.forEach(b=>{
+    b.x+=b.vx;b.y+=b.vy+Math.sin(Date.now()*0.003+b.x)*0.5;b.wing+=dt*8;
+    if(b.x<0||b.x>W)b.vx*=-1;if(b.y<H*0.1||b.y>H*0.6)b.vy*=-1;
+  });
+  updateParticles(dt);updateConfetti();
+}
+function drawGardenGame(){
+  // Sky
+  const sky=ctx.createLinearGradient(0,0,0,H*0.7);sky.addColorStop(0,'#64b5f6');sky.addColorStop(1,'#bbdefb');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  // Sun
+  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.85,H*0.08,30,0,Math.PI*2);ctx.fill();
+  drawCloud(W*0.15,H*0.1,0.7);drawCloud(W*0.55,H*0.06,0.5);
+  // Grass
+  ctx.fillStyle='#66bb6a';ctx.fillRect(0,H*0.65,W,H*0.35);
+  ctx.fillStyle='#558b2f';ctx.fillRect(0,H*0.65,W,4);
+  // Fence
+  ctx.fillStyle='#8d6e63';
+  for(let i=0;i<8;i++){const fx=W*0.05+i*(W*0.13);ctx.fillRect(fx,H*0.52,W*0.03,H*0.16)}
+  ctx.fillRect(W*0.03,H*0.56,W*0.94,H*0.02);ctx.fillRect(W*0.03,H*0.62,W*0.94,H*0.02);
+  // Soil spots and plants
+  for(let i=0;i<5;i++){
+    const sx=getGardenSpotX(i),sy=H*0.78;
+    // Soil mound
+    ctx.fillStyle='#5d4037';ctx.beginPath();ctx.ellipse(sx,sy,W*0.065,H*0.025,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#795548';ctx.beginPath();ctx.ellipse(sx,sy-H*0.005,W*0.055,H*0.018,0,0,Math.PI*2);ctx.fill();
+    // Water droplets
+    const p=gardenPlants[i];
+    if(p.waterAnim>0){
+      ctx.globalAlpha=p.waterAnim;ctx.fillStyle='#64b5f6';
+      for(let d=0;d<4;d++){ctx.beginPath();ctx.arc(sx-15+d*10,sy-20-d*8-p.waterAnim*15,3,0,Math.PI*2);ctx.fill()}
+      ctx.globalAlpha=1;
+    }
+    if(p.stage<0)continue;
+    const sc=easeOut(p.scaleAnim);
+    ctx.save();ctx.translate(sx,sy);ctx.scale(sc,sc);
+    if(p.stage===0){
+      // Seed
+      ctx.fillStyle='#795548';ctx.beginPath();ctx.ellipse(0,-8,6,4,0.3,0,Math.PI*2);ctx.fill();
+    } else if(p.stage===1){
+      // Sprout
+      ctx.fillStyle='#4caf50';ctx.fillRect(-2,-25,4,20);
+      ctx.beginPath();ctx.ellipse(-8,-28,8,5,0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(8,-28,8,5,-0.5,0,Math.PI*2);ctx.fill();
+    } else if(p.stage===2){
+      // Stem with leaves
+      ctx.fillStyle='#388e3c';ctx.fillRect(-3,-50,6,45);
+      ctx.fillStyle='#4caf50';ctx.beginPath();ctx.ellipse(-14,-30,12,6,0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(14,-38,12,6,-0.5,0,Math.PI*2);ctx.fill();
+    } else if(p.stage===3){
+      // Bud
+      ctx.fillStyle='#388e3c';ctx.fillRect(-3,-65,6,60);
+      ctx.fillStyle='#4caf50';ctx.beginPath();ctx.ellipse(-14,-35,12,6,0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(14,-48,12,6,-0.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(0,-70,10,0,Math.PI*2);ctx.fill();
+    } else if(p.stage>=4){
+      // Full flower
+      ctx.fillStyle='#388e3c';ctx.fillRect(-3,-70,6,65);
+      ctx.fillStyle='#4caf50';ctx.beginPath();ctx.ellipse(-14,-35,12,6,0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(14,-50,12,6,-0.5,0,Math.PI*2);ctx.fill();
+      // Petals
+      ctx.fillStyle=p.color;
+      for(let a=0;a<6;a++){const ang=a*Math.PI/3;ctx.beginPath();ctx.ellipse(Math.cos(ang)*14,-75+Math.sin(ang)*14,10,6,ang,0,Math.PI*2);ctx.fill()}
+      ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(0,-75,7,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  // Butterflies
+  gardenButterflies.forEach(b=>{
+    ctx.font=Math.max(20,W*0.05)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.save();ctx.translate(b.x,b.y);
+    const ws=Math.sin(b.wing)*0.3;ctx.scale(1+ws,1);ctx.fillText('🦋',0,0);ctx.restore();
+  });
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  drawParticles(0);drawConfetti();
+}
+
 // Handle canvas taps for match game
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
@@ -2854,6 +3229,9 @@ canvas.addEventListener('click',e=>{
   else if(currentMode==='catch')handleCatchTap(e.clientX);
   else if(currentMode==='sort')handleSortTap(e.clientX,e.clientY);
   else if(currentMode==='trace')handleTraceTap(e.clientX,e.clientY);
+  else if(currentMode==='music')handleMusicTap(e.clientX,e.clientY);
+  else if(currentMode==='garden')handleGardenTap(e.clientX,e.clientY);
+  else if(currentMode==='maze')handleMazeMove(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
@@ -2865,21 +3243,26 @@ canvas.addEventListener('touchstart',e=>{
   else if(currentMode==='catch'){e.preventDefault();handleCatchTap(e.touches[0].clientX)}
   else if(currentMode==='sort'){e.preventDefault();handleSortTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='trace'){e.preventDefault();handleTraceTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='music'){e.preventDefault();handleMusicTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='garden'){e.preventDefault();handleGardenTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='maze'){e.preventDefault();handleMazeMove(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
 canvas.addEventListener('mousemove',e=>{
   handlePaintMove(e.clientX,e.clientY);
   if(currentMode==='catch')handleCatchMove(e.clientX);
   if(currentMode==='sort')handleSortMove(e.clientX,e.clientY);
   if(currentMode==='trace')handleTraceMove(e.clientX,e.clientY);
+  if(currentMode==='maze')handleMazeMove(e.clientX,e.clientY);
 });
-canvas.addEventListener('mouseup',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd()});
+canvas.addEventListener('mouseup',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd();handleMazeEnd()});
 canvas.addEventListener('touchmove',e=>{
   if(currentMode==='paint'){e.preventDefault();handlePaintMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='catch'){e.preventDefault();handleCatchMove(e.touches[0].clientX)}
   else if(currentMode==='sort'){e.preventDefault();handleSortMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='trace'){e.preventDefault();handleTraceMove(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='maze'){e.preventDefault();handleMazeMove(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
-canvas.addEventListener('touchend',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd()});
+canvas.addEventListener('touchend',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd();handleMazeEnd()});
 // Block ALL browser gestures (pull-to-refresh, swipe navigation, minimize)
 document.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
 document.addEventListener('gesturestart',e=>{e.preventDefault()});
@@ -3386,6 +3769,9 @@ function gameLoop(ts){
   else if(currentMode==='catch'){updateCatchGame(dt);drawCatchGame()}
   else if(currentMode==='sort'){updateSortGame(dt);drawSortGame()}
   else if(currentMode==='trace'){updateTraceGame(dt);drawTraceGame()}
+  else if(currentMode==='music'){updateMusicGame(dt);drawMusicGame()}
+  else if(currentMode==='maze'){updateMazeGame(dt);drawMazeGame()}
+  else if(currentMode==='garden'){updateGardenGame(dt);drawGardenGame()}
 
   requestAnimationFrame(gameLoop);
 }
