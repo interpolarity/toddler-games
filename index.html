@@ -328,7 +328,7 @@ const DIG_MAT={
   rocks:{color:'#78909c',dark:'#546e7a',light:'#b0bec5',emoji:'🪨',label:'Rocks'},
   water:{color:'#29b6f6',dark:'#0288d1',light:'#81d4fa',emoji:'💧',label:'Water'},
 };
-const PILES={sand:{xFrac:0.15},rocks:{xFrac:0.40},water:{xFrac:0.65}};
+const PILES={sand:{xFrac:0.12},rocks:{xFrac:0.32},water:{xFrac:0.52}};
 let digState,truckLoad,dumpHoleLayers,pileSizes;
 let excX,excTargetX,excStartX,excArmAngle,excStickAngle,excBucketAngle,excBucketMat,excAnimPhase,excAnimTime;
 let screenShakeX=0,screenShakeY=0,screenShakeTimer=0;
@@ -399,7 +399,7 @@ function startDigGame(){
   if(!dumpHoleLayers)dumpHoleLayers=[];
   excArmAngle=0;excStickAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;screenShakeTimer=0;
   truckBedAngle=0;digTarget=null;animCallback=null;
-  digGroundY=H>W*1.5?H*0.42:H*0.55;excX=W*0.08;truckX=W*0.62;
+  digGroundY=H>W*1.5?H*0.42:H*0.55;excX=W*0.08;truckX=W*0.68;
   updateDigButtons();
 }
 
@@ -444,7 +444,7 @@ function digMoveToTruck(){
 }
 function digStartDrive(){
   if(truckLoad.length===0)return;digState='drive';driveTime=0;
-  driveStartTruckX=truckX;driveStartExcX=excX;driveTargetTruckX=W*0.7;
+  driveStartTruckX=truckX;driveStartExcX=excX;driveTargetTruckX=W*0.72;
   playSound_dig('honk');updateDigButtons();
 }
 function digDoDump(){
@@ -649,10 +649,10 @@ function drawDigGame(){
   drawExcavator(excX,digGroundY);
   // Truck
   drawDumpTruck(truckX,digGroundY);
-  // Truck indicator — bigger squares
-  if(digState==='dig'||digState==='digging'){const bs=W*0.05,gap=W*0.015,tw=MAX_SCOOPS*(bs+gap)-gap,sx=truckX-tw/2,iy=digGroundY-W*0.18;
-    for(let i=0;i<MAX_SCOOPS;i++){const bx=sx+i*(bs+gap);ctx.fillStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].color:'rgba(255,255,255,0.2)';drawRoundRect(bx,iy,bs,bs,4);ctx.fill();ctx.strokeStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].dark:'rgba(255,255,255,0.15)';ctx.lineWidth=2;ctx.stroke()}
-    if(truckLoad.length>=MAX_SCOOPS){ctx.fillStyle='#fff';ctx.font=`bold ${W*0.04}px sans-serif`;ctx.textAlign='center';ctx.fillText('FULL!',truckX,iy-W*0.02)}
+  // Load count on truck
+  if((digState==='dig'||digState==='digging')&&truckLoad.length>0){
+    ctx.fillStyle='#fff';ctx.font=`bold ${W*0.04}px sans-serif`;ctx.textAlign='center';
+    ctx.fillText(truckLoad.length+'/'+MAX_SCOOPS,truckX,digGroundY-W*0.15);ctx.textAlign='left';
   }
   drawDumpRocks();drawParticles(0);drawConfetti();
   ctx.restore(); // screen shake
