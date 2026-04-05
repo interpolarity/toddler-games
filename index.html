@@ -1862,7 +1862,9 @@ function addPancakeFruit(id){
   const f=PANCAKE_FRUITS.find(f=>f.id===id);
   const rng=seededRand(id.length*333+pancakeFruits.length*77);
   if(!pancakeFruitPos[id])pancakeFruitPos[id]=[];
-  pancakeFruitPos[id].push({x:(rng()-0.5)*0.7,y:rng()*0.3-0.15});
+  // Spread on oval top surface using polar coords
+  const fa=rng()*Math.PI*2,fr=0.2+rng()*0.6;
+  pancakeFruitPos[id].push({x:Math.cos(fa)*fr,y:Math.sin(fa)*fr*0.4});
   if(f){playPop();sayWord(f.label)}
   spawnParticles(W*0.35,H*0.7-getPancakeHeight()-10,6,f?[f.color,'#fff']:['#e91e63'],{vyRange:3,spread:15});
   updatePancakeButtons();
@@ -1996,12 +1998,15 @@ function drawPancakeGame(){
   // Fruit toppings on top of stack
   if(pancakeFruits.length>0){
     const topSurf=curY;const bncF=pancakeBounceTimer>0?bounce:0;
+    const ry=hw*0.32; // match pancake oval
+    ctx.globalAlpha=1;
+    const fsz=Math.max(20,W*0.06);
+    ctx.font=`${fsz}px sans-serif`;ctx.textAlign='center';
     Object.keys(pancakeFruitPos).forEach(fid=>{
       const f=PANCAKE_FRUITS.find(f=>f.id===fid);if(!f)return;
       const positions=pancakeFruitPos[fid];if(!positions)return;
       positions.forEach(pos=>{
-        const fx=stackX+pos.x*hw*2,fy=topSurf+pos.y*20+bncF-5;
-        ctx.font=`${Math.max(18,W*0.05)}px sans-serif`;ctx.textAlign='center';
+        const fx=stackX+pos.x*hw*0.9,fy=topSurf-ry*0.3+pos.y*ry+bncF;
         ctx.fillText(f.emoji,fx,fy);
       });
     });
