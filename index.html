@@ -2584,13 +2584,15 @@ function updateWreckGame(dt){
       // Split into 7-12 varied debris chunks per block
       const chunks=7+Math.floor(Math.random()*6);
       for(let c=0;c<chunks;c++){
-        const sizeVar=0.3+Math.random()*0.8;
-        const cw=b.w*sizeVar*0.45+5;
-        const ch=b.h*sizeVar*0.6+4;
+        const sizeVar=0.15+Math.random()*1.0; // wider range: tiny to large
+        const cw=b.w*sizeVar*0.4+3;
+        const ch=b.h*sizeVar*0.5+3;
         const detail=Math.floor(Math.random()*6);
-        wreckDebris.push({x:b.x+(Math.random()-0.5)*b.w*0.8,y:b.y-Math.random()*8,
-          w:cw,h:ch,color:b.color,dark:b.dark,light:b.light,id:b.id,detail,
-          rot:b.rot+(Math.random()-0.5)*1.2});
+        const shape=Math.random(); // 0-0.5=rect, 0.5-0.75=square, 0.75-1=triangle
+        wreckDebris.push({x:b.x+(Math.random()-0.5)*b.w*0.9,y:b.y-Math.random()*10,
+          w:cw,h:shape<0.5?ch:(shape<0.75?Math.min(cw,ch):ch),
+          color:b.color,dark:b.dark,light:b.light,id:b.id,detail,shape:shape<0.5?'rect':shape<0.75?'sq':'tri',
+          rot:b.rot+(Math.random()-0.5)*1.5});
       }
       wreckFlyingBlocks.splice(i,1);
     }
@@ -2678,14 +2680,19 @@ function drawWreckGame(){
   wreckDebris.forEach(d=>{
     ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);
     const hw=d.w/2,hh=d.h/2;
-    // Wall chunk — vary shade per piece for visual interest
+    // Chunk shape — rect, square, or triangle with shade variation
     const shade=d.detail*0.08-0.15;
     ctx.fillStyle=d.color;ctx.globalAlpha=1;
-    drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill();
+    if(d.shape==='tri'){
+      ctx.beginPath();ctx.moveTo(-hw,-hh);ctx.lineTo(hw,-hh*0.3);ctx.lineTo(hw*0.2,hh);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=d.dark;ctx.lineWidth=1.2;ctx.stroke();
+    }else{
+      drawRoundRect(-hw,-hh,d.w,d.h,d.shape==='sq'?1:2);ctx.fill();
+      ctx.strokeStyle=d.dark;ctx.lineWidth=1.2;ctx.stroke();
+    }
     // Tint lighter or darker
-    if(shade>0){ctx.fillStyle=`rgba(255,255,255,${shade})`;drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill()}
-    else{ctx.fillStyle=`rgba(0,0,0,${-shade})`;drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill()}
-    ctx.strokeStyle=d.dark;ctx.lineWidth=1.2;ctx.stroke();
+    if(shade>0){ctx.fillStyle=`rgba(255,255,255,${shade})`;if(d.shape==='tri'){ctx.fill()}else{drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill()}}
+    else if(shade<0){ctx.fillStyle=`rgba(0,0,0,${-shade})`;if(d.shape==='tri'){ctx.fill()}else{drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill()}}
 
     if(d.detail===0&&d.w>14){
       // Window — bright yellow or blue, always visible
