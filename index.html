@@ -2500,10 +2500,10 @@ function smashTower(){
     wreckFlyingBlocks.push({
       x:towerX+(Math.random()-0.5)*20,y:by,
       w:block.w,h:block.h,color:block.color,dark:block.dark,light:block.light,id:block.id,
-      vx:dir*(3+Math.random()*6)*impactForce,
-      vy:-(4+Math.random()*8+i*1.5),
+      vx:dir*(2+Math.random()*3)*impactForce,
+      vy:-(3+Math.random()*6+i*1),
       rot:0,rotV:(Math.random()-0.5)*0.4,
-      life:1,decay:0.008+Math.random()*0.005
+      life:1,decay:0.02+Math.random()*0.01
     });
     // Shatter particles per block
     const cols=block.id==='glass'?['#e3f2fd','#90caf9','#42a5f5','#fff']:
@@ -2571,13 +2571,15 @@ function updateWreckGame(dt){
   for(let i=wreckFlyingBlocks.length-1;i>=0;i--){
     const b=wreckFlyingBlocks[i];
     b.vy+=500*dt;b.x+=b.vx*dt*60;b.y+=b.vy*dt;b.rot+=b.rotV;b.life-=b.decay;
+    // Keep on screen
+    if(b.x<b.w)b.x=b.w;if(b.x>W-b.w)b.x=W-b.w;
     // Bounce off ground
     if(b.y>wreckGroundY-b.h/2){
-      b.y=wreckGroundY-b.h/2;b.vy*=-0.4;b.vx*=0.7;b.rotV*=0.6;
+      b.y=wreckGroundY-b.h/2;b.vy*=-0.3;b.vx*=0.6;b.rotV*=0.5;
       if(Math.abs(b.vy)>2)playTone(100+Math.random()*80,0.06,'triangle',0.05);
     }
-    // Settle into debris when stopped
-    if(b.life<=0.3&&Math.abs(b.vy)<2&&Math.abs(b.vx)<1){
+    // Settle into debris when slowed
+    if(b.life<=0.4&&Math.abs(b.vy)<3&&Math.abs(b.vx)<2){
       wreckDebris.push({x:b.x,y:b.y,w:b.w,h:b.h,color:b.color,dark:b.dark,rot:b.rot});
       wreckFlyingBlocks.splice(i,1);
     }else if(b.life<=0){wreckFlyingBlocks.splice(i,1)}
@@ -2590,7 +2592,8 @@ function updateWreckGame(dt){
   if(wreckDozerActive){
     wreckDozerX+=W*0.4*dt;
     // Push debris to the right
-    wreckDebris.forEach(d=>{if(wreckDozerX+W*0.06>d.x-d.w/2){d.x=wreckDozerX+W*0.06+d.w/2+Math.random()*5;d.y=wreckGroundY-d.h/2-Math.random()*5}});
+    const bladeEdge=wreckDozerX+W*0.003*38;
+    wreckDebris.forEach(d=>{if(bladeEdge>d.x-d.w/2){d.x=bladeEdge+d.w/2+Math.random()*8;d.y=wreckGroundY-d.h/2-Math.random()*5;d.rot+=(Math.random()-0.5)*0.2}});
     if(wreckDozerX>W+50){wreckDozerActive=false;wreckDebris=[];startWreckGame()}
   }
   updateParticles(dt);updateConfetti();
@@ -2677,20 +2680,50 @@ function drawWreckGame(){
   });
   // Bulldozer
   if(wreckDozerActive){
-    const dx=wreckDozerX,dy=wreckGroundY,ds=W*0.002;
+    const dx=wreckDozerX,dy=wreckGroundY,ds=W*0.003;
     // Tracks
-    ctx.fillStyle='#333';drawRoundRect(dx-25*ds,dy,50*ds,12*ds,6*ds);ctx.fill();
+    ctx.fillStyle='#2a2a2a';drawRoundRect(dx-30*ds,dy-2*ds,65*ds,16*ds,8*ds);ctx.fill();
+    ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.stroke();
+    for(let i=0;i<7;i++){const gx=dx-26*ds+i*8.5*ds;ctx.strokeStyle='#444';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(gx,dy);ctx.lineTo(gx,dy+12*ds);ctx.stroke()}
+    // Drive wheels
+    [[-22*ds,7*ds],[26*ds,7*ds]].forEach(([wx,wy])=>{ctx.fillStyle='#444';ctx.beginPath();ctx.arc(dx+wx,dy+wy,7*ds,0,Math.PI*2);ctx.fill();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(dx+wx,dy+wy,3*ds,0,Math.PI*2);ctx.fill()});
     // Body
-    let bg=ctx.createLinearGradient(0,dy-30*ds,0,dy);bg.addColorStop(0,'#ffb300');bg.addColorStop(1,'#ff8f00');
-    ctx.fillStyle=bg;drawRoundRect(dx-20*ds,dy-28*ds,40*ds,28*ds,5*ds);ctx.fill();
+    let bg=ctx.createLinearGradient(0,dy-32*ds,0,dy);bg.addColorStop(0,'#ffcc02');bg.addColorStop(0.5,'#ffb300');bg.addColorStop(1,'#ff8f00');
+    ctx.fillStyle=bg;drawRoundRect(dx-22*ds,dy-30*ds,48*ds,30*ds,5*ds);ctx.fill();
     ctx.strokeStyle='#e65100';ctx.lineWidth=2;ctx.stroke();
-    // Cab window
-    ctx.fillStyle='#b3e5fc';drawRoundRect(dx-15*ds,dy-25*ds,18*ds,12*ds,3*ds);ctx.fill();
-    // Blade
-    ctx.fillStyle='#757575';ctx.fillRect(dx+20*ds,dy-18*ds,8*ds,20*ds);
-    ctx.strokeStyle='#555';ctx.lineWidth=2;ctx.strokeRect(dx+20*ds,dy-18*ds,8*ds,20*ds);
-    // Exhaust
-    ctx.fillStyle='rgba(150,150,150,0.3)';ctx.beginPath();ctx.arc(dx-10*ds,dy-32*ds-Math.sin(Date.now()/200)*3,5*ds,0,Math.PI*2);ctx.fill();
+    // Safety stripe
+    ctx.fillStyle='#212121';ctx.fillRect(dx-20*ds,dy-6*ds,44*ds,4*ds);
+    ctx.fillStyle='#ffd600';
+    for(let i=0;i<6;i++){ctx.save();ctx.beginPath();ctx.rect(dx-20*ds,dy-6*ds,44*ds,4*ds);ctx.clip();
+      const sx=dx-20*ds+i*10*ds;ctx.beginPath();ctx.moveTo(sx,dy-6*ds);ctx.lineTo(sx+5*ds,dy-6*ds);ctx.lineTo(sx+2*ds,dy-2*ds);ctx.lineTo(sx-3*ds,dy-2*ds);ctx.closePath();ctx.fill();ctx.restore()}
+    // Cab
+    ctx.fillStyle='#ffb300';drawRoundRect(dx-18*ds,dy-28*ds,24*ds,20*ds,4*ds);ctx.fill();
+    ctx.strokeStyle='#e65100';ctx.lineWidth=1.5;ctx.stroke();
+    // Window
+    let wg=ctx.createLinearGradient(0,dy-26*ds,0,dy-16*ds);wg.addColorStop(0,'#e1f5fe');wg.addColorStop(1,'#4fc3f7');
+    ctx.fillStyle=wg;drawRoundRect(dx-14*ds,dy-26*ds,16*ds,10*ds,3*ds);ctx.fill();
+    // === BIG FRONT BLADE ===
+    const bladeX=dx+28*ds,bladeW=10*ds,bladeH=30*ds;
+    let blg=ctx.createLinearGradient(bladeX,0,bladeX+bladeW,0);
+    blg.addColorStop(0,'#9e9e9e');blg.addColorStop(0.3,'#bdbdbd');blg.addColorStop(0.7,'#8a8a8a');blg.addColorStop(1,'#757575');
+    ctx.fillStyle=blg;
+    // Blade shape — tall curved front
+    ctx.beginPath();
+    ctx.moveTo(bladeX,dy-bladeH+5*ds);
+    ctx.quadraticCurveTo(bladeX+bladeW*1.2,dy-bladeH,bladeX+bladeW,dy-bladeH+8*ds);
+    ctx.lineTo(bladeX+bladeW,dy+2*ds);
+    ctx.lineTo(bladeX,dy+2*ds);
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#555';ctx.lineWidth=2.5;ctx.stroke();
+    // Blade edge — reinforced bottom
+    ctx.fillStyle='#666';ctx.fillRect(bladeX,dy-2*ds,bladeW,4*ds);
+    // Push arm connecting body to blade
+    ctx.fillStyle='#e65100';ctx.fillRect(dx+24*ds,dy-14*ds,8*ds,4*ds);
+    ctx.fillRect(dx+24*ds,dy-22*ds,8*ds,4*ds);
+    // Exhaust puff
+    const puffs=[0,1,2];
+    puffs.forEach(p=>{ctx.fillStyle=`rgba(150,150,150,${0.25-p*0.07})`;
+      ctx.beginPath();ctx.arc(dx-8*ds,dy-34*ds-p*7*ds-Math.sin(Date.now()/200+p)*3,3*ds+p*2*ds,0,Math.PI*2);ctx.fill()});
   }
 
   // Wrecking crane vehicle
