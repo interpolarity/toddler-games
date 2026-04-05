@@ -2470,8 +2470,10 @@ function startSmashing(){
 function releaseWreckBall(){
   if(wreckBallReleased)return;
   wreckBallReleased=true;
-  // Ball velocity from pendulum
-  const craneX=W*0.82,craneY=H*0.08,ropeLen=H*0.35;
+  // Ball velocity from pendulum — boom tip is pivot
+  let tH=0;wreckTower.forEach(b=>tH+=b.h);const tTopY=wreckGroundY-tH;
+  const boomTipX=W*0.82-W*0.12,boomTipY=Math.min(tTopY-30,H*0.1);
+  const craneX=boomTipX,craneY=boomTipY,ropeLen=H*0.3;
   wreckBallX=craneX+Math.sin(wreckBallAngle)*ropeLen;
   wreckBallY=craneY+Math.cos(wreckBallAngle)*ropeLen;
   // Tangential velocity from pendulum — should fly leftward toward tower
@@ -2579,16 +2581,21 @@ function updateWreckGame(dt){
 
 function drawWreckGame(){
   wreckGroundY=H*0.65;
-  ctx.save();ctx.translate(wreckShakeX,wreckShakeY);
+  // Camera pan — shift down if tower is too tall
+  let towerH=0;wreckTower.forEach(b=>towerH+=b.h);
+  const towerTopY=wreckGroundY-towerH;
+  const camPan=Math.max(0,40-towerTopY);
+
+  ctx.save();ctx.translate(wreckShakeX,wreckShakeY+camPan);
   // Sky
-  let grd=ctx.createLinearGradient(0,0,0,wreckGroundY);
+  let grd=ctx.createLinearGradient(0,-camPan,0,wreckGroundY);
   grd.addColorStop(0,'#4fc3f7');grd.addColorStop(1,'#b3e5fc');
-  ctx.fillStyle=grd;ctx.fillRect(0,0,W,wreckGroundY);
-  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.12,H*0.08,30,0,Math.PI*2);ctx.fill();
-  drawCloud(W*0.3,H*0.05,0.6);drawCloud(W*0.6,H*0.09,0.5);
+  ctx.fillStyle=grd;ctx.fillRect(0,-camPan,W,wreckGroundY+camPan);
+  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.12,H*0.08-camPan,30,0,Math.PI*2);ctx.fill();
+  drawCloud(W*0.3,H*0.05-camPan,0.6);drawCloud(W*0.6,H*0.09-camPan,0.5);
   // Ground
   ctx.fillStyle='#8bc34a';ctx.fillRect(0,wreckGroundY-4,W,8);
-  grd=ctx.createLinearGradient(0,wreckGroundY+4,0,H);grd.addColorStop(0,'#8d6e63');grd.addColorStop(1,'#5d4037');
+  grd=ctx.createLinearGradient(0,wreckGroundY+4,0,H+camPan);grd.addColorStop(0,'#8d6e63');grd.addColorStop(1,'#5d4037');
   ctx.fillStyle=grd;ctx.fillRect(0,wreckGroundY+4,W,H);
 
   // Tower
@@ -2645,45 +2652,64 @@ function drawWreckGame(){
     ctx.globalAlpha=1;ctx.restore();
   });
 
-  // Crane
-  const craneX=W*0.82,craneTopY=H*0.05;
-  // Crane arm
-  ctx.fillStyle='#ffa726';
-  ctx.fillRect(craneX-5,craneTopY,10,wreckGroundY-craneTopY); // vertical mast
-  ctx.fillRect(towerX-20,craneTopY,craneX-towerX+25,8); // horizontal jib
-  ctx.strokeStyle='#e65100';ctx.lineWidth=2;
-  ctx.strokeRect(craneX-5,craneTopY,10,wreckGroundY-craneTopY);
-  ctx.strokeRect(towerX-20,craneTopY,craneX-towerX+25,8);
+  // Wrecking crane vehicle
+  const craneX=W*0.82,gy=wreckGroundY;
+  const cs=W*0.0022; // crane scale
+  // Tracks
+  const trW=50*cs,trH=14*cs;
+  ctx.fillStyle='#333';drawRoundRect(craneX-trW/2,gy,trW,trH,trH/2);ctx.fill();
+  ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.stroke();
+  for(let i=0;i<5;i++){const tx2=craneX-trW/2+6*cs+i*(trW-12*cs)/4;ctx.strokeStyle='#444';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(tx2,gy+2);ctx.lineTo(tx2,gy+trH-2);ctx.stroke()}
+  // Wheels
+  [[-trW/2+trH/2,trH/2],[trW/2-trH/2,trH/2]].forEach(([wx,wy])=>{ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(craneX+wx,gy+wy,trH/2-2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(craneX+wx,gy+wy,trH/4,0,Math.PI*2);ctx.fill()});
+  // Cab body
+  const cabW=35*cs,cabH=28*cs;
+  let cg=ctx.createLinearGradient(0,gy-cabH,0,gy);cg.addColorStop(0,'#ffb300');cg.addColorStop(1,'#ff8f00');
+  ctx.fillStyle=cg;drawRoundRect(craneX-cabW/2,gy-cabH,cabW,cabH,5*cs);ctx.fill();
+  ctx.strokeStyle='#e65100';ctx.lineWidth=1.5;ctx.stroke();
+  // Cab window
+  ctx.fillStyle='#b3e5fc';drawRoundRect(craneX-cabW/2+4*cs,gy-cabH+4*cs,cabW*0.5,cabH*0.45,3*cs);ctx.fill();
+  // Safety stripe
+  ctx.fillStyle='#212121';ctx.fillRect(craneX-cabW/2+2*cs,gy-4*cs,cabW-4*cs,3*cs);
+  // Boom arm — extends from cab top toward upper-left
+  const boomBaseX=craneX,boomBaseY=gy-cabH+3*cs;
+  const boomTipX=craneX-W*0.12,boomTipY=Math.min(towerTopY-30,H*0.1);
+  const boomW=7*cs;
+  ctx.save();
+  const boomAngle=Math.atan2(boomTipY-boomBaseY,boomTipX-boomBaseX);
+  const boomLen=Math.sqrt((boomTipX-boomBaseX)**2+(boomTipY-boomBaseY)**2);
+  ctx.translate(boomBaseX,boomBaseY);ctx.rotate(boomAngle);
+  // Boom lattice
+  ctx.fillStyle='#ffa726';ctx.fillRect(0,-boomW/2,boomLen,boomW);
+  ctx.strokeStyle='#e65100';ctx.lineWidth=1.5;ctx.strokeRect(0,-boomW/2,boomLen,boomW);
+  // Cross-bracing
+  ctx.strokeStyle='#e65100';ctx.lineWidth=1;
+  for(let i=0;i<Math.floor(boomLen/15);i++){const bx2=8+i*15;ctx.beginPath();ctx.moveTo(bx2,-boomW/2);ctx.lineTo(bx2+10,boomW/2);ctx.stroke();ctx.beginPath();ctx.moveTo(bx2+10,-boomW/2);ctx.lineTo(bx2,boomW/2);ctx.stroke()}
+  ctx.restore();
+  // Pivot bolt
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(boomBaseX,boomBaseY,4*cs,0,Math.PI*2);ctx.fill();
 
-  // Wrecking ball
-  const ropeLen=H*0.35,ballR=W*0.04;
+  // Wrecking ball from boom tip
+  const ropeLen=H*0.3,ballR=W*0.04;
+  const craneTopY=boomTipY; // pendulum pivot at boom tip
   let ballX,ballY;
   if(!wreckBallReleased){
-    ballX=craneX+Math.sin(wreckBallAngle)*ropeLen;
-    ballY=craneTopY+4+Math.cos(wreckBallAngle)*ropeLen;
+    ballX=boomTipX+Math.sin(wreckBallAngle)*ropeLen;
+    ballY=craneTopY+Math.cos(wreckBallAngle)*ropeLen;
   }else{
     ballX=wreckBallX;ballY=wreckBallY;
   }
-  // Rope/chain — always drawn from crane to ball
+  // Rope/chain
   ctx.strokeStyle='#616161';ctx.lineWidth=3;
-  ctx.beginPath();ctx.moveTo(craneX,craneTopY+4);ctx.lineTo(ballX,ballY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(boomTipX,craneTopY);ctx.lineTo(ballX,ballY);ctx.stroke();
   const links=8;
-  for(let i=1;i<links;i++){
-    const t=i/links;
-    const lx=lerp(craneX,ballX,t),ly=lerp(craneTopY+4,ballY,t);
-    ctx.fillStyle=i%2?'#757575':'#616161';
-    ctx.beginPath();ctx.arc(lx,ly,2.5,0,Math.PI*2);ctx.fill();
-  }
+  for(let i=1;i<links;i++){const t=i/links;const lx=lerp(boomTipX,ballX,t),ly=lerp(craneTopY,ballY,t);
+    ctx.fillStyle=i%2?'#757575':'#616161';ctx.beginPath();ctx.arc(lx,ly,2.5,0,Math.PI*2);ctx.fill()}
   // Ball
-  ctx.fillStyle='#424242';
-  ctx.beginPath();ctx.arc(ballX,ballY,ballR,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#424242';ctx.beginPath();ctx.arc(ballX,ballY,ballR,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#212121';ctx.lineWidth=3;ctx.stroke();
-  // Ball highlight
-  ctx.fillStyle='rgba(255,255,255,0.2)';
-  ctx.beginPath();ctx.arc(ballX-ballR*0.25,ballY-ballR*0.25,ballR*0.4,0,Math.PI*2);ctx.fill();
-  // Ball ring
-  ctx.fillStyle='#616161';
-  ctx.beginPath();ctx.arc(ballX,ballY-ballR+3,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.arc(ballX-ballR*0.25,ballY-ballR*0.25,ballR*0.4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#616161';ctx.beginPath();ctx.arc(ballX,ballY-ballR+3,5,0,Math.PI*2);ctx.fill();
 
   drawParticles(0);drawConfetti();
   ctx.restore(); // shake
