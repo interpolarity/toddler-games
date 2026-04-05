@@ -633,33 +633,31 @@ function drawDigGame(){
     const totalLayers=dumpHoleLayers.length;
     const lh=Math.max(6,(hh-12)/Math.max(totalLayers,1)); // shrink layers to fit, min 6px
     ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();
-    // Draw rocks at bottom first, then sand, then water on top
-    holeRocks.forEach(r=>{
-      ctx.fillStyle=r.color;ctx.beginPath();
-      r.verts.forEach((v,i)=>{const vx=r.x+v.x*Math.cos(r.rotation)-v.y*Math.sin(r.rotation),vy=r.y+v.x*Math.sin(r.rotation)+v.y*Math.cos(r.rotation);if(i===0)ctx.moveTo(vx,vy);else ctx.lineTo(vx,vy)});
-      ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
-      ctx.fillStyle='#b0bec5';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(r.x-r.radius*0.15,r.y-r.radius*0.2,r.radius*0.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-    });
-    // Sand layers mingle with rocks at bottom
+    // Sand at bottom
     const sandLayers=[];const waterCount=dumpHoleLayers.filter(m=>m==='water').length;
     dumpHoleLayers.forEach((mat,i)=>{if(mat==='sand')sandLayers.push({mat,i})});
     const solidCount=sandLayers.length+dumpHoleLayers.filter(m=>m==='rocks').length;
     const sandLh=Math.max(6,(hh-12)/Math.max(solidCount+waterCount,1));
     sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-(di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,s.mat,5000+s.i*251)});
-    // Water fills like a pool from top of hole down to solid line — rocks visible through it
+    // Water — proportional to amount, rises from bottom
     if(waterCount>0){
-      const waterTop=digGroundY+8;
-      const waterFill=hh-6; // fills entire hole depth — rocks visible at bottom through it
-      // Semi-transparent water pool
+      const maxWaterH=hh-10;
+      const waterFill=Math.min(maxWaterH,waterCount*(maxWaterH/MAX_SCOOPS));
+      const waterTop=digGroundY+hh-waterFill;
       const wg=ctx.createLinearGradient(0,waterTop,0,waterTop+waterFill);
-      wg.addColorStop(0,'rgba(41,182,246,0.55)');wg.addColorStop(0.5,'rgba(2,136,209,0.5)');wg.addColorStop(1,'rgba(1,87,155,0.45)');
+      wg.addColorStop(0,'rgba(41,182,246,0.45)');wg.addColorStop(0.5,'rgba(2,136,209,0.4)');wg.addColorStop(1,'rgba(1,87,155,0.35)');
       ctx.fillStyle=wg;ctx.fillRect(hx-hw,waterTop,hw*2,waterFill);
-      // Animated waves at surface
       const wt=Date.now()/500;ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=2;
       for(let wr=0;wr<2;wr++){ctx.beginPath();for(let wx=hx-hw;wx<=hx+hw;wx+=4){
         const wy=waterTop+wr*8+Math.sin(wt+wx*0.08+wr*2)*3;
         if(wx===hx-hw)ctx.moveTo(wx,wy);else ctx.lineTo(wx,wy)}ctx.stroke()}
     }
+    // Rocks drawn LAST — visible on top of water (sitting in it like real rocks)
+    holeRocks.forEach(r=>{
+      ctx.fillStyle=r.color;ctx.beginPath();
+      r.verts.forEach((v,i)=>{const vx=r.x+v.x*Math.cos(r.rotation)-v.y*Math.sin(r.rotation),vy=r.y+v.x*Math.sin(r.rotation)+v.y*Math.cos(r.rotation);if(i===0)ctx.moveTo(vx,vy);else ctx.lineTo(vx,vy)});
+      ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
+    });
     ctx.restore()}
   // Excavator
   drawExcavator(excX,digGroundY);
