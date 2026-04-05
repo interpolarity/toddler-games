@@ -580,7 +580,7 @@ function updateDigGame(dt){
       const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));
       if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
   }
-  updateDumpRocks(dt);updateParticles(dt);updateConfetti();
+  updateParticles(dt);updateConfetti();
 }
 
 function drawDigGame(){
@@ -670,7 +670,7 @@ function drawDigGame(){
     ctx.fillStyle='#fff';ctx.font=`bold ${W*0.04}px sans-serif`;ctx.textAlign='center';
     ctx.fillText(truckLoad.length+'/'+MAX_SCOOPS,truckX,digGroundY-W*0.15);ctx.textAlign='left';
   }
-  drawDumpRocks();drawParticles(0);drawConfetti();
+  drawParticles(0);drawConfetti();
   ctx.restore(); // screen shake
 }
 
