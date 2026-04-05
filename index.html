@@ -278,7 +278,6 @@ function showMenu(){
     {emoji:'🎨',label:'Splash!',bg:'linear-gradient(180deg,#ce93d8,#8e24aa)',fn:startPaintGame},
     {emoji:'🫧',label:'Bubbles!',bg:'linear-gradient(180deg,#64b5f6,#1976d2)',fn:startBalloonGame},
     {emoji:'🧺',label:'Catch!',bg:'linear-gradient(180deg,#81c784,#43a047)',fn:startCatchGame},
-    {emoji:'🔵',label:'Sort!',bg:'linear-gradient(180deg,#90caf9,#1976d2)',fn:startSortGame},
     {emoji:'✏️',label:'Trace!',bg:'linear-gradient(180deg,#fff176,#f9a825)',color:'#5d4037',fn:startTraceGame},
   ];
   games.forEach(g=>{
@@ -2610,7 +2609,7 @@ function handleCatchEnd(){catchDragging=false}
 function updateCatchGame(dt){
   catchSpawnTimer+=dt;
   if(catchSpawnTimer>1.5+Math.random()*0.5){catchSpawnTimer=0;spawnCatchObject()}
-  const bw=W*0.125,by=H*0.82;
+  const bw=W*0.125,by=H*0.68;
   for(let i=catchObjects.length-1;i>=0;i--){
     const o=catchObjects[i];o.y+=o.vy*dt;
     if(o.y>=by-W*0.04&&Math.abs(o.x-catchBasketX)<bw+W*0.04){
@@ -2626,7 +2625,7 @@ function drawCatchGame(){
   const grd=ctx.createLinearGradient(0,0,0,H);
   grd.addColorStop(0,'#4fc3f7');grd.addColorStop(0.6,'#81d4fa');grd.addColorStop(1,'#66bb6a');
   ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#43a047';ctx.fillRect(0,H*0.85,W,H*0.15);
+  ctx.fillStyle='#43a047';ctx.fillRect(0,H*0.73,W,H*0.27);
   // Sun
   ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.85,H*0.08,30,0,Math.PI*2);ctx.fill();
   drawCloud(W*0.15,H*0.07,0.7);drawCloud(W*0.55,H*0.12,0.5);
@@ -2634,7 +2633,7 @@ function drawCatchGame(){
   const fs=Math.max(24,W*0.08);
   catchObjects.forEach(o=>{ctx.font=fs+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.emoji,o.x,o.y)});
   // Basket
-  const bx=catchBasketX,by=H*0.82,bw=W*0.125,bh=W*0.08;
+  const bx=catchBasketX,by=H*0.68,bw=W*0.125,bh=W*0.08;
   ctx.fillStyle='#8d6e63';
   ctx.beginPath();ctx.moveTo(bx-bw,by-bh*0.3);ctx.lineTo(bx-bw*0.8,by+bh);ctx.lineTo(bx+bw*0.8,by+bh);ctx.lineTo(bx+bw,by-bh*0.3);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#5d4037';ctx.lineWidth=3;ctx.stroke();
@@ -2773,8 +2772,8 @@ function updateTraceButtons(){
 function setupTraceShape(){
   traceDone=false;
   const s=TRACE_SHAPES[traceShapeIdx%TRACE_SHAPES.length];
-  const r=W*0.2;
-  tracePath=s.gen(W/2,H*0.4,r);
+  const r=Math.min(W,H)*0.3;
+  tracePath=s.gen(W/2,H*0.38,r);
   traceHit=new Array(tracePath.length).fill(false);
   traceSparkles=[];
   sayWord(s.name);updateTraceButtons();
