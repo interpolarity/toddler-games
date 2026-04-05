@@ -259,6 +259,8 @@ function showMenu(){
     {emoji:'🍕',label:'Pizza!',bg:'linear-gradient(180deg,#ff8a65,#e64a19)',fn:startPizzaGame},
     {emoji:'🃏',label:'Match!',bg:'linear-gradient(180deg,#66bb6a,#388e3c)',fn:startMatchGame},
     {emoji:'💥',label:'Smash!',bg:'linear-gradient(180deg,#ff7043,#d84315)',fn:startWreckGame},
+    {emoji:'🎨',label:'Splash!',bg:'linear-gradient(180deg,#ce93d8,#8e24aa)',fn:startPaintGame},
+    {emoji:'🫧',label:'Bubbles!',bg:'linear-gradient(180deg,#64b5f6,#1976d2)',fn:startBalloonGame},
   ];
   games.forEach(g=>{
     const card=document.createElement('div');
@@ -2364,18 +2366,202 @@ function drawPizzaScatter(cx,cy,innerR,id){
   });
 }
 
+// =============================================
+// PAINT SPLAT GAME
+// =============================================
+let paintSplats=[],paintColor='#f44336',paintRainbow=false,paintRainbowIdx=0;
+const PAINT_COLORS=[
+  {color:'#f44336',label:'Red',emoji:'🔴'},
+  {color:'#2196f3',label:'Blue',emoji:'🔵'},
+  {color:'#4caf50',label:'Green',emoji:'🟢'},
+  {color:'#ffeb3b',label:'Yellow',emoji:'🟡'},
+  {color:'#e91e63',label:'Pink',emoji:'🩷'},
+  {color:'#ff9800',label:'Orange',emoji:'🟠'},
+  {color:'#9c27b0',label:'Purple',emoji:'🟣'},
+];
+
+function startPaintGame(){
+  currentMode='paint';particles=[];confetti=[];
+  paintSplats=[];paintColor=PAINT_COLORS[0].color;paintRainbow=false;paintRainbowIdx=0;
+  updatePaintButtons();
+}
+
+function updatePaintButtons(){
+  buttonsArea.innerHTML='';
+  instruction.textContent=paintSplats.length===0?'Tap to paint!':'Keep painting!';
+  PAINT_COLORS.forEach(c=>addBtn('btn-food',c.emoji,'',()=>{initAudio();paintColor=c.color;paintRainbow=false;playPop();updatePaintButtons()}));
+  addBtn(paintRainbow?'btn-go':'btn-menu','🌈','',()=>{initAudio();paintRainbow=!paintRainbow;playPop();updatePaintButtons()});
+  addBtn('btn-again','🗑️','Clear',()=>{initAudio();paintSplats=[];playPop();updatePaintButtons()});
+}
+
+function handlePaintTap(tx,ty){
+  if(ty>H-100)return; // ignore taps on button area
+  initAudio();
+  let c=paintColor;
+  if(paintRainbow){c=PAINT_COLORS[paintRainbowIdx%PAINT_COLORS.length].color;paintRainbowIdx++}
+  // Main splat
+  const sz=20+Math.random()*30;
+  const droplets=[];
+  for(let i=0;i<8+Math.random()*6;i++){
+    const a=Math.random()*Math.PI*2,d=sz+Math.random()*sz*1.2;
+    droplets.push({x:Math.cos(a)*d,y:Math.sin(a)*d,r:3+Math.random()*8});
+  }
+  paintSplats.push({x:tx,y:ty,r:sz,color:c,droplets});
+  spawnParticles(tx,ty,8,[c,'#ffffff'],{vyRange:6,spread:30,maxSize:6});
+  // Splat sound
+  playTone(120+Math.random()*80,0.15,'triangle',0.15);
+  playTone(80+Math.random()*60,0.2,'square',0.08);
+  if(paintSplats.length===1)updatePaintButtons();
+}
+
+function updatePaintGame(dt){updateParticles(dt);updateConfetti()}
+
+function drawPaintGame(){
+  // White canvas background
+  ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,W,H);
+  // Easel frame border
+  const bw=8;
+  ctx.strokeStyle='#8d6e63';ctx.lineWidth=bw;
+  ctx.strokeRect(bw/2,bw/2,W-bw,H-bw);
+  ctx.strokeStyle='#a1887f';ctx.lineWidth=3;
+  ctx.strokeRect(bw+2,bw+2,W-bw*2-4,H-bw*2-4);
+  // Draw all splats
+  paintSplats.forEach(s=>{
+    ctx.fillStyle=s.color;
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+    // Droplets
+    s.droplets.forEach(d=>{
+      ctx.beginPath();ctx.arc(s.x+d.x,s.y+d.y,d.r,0,Math.PI*2);ctx.fill();
+    });
+  });
+  drawParticles(0);drawConfetti();
+}
+
+// =============================================
+// BALLOON BOUNCE GAME
+// =============================================
+let balloons=[],balloonScore=0,balloonSpawnTimer=0,balloonClouds=[];
+const BALLOON_COLORS=['#f44336','#e91e63','#9c27b0','#2196f3','#4caf50','#ff9800','#ffeb3b','#00bcd4'];
+
+function startBalloonGame(){
+  currentMode='balloon';particles=[];confetti=[];
+  balloons=[];balloonScore=0;balloonSpawnTimer=0;
+  balloonClouds=[];
+  for(let i=0;i<5;i++)balloonClouds.push({x:Math.random()*W,y:H*0.05+Math.random()*H*0.25,s:0.5+Math.random()*0.6,vx:0.2+Math.random()*0.3});
+  spawnBalloon();spawnBalloon();
+  updateBalloonButtons();
+}
+
+function updateBalloonButtons(){
+  buttonsArea.innerHTML='';
+  instruction.textContent='Popped: '+balloonScore+' 🎈';
+  addBtn('btn-again','🔄','Again!',()=>{initAudio();startBalloonGame()});
+}
+
+function spawnBalloon(){
+  const r=22+Math.random()*18;
+  balloons.push({
+    x:r+Math.random()*(W-r*2),y:H+r+Math.random()*40,
+    r,color:BALLOON_COLORS[Math.floor(Math.random()*BALLOON_COLORS.length)],
+    vy:-(1.2+Math.random()*1.5),vx:(Math.random()-0.5)*0.5,
+    taps:0,wobble:0,wobbleV:0,pop:false,popTimer:0
+  });
+}
+
+function handleBalloonTap(tx,ty){
+  for(let i=balloons.length-1;i>=0;i--){
+    const b=balloons[i];if(b.pop)continue;
+    const dx=tx-b.x,dy=ty-b.y;
+    if(dx*dx+dy*dy<(b.r+10)*(b.r+10)){
+      initAudio();b.taps++;b.vy=2+Math.random()*1.5; // bounce down
+      b.vx+=(Math.random()-0.5)*2;b.wobbleV=0.3;
+      if(b.taps>=3){
+        // Pop!
+        b.pop=true;b.popTimer=0.3;balloonScore++;
+        spawnParticles(b.x,b.y,15,[b.color,'#ffffff','#ffeb3b'],{vyRange:8,spread:25,maxSize:8});
+        spawnConfetti();playPop();
+        playTone(800,0.1,'sine',0.15);playTone(1200,0.08,'sine',0.1,0.05);
+        updateBalloonButtons();
+      }else{
+        // Boing sound
+        playTone(300+b.taps*200,0.15,'sine',0.15);
+        playTone(400+b.taps*200,0.1,'triangle',0.1,0.05);
+        spawnParticles(b.x,b.y,5,[b.color],{vyRange:4,spread:15,maxSize:4});
+      }
+      return;
+    }
+  }
+}
+
+function updateBalloonGame(dt){
+  balloonSpawnTimer+=dt;
+  if(balloonSpawnTimer>1+Math.random()){balloonSpawnTimer=0;spawnBalloon()}
+  for(let i=balloons.length-1;i>=0;i--){
+    const b=balloons[i];
+    if(b.pop){b.popTimer-=dt;if(b.popTimer<=0)balloons.splice(i,1);continue}
+    b.x+=b.vx;b.y+=b.vy;
+    b.vy-=dt*0.8; // float upward
+    b.vx*=0.99;
+    b.wobble+=b.wobbleV;b.wobbleV*=0.92;
+    // Bounce off walls
+    if(b.x<b.r){b.x=b.r;b.vx=Math.abs(b.vx)}
+    if(b.x>W-b.r){b.x=W-b.r;b.vx=-Math.abs(b.vx)}
+    // Remove if off top
+    if(b.y<-b.r*2)balloons.splice(i,1);
+  }
+  // Move clouds
+  balloonClouds.forEach(c=>{c.x+=c.vx*dt*20;if(c.x>W+60)c.x=-60});
+  updateParticles(dt);updateConfetti();
+}
+
+function drawBalloonGame(){
+  // Sky gradient
+  const grd=ctx.createLinearGradient(0,0,0,H);
+  grd.addColorStop(0,'#4fc3f7');grd.addColorStop(0.6,'#81d4fa');grd.addColorStop(1,'#b3e5fc');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+  // Sun
+  ctx.fillStyle='#ffeb3b';ctx.beginPath();ctx.arc(W*0.85,H*0.08,30,0,Math.PI*2);ctx.fill();
+  // Clouds
+  balloonClouds.forEach(c=>drawCloud(c.x,c.y,c.s));
+  // Balloons
+  balloons.forEach(b=>{
+    if(b.pop)return;
+    ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.sin(b.wobble)*0.15);
+    // String
+    ctx.strokeStyle='#999';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,b.r);ctx.quadraticCurveTo(3,b.r+15,-2,b.r+30);ctx.stroke();
+    // Balloon body
+    ctx.fillStyle=b.color;ctx.beginPath();ctx.ellipse(0,0,b.r*0.85,b.r,0,0,Math.PI*2);ctx.fill();
+    // Shine
+    ctx.fillStyle='rgba(255,255,255,0.35)';ctx.beginPath();ctx.ellipse(-b.r*0.25,-b.r*0.3,b.r*0.2,b.r*0.35,0.3,0,Math.PI*2);ctx.fill();
+    // Knot
+    ctx.fillStyle=b.color;ctx.beginPath();ctx.moveTo(-3,b.r);ctx.lineTo(3,b.r);ctx.lineTo(0,b.r+5);ctx.closePath();ctx.fill();
+    // Tap indicator
+    if(b.taps>0){
+      ctx.fillStyle='white';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(b.taps+'/3',0,0);
+    }
+    ctx.restore();
+  });
+  drawParticles(0);drawConfetti();
+}
+
 // Handle canvas taps for match game
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
   else if(currentMode==='dig')handleDigTap(e.clientX,e.clientY);
   else if(currentMode==='wreck')handleWreckTap(e.clientX,e.clientY);
   else if(currentMode==='pizza')handlePizzaTap(e.clientX,e.clientY);
+  else if(currentMode==='paint')handlePaintTap(e.clientX,e.clientY);
+  else if(currentMode==='balloon')handleBalloonTap(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='dig'){e.preventDefault();handleDigTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='wreck'){e.preventDefault();handleWreckTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='pizza'){e.preventDefault();handlePizzaTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='paint'){e.preventDefault();handlePaintTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='balloon'){e.preventDefault();handleBalloonTap(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
 
 function handleDigTap(tx,ty){
@@ -2874,6 +3060,8 @@ function gameLoop(ts){
   else if(currentMode==='wreck'){updateWreckGame(dt);drawWreckGame()}
   else if(currentMode==='pancake'){updatePancakeGame(dt);drawPancakeGame()}
   else if(currentMode==='pizza'){updatePizzaGame(dt);drawPizzaGame()}
+  else if(currentMode==='paint'){updatePaintGame(dt);drawPaintGame()}
+  else if(currentMode==='balloon'){updateBalloonGame(dt);drawBalloonGame()}
 
   requestAnimationFrame(gameLoop);
 }
