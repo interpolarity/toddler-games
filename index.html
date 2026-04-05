@@ -643,8 +643,8 @@ function drawDigGame(){
     sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-(di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,s.mat,5000+s.i*251)});
     // Water fills like a pool from top of hole down to solid line — rocks visible through it
     if(waterCount>0){
-      const waterFill=Math.min(hh-14,waterCount*sandLh);
       const waterTop=digGroundY+8;
+      const waterFill=hh-6; // fills entire hole depth — rocks visible at bottom through it
       // Semi-transparent water pool
       const wg=ctx.createLinearGradient(0,waterTop,0,waterTop+waterFill);
       wg.addColorStop(0,'rgba(41,182,246,0.55)');wg.addColorStop(0.5,'rgba(2,136,209,0.5)');wg.addColorStop(1,'rgba(1,87,155,0.45)');
