@@ -1874,28 +1874,26 @@ function addPancakeFruit(id){
   updatePancakeButtons();
 }
 function finishPancake(){
-  pancakeTotalLayers=pancakeStack.filter(s=>s!=='plate').length+pancakeFruits.length;
+  pancakeTotalLayers=pancakeStack.filter(s=>s==='pancake').length;
   pancakeEatCount=0;pancakeState='pick_char';playPop();updatePancakeButtons();
 }
 function pancakeDoEat(){
-  if(pancakeState!=='eating'||mouthOpenTimer>0.15)return;
-  // Eat fruits first, then stack items
-  if(pancakeFruits.length>0){
-    const removed=pancakeFruits.pop();const f=PANCAKE_FRUITS.find(f=>f.id===removed);
-    if(f&&pancakeFruitPos[removed])pancakeFruitPos[removed].pop();
-    pancakeEatCount++;mouthOpenTimer=0.3;playChomp(350);
-    spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,f?f.emoji:'🍓',f?f.color:null);
-    spawnFloatingEmoji(pancakeCustomerX,H*0.7-80,'😋');
-  }else if(pancakeStack.length>1){
+  if(pancakeState!=='eating'||pancakeStack.length<=1||mouthOpenTimer>0.15)return;
+  // Each NOM eats one whole pancake layer: all fruits (first time) + syrups above it + the pancake
+  // Clear all fruit toppings on first eat
+  if(pancakeFruits.length>0){pancakeFruits=[];pancakeFruitPos={}}
+  // Pop from top until we remove a pancake (inclusive)
+  let ate=false;
+  while(pancakeStack.length>1&&!ate){
     const removed=pancakeStack.pop();
-    pancakeEatCount++;mouthOpenTimer=0.3;
-    if(removed==='pancake'){playChomp(200);spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,'🥞','#d7a86e')}
-    else{const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===removed);playChomp(300);
-      spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,s?s.emoji:'🍯',s?s.color:null)}
-    spawnFloatingEmoji(pancakeCustomerX,H*0.7-80,'😊');
+    if(removed==='pancake')ate=true;
   }
-  spawnParticles(W*0.35,H*0.55,5,['#d7a86e','#c49556'],{vyRange:3,spread:15});
-  if(pancakeStack.length<=1&&pancakeFruits.length===0){
+  pancakeEatCount++;mouthOpenTimer=0.35;
+  playChomp(200);
+  spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,'🥞','#d7a86e');
+  spawnParticles(W*0.35,H*0.55,8,['#d7a86e','#c49556','#ffca28'],{vyRange:5,spread:25});
+  spawnFloatingEmoji(pancakeCustomerX,H*0.7-80,'😋');
+  if(pancakeStack.length<=1){
     pancakeState='done';playJingle();spawnConfetti();
     sayNumber(pancakeEatCount);setTimeout(()=>playTaDa(),600);
     updatePancakeButtons();
