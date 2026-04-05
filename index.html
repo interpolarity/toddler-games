@@ -1964,16 +1964,16 @@ function drawPancakeGame(){
       // Syrup layer with natural drips
       const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);
       if(s){
-        const sh=hw*0.08,sry=hw*0.24;
-        // Main syrup pool on top
+        const sh=hw*0.08,sry=hw*0.3;
+        // Main syrup pool on top — matches pancake width
         ctx.fillStyle=s.color;ctx.globalAlpha=0.85;
-        ctx.beginPath();ctx.ellipse(bX,bY-sh/2,hw*0.88,sry,0,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(bX,bY-sh/2,hw*0.97,sry,0,0,Math.PI*2);ctx.fill();
         // Natural drips — drawn as paths (narrow top, rounded bottom)
         const rng=seededRand(idx*77);
         for(let i=0;i<6;i++){
           const da=-Math.PI*0.1+rng()*Math.PI*1.2;
-          const edgeX=bX+Math.cos(da)*hw*0.84;
-          const edgeY=bY-sh/2+Math.sin(da)*sry*0.85;
+          const edgeX=bX+Math.cos(da)*hw*0.93;
+          const edgeY=bY-sh/2+Math.sin(da)*sry*0.9;
           const dLen=hw*0.1+rng()*hw*0.2;
           const dW=hw*0.025+rng()*hw*0.02;
           // Teardrop path: narrow at top, round at bottom
