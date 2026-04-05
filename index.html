@@ -96,11 +96,22 @@ function playTaDa(){
 function playMatch(){playTone(523,0.15,'sine',0.2);setTimeout(()=>playTone(659,0.15,'sine',0.2),100);setTimeout(()=>playTone(784,0.2,'sine',0.2),200)}
 function playWrong(){playTone(200,0.2,'square',0.1);setTimeout(()=>playTone(160,0.25,'square',0.1),150)}
 function playFlip(){playTone(800,0.08,'sine',0.1)}
+let enVoice=null;
+function findEnVoice(){
+  if(enVoice)return;
+  const v=speechSynthesis.getVoices();if(!v.length)return;
+  // Prefer native English voices: Samantha (iOS), Google US, any en-US, any en-*
+  enVoice=v.find(x=>x.name==='Samantha')||v.find(x=>x.name.includes('Google')&&x.lang.startsWith('en'))
+    ||v.find(x=>x.lang==='en-US'&&!x.localService===false)||v.find(x=>x.lang.startsWith('en'))||null;
+}
+if(window.speechSynthesis){speechSynthesis.addEventListener('voiceschanged',findEnVoice);findEnVoice()}
+function setEnVoice(utt){utt.lang='en-US';findEnVoice();if(enVoice)utt.voice=enVoice}
+
 function sayWord(word){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
   const utt=new SpeechSynthesisUtterance(word);
-  utt.lang='en-US';utt.rate=1.1;utt.pitch=1.5;utt.volume=1;
+  setEnVoice(utt);utt.rate=1.1;utt.pitch=1.5;utt.volume=1;
   window.speechSynthesis.speak(utt);
 }
 
@@ -113,7 +124,7 @@ function sayNumber(n){
     'Eleven!','Twelve!','Thirteen!','Fourteen!','Fifteen!','Sixteen!','Seventeen!','Eighteen!','Nineteen!','Twenty!'];
   const text=n<=20?(words[n]||n+'!'):(n+'!');
   const utt=new SpeechSynthesisUtterance(text);
-  utt.lang='en-US';utt.rate=1.2;utt.pitch=1.4;utt.volume=1;
+  setEnVoice(utt);utt.rate=1.2;utt.pitch=1.4;utt.volume=1;
   utt.onstart=()=>{speechBusy=true};
   utt.onend=()=>{speechBusy=false};
   window.speechSynthesis.speak(utt);
