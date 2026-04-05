@@ -341,6 +341,7 @@ let dumpTime,dumpPhase,dumpParticleTimer;
 let dumpDrainProgress=0,dumpStreamTimer=0,dumpTotalToDump=0;
 let digGroundY;
 let dumpRocks=[],holeRocks=[];
+let holeTransform=null,holeTransformTimer=0; // {type:'sandcastle'|'pond'|'mountain',anim:0}
 
 function makeRockVerts(radius){
   const pts=5+Math.floor(Math.random()*3);
@@ -395,7 +396,7 @@ function startDigGame(){
   const fromMenu=currentMode!=='dig';
   currentMode='dig';particles=[];confetti=[];dumpRocks=[];
   digState='dig';truckLoad=[];
-  if(fromMenu){pileSizes={sand:1,rocks:1,water:1};dumpHoleLayers=[];holeRocks=[]}
+  if(fromMenu){pileSizes={sand:1,rocks:1,water:1};dumpHoleLayers=[];holeRocks=[];holeTransform=null}
   if(!pileSizes)pileSizes={sand:1,rocks:1,water:1};
   if(!dumpHoleLayers)dumpHoleLayers=[];
   excArmAngle=0;excStickAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;screenShakeTimer=0;
@@ -418,8 +419,11 @@ function updateDigButtons(){
     instruction.textContent='Tap to DUMP!';
     addBtn('btn-dump','⬇️','DUMP!',()=>{initAudio();digDoDump()});
   }else if(digState==='celebrate'){
-
-    instruction.textContent='YAY! 🎉';
+    if(holeTransform){
+      const names={sandcastle:'Sandcastle! 🏰',pond:'Pond! 🦆',mountain:'Mountain! ⛰️'};
+      instruction.textContent=names[holeTransform.type]||'YAY! 🎉';
+      addBtn('btn-go','🆕','New Hole',()=>{initAudio();dumpHoleLayers=[];holeRocks=[];holeTransform=null;digState='dig';updateDigButtons()});
+    }else{instruction.textContent='YAY! 🎉'}
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startDigGame()});
   }else{
     // Digging/driving/dumping animation — no buttons, nothing to accidentally tap
@@ -581,9 +585,77 @@ function updateDigGame(dt){
     }
     else if(dumpPhase===2){// Lower bed back
       const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));
-      if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
+      if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();
+        // Check if hole is full enough to transform
+        if(dumpHoleLayers.length>=10&&!holeTransform){
+          const sand=dumpHoleLayers.filter(m=>m==='sand').length;
+          const rocks=dumpHoleLayers.filter(m=>m==='rocks').length;
+          const water=dumpHoleLayers.filter(m=>m==='water').length;
+          const dom=sand>=rocks&&sand>=water?'sandcastle':rocks>=sand&&rocks>=water?'mountain':'pond';
+          holeTransform={type:dom,anim:0};holeTransformTimer=0;
+          sayWord(dom==='sandcastle'?'Sandcastle!':dom==='pond'?'Pond!':'Mountain!');
+        }
+        updateDigButtons()}}
   }
+  if(holeTransform){holeTransform.anim=Math.min(1,holeTransform.anim+dt*0.8)}
   updateParticles(dt);updateConfetti();
+}
+
+function drawHoleTransform(hx,gy,hw,hh){
+  if(!holeTransform||holeTransform.anim<=0)return;
+  const a=easeOut(holeTransform.anim),t=holeTransform.type;
+  ctx.save();
+  if(t==='sandcastle'){
+    const bx=hx,by=gy-a*hh*0.8;
+    // Castle base
+    ctx.fillStyle='#f9a825';
+    ctx.fillRect(bx-hw*0.7,by,hw*1.4,gy-by);
+    // Towers
+    ctx.fillRect(bx-hw*0.7,by-hw*0.5*a,hw*0.4,hw*0.5*a);
+    ctx.fillRect(bx+hw*0.3,by-hw*0.5*a,hw*0.4,hw*0.5*a);
+    // Center tower
+    ctx.fillRect(bx-hw*0.25,by-hw*0.7*a,hw*0.5,hw*0.7*a);
+    // Battlements
+    ctx.fillStyle='#f57f17';
+    for(let bi=0;bi<5;bi++){ctx.fillRect(bx-hw*0.65+bi*hw*0.3,by-hw*0.5*a-hw*0.1*a,hw*0.12,hw*0.1*a)}
+    for(let bi=0;bi<3;bi++){ctx.fillRect(bx-hw*0.2+bi*hw*0.2,by-hw*0.7*a-hw*0.1*a,hw*0.12,hw*0.1*a)}
+    // Door
+    ctx.fillStyle='#5d4037';ctx.beginPath();ctx.arc(bx,gy,hw*0.15,Math.PI,0);ctx.fill();
+    // Flag
+    ctx.fillStyle='#e53935';ctx.fillRect(bx,by-hw*0.7*a-hw*0.4*a,2,hw*0.35*a);
+    ctx.beginPath();ctx.moveTo(bx+2,by-hw*0.7*a-hw*0.4*a);ctx.lineTo(bx+hw*0.25,by-hw*0.7*a-hw*0.25*a);ctx.lineTo(bx+2,by-hw*0.7*a-hw*0.1*a);ctx.fill();
+  }else if(t==='pond'){
+    // Water surface
+    const py=gy-a*6;
+    ctx.fillStyle='#29b6f6';ctx.globalAlpha=0.7;
+    ctx.beginPath();ctx.ellipse(hx,py,hw*1.1,hw*0.35*a,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // Ripples
+    const wt=Date.now()/400;ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;
+    for(let ri=0;ri<3;ri++){ctx.beginPath();ctx.ellipse(hx,py,hw*(0.3+ri*0.25),hw*(0.1+ri*0.08)*a,0,0,Math.PI*2);ctx.stroke()}
+    // Rubber duck
+    if(a>0.5){ctx.font=`${Math.max(20,hw*0.5)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🦆',hx+Math.sin(wt)*hw*0.2,py-5);ctx.textAlign='left';ctx.textBaseline='alphabetic'}
+    // Reeds
+    ctx.fillStyle='#558b2f';
+    ctx.fillRect(hx-hw*0.9,py-hw*0.4*a,3,hw*0.4*a);ctx.fillRect(hx+hw*0.85,py-hw*0.3*a,3,hw*0.3*a);
+  }else if(t==='mountain'){
+    const by=gy;
+    // Mountain
+    ctx.fillStyle='#78909c';
+    ctx.beginPath();ctx.moveTo(hx-hw*1.2,by);ctx.lineTo(hx,by-hh*1.2*a);ctx.lineTo(hx+hw*1.2,by);ctx.closePath();ctx.fill();
+    // Snow cap
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.moveTo(hx-hw*0.25,by-hh*0.85*a);ctx.lineTo(hx,by-hh*1.2*a);ctx.lineTo(hx+hw*0.25,by-hh*0.85*a);ctx.closePath();ctx.fill();
+    // Texture
+    ctx.fillStyle='#607d8b';ctx.globalAlpha=0.3;
+    ctx.beginPath();ctx.moveTo(hx-hw*0.5,by);ctx.lineTo(hx-hw*0.1,by-hh*0.6*a);ctx.lineTo(hx+hw*0.3,by);ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
+    // Tree at base
+    if(a>0.7){ctx.fillStyle='#4caf50';ctx.beginPath();ctx.arc(hx-hw*0.7,by-hw*0.2,hw*0.15,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#5d4037';ctx.fillRect(hx-hw*0.7-2,by-hw*0.05,4,hw*0.1)}
+  }
+  ctx.restore();
 }
 
 function drawDigGame(){
@@ -658,6 +730,8 @@ function drawDigGame(){
       ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=0.8;ctx.stroke();
     });
     ctx.restore()}
+  // Transformation (sandcastle/pond/mountain rising from hole)
+  drawHoleTransform(hx,digGroundY,hw,hh);
   // Excavator
   drawExcavator(excX,digGroundY);
   // Truck
