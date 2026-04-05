@@ -2388,31 +2388,45 @@ function startPaintGame(){
 
 function updatePaintButtons(){
   buttonsArea.innerHTML='';
-  instruction.textContent=paintSplats.length===0?'Tap to paint!':'Keep painting!';
-  PAINT_COLORS.forEach(c=>addBtn('btn-food',c.emoji,'',()=>{initAudio();paintColor=c.color;paintRainbow=false;playPop();updatePaintButtons()}));
-  addBtn(paintRainbow?'btn-go':'btn-menu','🌈','',()=>{initAudio();paintRainbow=!paintRainbow;playPop();updatePaintButtons()});
+  instruction.textContent=paintSplats.length===0?'Tap to splash!':'Keep splashing!';
+  PAINT_COLORS.forEach(c=>{
+    const sel=!paintRainbow&&paintColor===c.color;
+    const btn=document.createElement('button');
+    btn.className='game-btn';
+    btn.style.background=c.color;btn.style.minWidth='52px';btn.style.minHeight='52px';btn.style.borderRadius='50%';
+    btn.style.border=sel?'4px solid #fff':'4px solid rgba(0,0,0,0.2)';
+    btn.style.boxShadow=sel?'0 0 0 3px '+c.color+',0 4px 0 rgba(0,0,0,0.3)':'0 4px 0 rgba(0,0,0,0.3)';
+    btn.innerHTML=sel?'<span style="font-size:22px">✓</span>':'';
+    btn.addEventListener('click',()=>{initAudio();paintColor=c.color;paintRainbow=false;playPop();updatePaintButtons()});
+    buttonsArea.appendChild(btn);
+  });
+  addBtn(paintRainbow?'btn-go':'btn-menu','🌈','Rainbow',()=>{initAudio();paintRainbow=!paintRainbow;playPop();updatePaintButtons()});
   addBtn('btn-again','🗑️','Clear',()=>{initAudio();paintSplats=[];playPop();updatePaintButtons()});
 }
 
-function handlePaintTap(tx,ty){
-  if(ty>H-100)return; // ignore taps on button area
-  initAudio();
+let paintDragging=false;
+function paintAddSplat(tx,ty,big){
+  if(ty>H-100)return;
   let c=paintColor;
   if(paintRainbow){c=PAINT_COLORS[paintRainbowIdx%PAINT_COLORS.length].color;paintRainbowIdx++}
-  // Main splat
-  const sz=20+Math.random()*30;
+  const sz=big?(20+Math.random()*30):(8+Math.random()*12);
   const droplets=[];
-  for(let i=0;i<8+Math.random()*6;i++){
+  if(big){for(let i=0;i<8+Math.random()*6;i++){
     const a=Math.random()*Math.PI*2,d=sz+Math.random()*sz*1.2;
-    droplets.push({x:Math.cos(a)*d,y:Math.sin(a)*d,r:3+Math.random()*8});
-  }
+    droplets.push({x:Math.cos(a)*d,y:Math.sin(a)*d,r:3+Math.random()*8})}}
   paintSplats.push({x:tx,y:ty,r:sz,color:c,droplets});
-  spawnParticles(tx,ty,8,[c,'#ffffff'],{vyRange:6,spread:30,maxSize:6});
-  // Splat sound
-  playTone(120+Math.random()*80,0.15,'triangle',0.15);
-  playTone(80+Math.random()*60,0.2,'square',0.08);
+  if(big){spawnParticles(tx,ty,8,[c,'#ffffff'],{vyRange:6,spread:30,maxSize:6});
+    playTone(120+Math.random()*80,0.15,'triangle',0.15)}
+}
+function handlePaintTap(tx,ty){
+  initAudio();paintDragging=true;paintAddSplat(tx,ty,true);
   if(paintSplats.length===1)updatePaintButtons();
 }
+function handlePaintMove(tx,ty){
+  if(!paintDragging||currentMode!=='paint')return;
+  paintAddSplat(tx,ty,false);
+}
+function handlePaintEnd(){paintDragging=false}
 
 function updatePaintGame(dt){updateParticles(dt);updateConfetti()}
 
@@ -2459,7 +2473,7 @@ function updateBalloonButtons(){
 }
 
 function spawnBalloon(){
-  const r=22+Math.random()*18;
+  const r=W*0.06+Math.random()*W*0.05;
   balloons.push({
     x:r+Math.random()*(W-r*2),y:H+r+Math.random()*40,
     r,color:BALLOON_COLORS[Math.floor(Math.random()*BALLOON_COLORS.length)],
@@ -2563,6 +2577,10 @@ canvas.addEventListener('touchstart',e=>{
   else if(currentMode==='paint'){e.preventDefault();handlePaintTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='balloon'){e.preventDefault();handleBalloonTap(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
+canvas.addEventListener('mousemove',e=>{handlePaintMove(e.clientX,e.clientY)});
+canvas.addEventListener('mouseup',()=>{handlePaintEnd()});
+canvas.addEventListener('touchmove',e=>{if(currentMode==='paint'){e.preventDefault();handlePaintMove(e.touches[0].clientX,e.touches[0].clientY)}},{passive:false});
+canvas.addEventListener('touchend',()=>{handlePaintEnd()});
 
 function handleDigTap(tx,ty){
   if(digState!=='dig'||truckLoad.length>=MAX_SCOOPS)return;
