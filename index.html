@@ -222,6 +222,14 @@ const CHARACTERS = [
 ];
 let currentChar = 'purin';
 let mouthOpenTimer = 0; // for mouth animation on tap
+let autoEatFn=null,autoEatTimer=0; // auto-eat system
+function startAutoEat(eatFn){autoEatFn=eatFn;autoEatTimer=0}
+function stopAutoEat(){autoEatFn=null;autoEatTimer=0}
+function updateAutoEat(dt){
+  if(!autoEatFn)return;
+  autoEatTimer+=dt;
+  if(autoEatTimer>=0.45){autoEatTimer=0;autoEatFn()}
+}
 
 // =============================================
 // CURRENT GAME MODE
@@ -233,7 +241,7 @@ let wobbleAngle = 0, wobbleVel = 0; // wobbly stack physics
 // MENU
 // =============================================
 function showMenu(){
-  currentMode='menu';particles=[];confetti=[];
+  currentMode='menu';particles=[];confetti=[];stopAutoEat();
   if(window.speechSynthesis)window.speechSynthesis.cancel();speechBusy=false;
   instruction.textContent='Pick a game!';
   buttonsArea.innerHTML='';
@@ -1054,7 +1062,8 @@ function updateBurgerButtons(){
   }else if(burgerState==='eating'){
 
     instruction.textContent='Tap NOM!';
-    addBtn('btn-nom','😋','NOM!',()=>{initAudio();burgerDoEat()});
+    addBtn('btn-nom','😋','NOM!',()=>{initAudio();stopAutoEat();burgerDoEat()});
+    addBtn('btn-go','🍽️','Auto',()=>{initAudio();startAutoEat(()=>burgerDoEat())});
   }else if(burgerState==='done'){
 
     instruction.textContent='Delicious! 🎉';
@@ -1103,7 +1112,7 @@ function burgerDoEat(){
   spawnParticles(W*0.35,H*0.55,6,item?[item.color,item.dark]:['#d7a86e','#c49556'],{vyRange:4,spread:20});
   if(item&&item.react)spawnFloatingEmoji(burgerCustomerX,H*0.7-80,item.react);
   else spawnFloatingEmoji(burgerCustomerX,H*0.7-80,'😋');
-  if(burgerStack.length===0){burgerState='done';playJingle();spawnConfetti();sayNumber(burgerEatCount);setTimeout(()=>playTaDa(),600);updateBurgerButtons()}
+  if(burgerStack.length===0){stopAutoEat();burgerState='done';playJingle();spawnConfetti();sayNumber(burgerEatCount);setTimeout(()=>playTaDa(),600);updateBurgerButtons()}
 }
 
 function getBurgerHeight(){
@@ -1113,6 +1122,7 @@ function getBurgerHeight(){
 }
 
 function updateBurgerGame(dt){
+  updateAutoEat(dt);
   if(burgerBounceTimer>0)burgerBounceTimer=Math.max(0,burgerBounceTimer-dt);
   // Wobbly stack physics
   wobbleVel+=-wobbleAngle*2.5*dt; // spring
@@ -1294,7 +1304,8 @@ function updateIceButtons(){
   }else if(iceState==='eating'){
 
     instruction.textContent='Tap NOM!';
-    addBtn('btn-nom','😋','NOM!',()=>{initAudio();iceDoEat()});
+    addBtn('btn-nom','😋','NOM!',()=>{initAudio();stopAutoEat();iceDoEat()});
+    addBtn('btn-go','🍽️','Auto',()=>{initAudio();startAutoEat(()=>iceDoEat())});
   }else if(iceState==='done'){
 
     instruction.textContent='Yummy! 🎉';addBtn('btn-again','🔄','Again!',()=>{initAudio();startIceCreamGame()});
@@ -1343,7 +1354,7 @@ function iceDoEat(){
   spawnFlyingFood(W*0.35,H*0.5,iceCustomerX,mouthY,foodEmoji,flav?flav.color:null);
   spawnParticles(W*0.35,H*0.5,8,flav?[flav.color,flav.dark]:['#fff','#f8bbd0'],{vyRange:4,spread:25});
   spawnFloatingEmoji(iceCustomerX,H*0.7-80,ICE_REACTS[removed]||'😋');
-  if(iceStack.length<=1){iceState='done';playJingle();spawnConfetti();sayNumber(iceEatCount);setTimeout(()=>playTaDa(),600);updateIceButtons()}
+  if(iceStack.length<=1){stopAutoEat();iceState='done';playJingle();spawnConfetti();sayNumber(iceEatCount);setTimeout(()=>playTaDa(),600);updateIceButtons()}
 }
 
 function getIceHeight(){
@@ -1353,6 +1364,7 @@ function getIceHeight(){
 }
 
 function updateIceCreamGame(dt){
+  updateAutoEat(dt);
   if(iceBounceTimer>0)iceBounceTimer=Math.max(0,iceBounceTimer-dt);
   wobbleVel+=-wobbleAngle*2.5*dt;wobbleVel*=0.95;wobbleAngle+=wobbleVel;
   if(iceState==='customer_walking'){
@@ -1838,7 +1850,8 @@ function updatePancakeButtons(){
     CHARACTERS.forEach(c=>addBtn('btn-char',c.emoji,c.label,()=>{initAudio();currentChar=c.id;playPop();pancakeState='customer_walking';pancakeCustomerX=W+80;updatePancakeButtons()}));
   }else if(pancakeState==='eating'){
     instruction.textContent='Tap NOM! 🥞';
-    addBtn('btn-nom','😋','NOM!',()=>{initAudio();pancakeDoEat()});
+    addBtn('btn-nom','😋','NOM!',()=>{initAudio();stopAutoEat();pancakeDoEat()});
+    addBtn('btn-go','🍽️','Auto',()=>{initAudio();startAutoEat(()=>pancakeDoEat())});
   }else if(pancakeState==='done'){
     instruction.textContent='Yummy! 🎉';
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startPancakeGame()});
@@ -1894,7 +1907,7 @@ function pancakeDoEat(){
   spawnParticles(W*0.35,H*0.55,8,['#d7a86e','#c49556','#ffca28'],{vyRange:5,spread:25});
   spawnFloatingEmoji(pancakeCustomerX,H*0.7-80,'😋');
   if(pancakeStack.length<=1){
-    pancakeState='done';playJingle();spawnConfetti();
+    stopAutoEat();pancakeState='done';playJingle();spawnConfetti();
     sayNumber(pancakeEatCount);setTimeout(()=>playTaDa(),600);
     updatePancakeButtons();
   }
@@ -1906,6 +1919,7 @@ function getPancakeHeight(){
   return h;
 }
 function updatePancakeGame(dt){
+  updateAutoEat(dt);
   if(pancakeBounceTimer>0)pancakeBounceTimer=Math.max(0,pancakeBounceTimer-dt);
   wobbleVel+=-wobbleAngle*2.5*dt;wobbleVel*=0.95;wobbleAngle+=wobbleVel;
   if(pancakeState==='customer_walking'){
@@ -2096,7 +2110,8 @@ function updatePizzaButtons(){
   }else if(pizzaState==='eating'){
 
     instruction.textContent='Tap NOM! 🍕';
-    addBtn('btn-nom','😋','NOM!',()=>{initAudio();pizzaDoEat()});
+    addBtn('btn-nom','😋','NOM!',()=>{initAudio();stopAutoEat();pizzaDoEat()});
+    addBtn('btn-go','🍽️','Auto',()=>{initAudio();startAutoEat(()=>pizzaDoEat())});
   }else if(pizzaState==='done'){
 
     instruction.textContent='Delicious! 🎉';
@@ -2158,12 +2173,13 @@ function pizzaDoEat(){
   spawnParticles(cx,cy,6,['#ffca28','#c62828','#f9a825'],{vyRange:4,spread:20});
   spawnFloatingEmoji(pizzaCustomerX,H*0.7-80,'😋');
   if(pizzaSlicesLeft<=0){
-    pizzaState='done';playJingle();spawnConfetti();
+    stopAutoEat();pizzaState='done';playJingle();spawnConfetti();
     sayNumber(pizzaEatCount);setTimeout(()=>playTaDa(),600);
     updatePizzaButtons();
   }
 }
 function updatePizzaGame(dt){
+  updateAutoEat(dt);
   if(pizzaState==='baking'){
     pizzaBakeTimer+=dt;
     if(pizzaBakeTimer>=1.5){
@@ -2486,21 +2502,27 @@ function updateWreckGame(dt){
     wreckBallVel*=0.998; // slight damping
     wreckBallAngle+=wreckBallVel*dt;
   }
-  // Released ball physics
-  if(wreckBallReleased&&!wreckSmashed){
+  // Released ball physics — keeps moving even after smash
+  if(wreckBallReleased){
     wreckBallVY+=600*dt; // gravity
     wreckBallX+=wreckBallVX*dt;
     wreckBallY+=wreckBallVY*dt;
-    // Check collision with tower
-    const towerX=W*0.38,towerW=55;
-    if(wreckBallX>towerX-towerW&&wreckBallX<towerX+towerW&&wreckBallY>wreckGroundY-wreckTower.length*25-30){
-      smashTower();
+    // Check collision with tower (only before smash)
+    if(!wreckSmashed){
+      const towerX=W*0.38,towerW=55;
+      if(wreckBallX>towerX-towerW&&wreckBallX<towerX+towerW&&wreckBallY>wreckGroundY-wreckTower.length*25-30){
+        smashTower();wreckBallVX*=0.3;wreckBallVY=-100; // bounce off impact
+      }
     }
-    // Ball hit ground
+    // Ball hit ground — bounce and settle
     if(wreckBallY>wreckGroundY){
-      wreckBallY=wreckGroundY;wreckBallVY=0;wreckBallVX*=0.5;
-      if(!wreckSmashed&&wreckTower.length>0){smashTower()} // close enough
+      wreckBallY=wreckGroundY;wreckBallVY*=-0.3;wreckBallVX*=0.5;
+      if(!wreckSmashed&&wreckTower.length>0){smashTower()}
       else if(!wreckSmashed){wreckSmashed=true;wreckState='done';updateWreckButtons()}
+    }
+    // Snap back to rope after settling (once moving slowly)
+    if(wreckSmashed&&Math.abs(wreckBallVX)<5&&Math.abs(wreckBallVY)<5){
+      wreckBallReleased=false;wreckBallAngle=0;wreckBallVel=0;
     }
   }
   // Flying blocks
@@ -2593,19 +2615,18 @@ function drawWreckGame(){
   if(!wreckBallReleased){
     ballX=craneX+Math.sin(wreckBallAngle)*ropeLen;
     ballY=craneTopY+4+Math.cos(wreckBallAngle)*ropeLen;
-    // Rope/chain
-    ctx.strokeStyle='#616161';ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(craneX,craneTopY+4);ctx.lineTo(ballX,ballY);ctx.stroke();
-    // Chain links
-    const links=8;
-    for(let i=1;i<links;i++){
-      const t=i/links;
-      const lx=lerp(craneX,ballX,t),ly=lerp(craneTopY+4,ballY,t);
-      ctx.fillStyle=i%2?'#757575':'#616161';
-      ctx.beginPath();ctx.arc(lx,ly,2.5,0,Math.PI*2);ctx.fill();
-    }
   }else{
     ballX=wreckBallX;ballY=wreckBallY;
+  }
+  // Rope/chain — always drawn from crane to ball
+  ctx.strokeStyle='#616161';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(craneX,craneTopY+4);ctx.lineTo(ballX,ballY);ctx.stroke();
+  const links=8;
+  for(let i=1;i<links;i++){
+    const t=i/links;
+    const lx=lerp(craneX,ballX,t),ly=lerp(craneTopY+4,ballY,t);
+    ctx.fillStyle=i%2?'#757575':'#616161';
+    ctx.beginPath();ctx.arc(lx,ly,2.5,0,Math.PI*2);ctx.fill();
   }
   // Ball
   ctx.fillStyle='#424242';
