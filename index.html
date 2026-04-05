@@ -585,14 +585,16 @@ function updateDigGame(dt){
     }
     else if(dumpPhase===2){// Lower bed back
       const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));
-      if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();
-        // Check if hole is full enough to transform
-        if(dumpHoleLayers.length>=10&&!holeTransform){
+      if(t>=1){truckBedAngle=0;dumpPhase=3;dumpTime=0}}
+    else if(dumpPhase===3){// Drive truck away to reveal hole
+      const t=Math.min(1,dumpTime/0.8);truckX=lerp(W*0.72,W+150,easeInOut(t));
+      if(t>=1){digState='celebrate';playJingle();spawnConfetti();
+        if(dumpHoleLayers.length>=5&&!holeTransform){
           const sand=dumpHoleLayers.filter(m=>m==='sand').length;
           const rocks=dumpHoleLayers.filter(m=>m==='rocks').length;
           const water=dumpHoleLayers.filter(m=>m==='water').length;
           const dom=sand>=rocks&&sand>=water?'sandcastle':rocks>=sand&&rocks>=water?'mountain':'pond';
-          holeTransform={type:dom,anim:0};holeTransformTimer=0;
+          holeTransform={type:dom,anim:0};
           sayWord(dom==='sandcastle'?'Sandcastle!':dom==='pond'?'Pond!':'Mountain!');
         }
         updateDigButtons()}}
