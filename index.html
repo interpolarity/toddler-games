@@ -2124,8 +2124,15 @@ function addPizzaTopping(id){
   if(t&&t.type==='topping'){
     // Accumulate positions (allows multiples of same topping)
     const rng=seededRand(id.length*7777+pizzaToppings.length*31);
-    const newPos=[];const count=id==='pepperoni'?8:id==='mushroom'?5:id==='olive'?6:5;
-    for(let i=0;i<count;i++){newPos.push({angle:rng()*Math.PI*2,rFrac:0.15+rng()*0.65})}
+    const existing=pizzaToppingPos[id]||[];
+    const newPos=[];const count=id==='pepperoni'?8:id==='mushroom'?4:id==='olive'?6:5;
+    for(let i=0;i<count;i++){
+      const idx=existing.length+i;
+      // Mushrooms use golden angle for even spread, others use random
+      const angle=id==='mushroom'?idx*2.399+rng()*0.3:rng()*Math.PI*2;
+      const rFrac=id==='mushroom'?0.25+((idx*3)%5)*0.12:0.15+rng()*0.65;
+      newPos.push({angle,rFrac});
+    }
     if(!pizzaToppingPos[id])pizzaToppingPos[id]=[];
     pizzaToppingPos[id]=pizzaToppingPos[id].concat(newPos);
   }
@@ -2323,18 +2330,22 @@ function drawPizzaScatter(cx,cy,innerR,id){
       // Mushroom slice — fan shape with visible gills
       const ms=sz*1.8;
       ctx.save();ctx.translate(px,py);ctx.rotate(pos.angle*0.15);
-      // Cap
-      ctx.fillStyle='#d7ccc8';
+      // Cap — warm cream/tan
+      ctx.fillStyle='#f5e6d0';
       ctx.beginPath();ctx.moveTo(-ms*0.7,0);ctx.quadraticCurveTo(-ms*0.6,-ms*0.9,0,-ms);
       ctx.quadraticCurveTo(ms*0.6,-ms*0.9,ms*0.7,0);ctx.closePath();ctx.fill();
-      ctx.strokeStyle='#a1887f';ctx.lineWidth=0.8;ctx.stroke();
-      // Gills (lines radiating from stem)
-      ctx.strokeStyle='rgba(141,110,99,0.3)';ctx.lineWidth=0.5;
-      for(let g=-2;g<=2;g++){ctx.beginPath();ctx.moveTo(g*ms*0.1,0);ctx.lineTo(g*ms*0.2,-ms*0.7);ctx.stroke()}
-      // Stem
-      ctx.fillStyle='#efebe9';
+      ctx.strokeStyle='#c9a87c';ctx.lineWidth=1;ctx.stroke();
+      // Light brown spots on cap
+      ctx.fillStyle='rgba(180,140,90,0.2)';
+      ctx.beginPath();ctx.arc(-ms*0.2,-ms*0.5,ms*0.15,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(ms*0.15,-ms*0.35,ms*0.1,0,Math.PI*2);ctx.fill();
+      // Gills
+      ctx.strokeStyle='rgba(180,140,90,0.25)';ctx.lineWidth=0.6;
+      for(let g=-2;g<=2;g++){ctx.beginPath();ctx.moveTo(g*ms*0.1,0);ctx.lineTo(g*ms*0.2,-ms*0.65);ctx.stroke()}
+      // Stem — off-white
+      ctx.fillStyle='#faf3eb';
       ctx.fillRect(-ms*0.15,0,ms*0.3,ms*0.35);
-      ctx.strokeStyle='#bcaaa4';ctx.lineWidth=0.5;ctx.strokeRect(-ms*0.15,0,ms*0.3,ms*0.35);
+      ctx.strokeStyle='#d4b896';ctx.lineWidth=0.6;ctx.strokeRect(-ms*0.15,0,ms*0.3,ms*0.35);
       ctx.restore();
     }else if(id==='olive'){
       ctx.fillStyle='#33691e';ctx.beginPath();ctx.arc(px,py,sz*0.8,0,Math.PI*2);ctx.fill();
