@@ -2580,13 +2580,16 @@ function updateWreckGame(dt){
     }
     // Settle into debris when slowed
     if(b.life<=0.4&&Math.abs(b.vy)<3&&Math.abs(b.vx)<2){
-      // Split into 2-3 debris chunks per block
-      const chunks=2+Math.floor(Math.random()*2);
+      // Split into 3-5 varied debris chunks per block
+      const chunks=3+Math.floor(Math.random()*3);
       for(let c=0;c<chunks;c++){
-        const cw=b.w/(chunks+0.5)+Math.random()*8;
-        wreckDebris.push({x:b.x+(c-chunks/2)*cw*0.6+Math.random()*10,y:b.y-Math.random()*4,
-          w:cw,h:b.h*0.8+Math.random()*b.h*0.3,color:b.color,dark:b.dark,light:b.light,id:b.id,
-          rot:b.rot+(Math.random()-0.5)*0.5});
+        const sizeVar=0.3+Math.random()*0.8; // big variation
+        const cw=b.w*sizeVar*0.45+5;
+        const ch=b.h*sizeVar*0.6+4;
+        const detail=Math.floor(Math.random()*6); // 0-5 detail type
+        wreckDebris.push({x:b.x+(Math.random()-0.5)*b.w*0.8,y:b.y-Math.random()*8,
+          w:cw,h:ch,color:b.color,dark:b.dark,light:b.light,id:b.id,detail,
+          rot:b.rot+(Math.random()-0.5)*1.2});
       }
       wreckFlyingBlocks.splice(i,1);
     }else if(b.life<=0){wreckFlyingBlocks.splice(i,1)}
@@ -2670,35 +2673,48 @@ function drawWreckGame(){
   });
   ctx.restore();
 
-  // Debris pile — with recognizable building features
+  // Debris pile — varied recognizable building chunks
   wreckDebris.forEach(d=>{
     ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);
     const hw=d.w/2,hh=d.h/2;
-    // Wall chunk
+    // Wall chunk with slight color variation
+    const cv=((d.detail*37)%20-10);
     ctx.fillStyle=d.color;drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill();
-    ctx.strokeStyle=d.dark;ctx.lineWidth=1;ctx.stroke();
-    // Variety: some have windows, some have cracks, some are plain
-    const hash=(d.x*7+d.y*13+d.w*3)|0;
-    const detail=hash%5;
-    if(detail===0&&d.w>15&&d.h>12){
-      // Window
-      const ww=Math.min(d.w*0.35,12),wh=Math.min(d.h*0.45,9);
-      ctx.fillStyle=d.id==='glass'?'#e3f2fd':'#fff9c4';ctx.fillRect(-ww/2,-wh/2,ww,wh);
-      ctx.strokeStyle=d.dark;ctx.lineWidth=0.6;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
-    }else if(detail===1){
-      // Crack
-      ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=0.7;
-      ctx.beginPath();ctx.moveTo(-hw*0.4,-hh*0.8);ctx.lineTo(hw*0.2,hh*0.6);ctx.stroke();
-    }else if(detail===2){
-      // Brick/mortar line
-      ctx.strokeStyle=d.dark;ctx.lineWidth=0.5;
-      ctx.beginPath();ctx.moveTo(-hw,0);ctx.lineTo(hw,0);ctx.stroke();
-    }else if(detail===3&&d.w>12){
-      // Exposed rebar/pipe
-      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(-hw*0.3,-hh);ctx.lineTo(-hw*0.1,hh);ctx.stroke();
+    ctx.strokeStyle=d.dark;ctx.lineWidth=1.2;ctx.stroke();
+
+    if(d.detail===0&&d.w>18){
+      // Window — large, prominent
+      const ww=d.w*0.55,wh=d.h*0.6;
+      ctx.fillStyle=d.id==='glass'?'#bbdefb':'#fff9c4';
+      ctx.fillRect(-ww/2,-wh/2,ww,wh);
+      ctx.strokeStyle=d.dark;ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
+      if(d.id!=='glass'){ctx.beginPath();ctx.moveTo(0,-wh/2);ctx.lineTo(0,wh/2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-ww/2,0);ctx.lineTo(ww/2,0);ctx.stroke()}
+    }else if(d.detail===1){
+      // Big diagonal crack
+      ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(-hw*0.7,-hh*0.9);ctx.lineTo(hw*0.5,hh*0.8);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-hw*0.2,-hh);ctx.lineTo(hw*0.7,hh*0.3);ctx.stroke();
+    }else if(d.detail===2){
+      // Brick pattern
+      ctx.strokeStyle=d.dark;ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.moveTo(-hw,hh*0.3);ctx.lineTo(hw,hh*0.3);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-hw,-hh*0.3);ctx.lineTo(hw,-hh*0.3);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,-hh);ctx.lineTo(0,hh);ctx.stroke();
+    }else if(d.detail===3){
+      // Exposed rebar sticking out
+      ctx.strokeStyle='#777';ctx.lineWidth=2;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(-hw*0.5,-hh*1.2);ctx.lineTo(-hw*0.2,hh*0.5);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(hw*0.3,-hh*0.8);ctx.lineTo(hw*0.1,hh*1.1);ctx.stroke();
+      ctx.lineCap='butt';
+    }else if(d.detail===4&&d.w>14){
+      // Broken floor tile
+      ctx.fillStyle=d.light||'#ddd';ctx.globalAlpha=0.4;
+      ctx.fillRect(-hw+2,-hh+2,d.w-4,d.h*0.4);ctx.globalAlpha=1;
+      ctx.strokeStyle=d.dark;ctx.lineWidth=0.6;
+      ctx.beginPath();ctx.moveTo(-hw+2,-hh+2+d.h*0.4);ctx.lineTo(hw-2,-hh+2+d.h*0.4);ctx.stroke();
     }
-    // else: plain chunk
+    // detail===5: plain chunk — no extra detail
     ctx.restore();
   });
   // Flying blocks
