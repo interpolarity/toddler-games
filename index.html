@@ -530,11 +530,16 @@ function updateDigGame(dt){
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
-          // Spawn rolling rocks
-          for(let ri=0;ri<2;ri++){if(Math.random()<0.5)spawnDumpRock(pourX+(Math.random()-0.5)*8,pourY,holeX)}
-          // Gravel dust alongside
-          if(Math.random()<0.4){const cols=['#78909c','#546e7a','#90a4ae'];
-            particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,vx:(holeX-pourX)*0.012+(Math.random()-0.5)*2,vy:Math.random()*2+1,size:1+Math.random()*2,color:cols[Math.floor(Math.random()*cols.length)],life:1,decay:0.03,gravity:0.35,shape:'square'});}
+          // Rock particles — same system as sand/water but square shaped, larger
+          const cols=['#78909c','#546e7a','#90a4ae','#455a64'];
+          for(let i=0;i<3;i++){
+            particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,
+              vx:(holeX-pourX)*0.015+(Math.random()-0.5)*2,
+              vy:Math.random()*2+1,
+              size:2+Math.random()*5,
+              color:cols[Math.floor(Math.random()*cols.length)],
+              life:1,decay:0.02+Math.random()*0.01,gravity:0.35,shape:'square'});
+          }
         }else{
           const cols=[mat.color,mat.dark,mat.light];
           for(let i=0;i<(m==='water'?5:3);i++){
