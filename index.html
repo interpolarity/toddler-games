@@ -563,7 +563,7 @@ function updateDigGame(dt){
             const rockStackH=(rockDumpsSoFar-1)*layerH*0.45; // each dump stacks 45% of a layer
             const bandTop=surfaceY-rockStackH-layerH*0.45;
             const bandBot=surfaceY-rockStackH;
-            for(let ri=0;ri<25;ri++){const rr=2+Math.random()*5;
+            for(let ri=0;ri<35;ri++){const rr=2+Math.random()*5;
               holeRocks.push({x:hx-hw*0.9+Math.random()*hw*1.8,y:bandBot-rr-(bandBot-bandTop)*Math.random(),
                 radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
                 rotation:Math.random()*Math.PI*2});
@@ -639,20 +639,7 @@ function drawDigGame(){
     const waterH=waterCount*layerH;
     // Sand from bottom
     sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-2-(di+1)*layerH;drawDigMaterialFill(hx-hw,ly,hw*2,layerH+1,s.mat,5000+s.i*251)});
-    // Gravel fill BEFORE water (so water renders on top)
-    const rockDumps=dumpHoleLayers.filter(m=>m==='rocks').length;
-    if(rockDumps>0){
-      const rlH=(hh-12)/MAX_SCOOPS;
-      const rSurf=digGroundY+hh-2-sandLayers.length*rlH;
-      const totalRockH=rockDumps*rlH*0.45;
-      ctx.fillStyle='#6d7f8b';
-      ctx.fillRect(hx-hw,rSurf-totalRockH,hw*2,totalRockH);
-      const rng=seededRand(9999);
-      for(let gi=0;gi<15;gi++){ctx.fillStyle=rng()>0.5?'#78909c':'#546e7a';ctx.globalAlpha=0.4;
-        ctx.beginPath();ctx.arc(hx-hw+rng()*hw*2,rSurf-rng()*totalRockH,3+rng()*5,0,Math.PI*2);ctx.fill()}
-      ctx.globalAlpha=1;
-    }
-    // Water on top of everything solid
+    // Water on top of sand
     if(waterCount>0){
       const waterBottom=digGroundY+hh-2-sandH;
       const waterTop=waterBottom-waterH;
