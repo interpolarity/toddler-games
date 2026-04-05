@@ -452,7 +452,7 @@ function updateDigGame(dt){
       // Spawn streaming particles every frame
       const holeX=W*0.85;
       const ds=W*0.002,bedEnd=75*ds;
-      const pourX=truckX+bedEnd*Math.cos(truckBedAngle),pourY=digGroundY-bedEnd*Math.sin(truckBedAngle)-ds*10;
+      const pourX=truckX+bedEnd*Math.cos(truckBedAngle),pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-ds*10;
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
@@ -937,7 +937,7 @@ function drawDumpTruck(x,y){
   ctx.translate(bedW-2*s,0); // hinge at bottom-right
   if(truckBedAngle>0.1){
     const gateAngle=Math.min(1.2,truckBedAngle*2.5);
-    ctx.rotate(-gateAngle); // drops open outward (counter-clockwise from bottom hinge)
+    ctx.rotate(gateAngle); // swings top outward (clockwise from bottom hinge)
   }
   let gtg=ctx.createLinearGradient(-4*s,-bedH,2*s,-bedH);
   gtg.addColorStop(0,'#c62828');gtg.addColorStop(0.5,'#b71c1c');gtg.addColorStop(1,'#a31515');
