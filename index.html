@@ -635,15 +635,26 @@ function drawDigGame(){
       ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
       ctx.fillStyle='#b0bec5';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(r.x-r.radius*0.15,r.y-r.radius*0.2,r.radius*0.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
     });
-    // Sand layers can mingle with rocks (both sink). Water always floats on top.
-    const sandLayers=[];const waterLayers=[];
-    dumpHoleLayers.forEach((mat,i)=>{if(mat==='sand')sandLayers.push({mat,i});else if(mat==='water')waterLayers.push({mat,i})});
+    // Sand layers mingle with rocks at bottom
+    const sandLayers=[];const waterCount=dumpHoleLayers.filter(m=>m==='water').length;
+    dumpHoleLayers.forEach((mat,i)=>{if(mat==='sand')sandLayers.push({mat,i})});
     const solidCount=sandLayers.length+dumpHoleLayers.filter(m=>m==='rocks').length;
-    const sandLh=Math.max(6,(hh-12)/Math.max(solidCount+waterLayers.length,1));
-    // Sand among the rocks
+    const sandLh=Math.max(6,(hh-12)/Math.max(solidCount+waterCount,1));
     sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-(di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,s.mat,5000+s.i*251)});
-    // Water always on top
-    waterLayers.forEach((w,di)=>{const ly=digGroundY+hh-(solidCount+di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,w.mat,5000+w.i*251)});
+    // Water fills like a pool from top of hole down to solid line — rocks visible through it
+    if(waterCount>0){
+      const waterFill=Math.min(hh-14,waterCount*sandLh);
+      const waterTop=digGroundY+8;
+      // Semi-transparent water pool
+      const wg=ctx.createLinearGradient(0,waterTop,0,waterTop+waterFill);
+      wg.addColorStop(0,'rgba(41,182,246,0.55)');wg.addColorStop(0.5,'rgba(2,136,209,0.5)');wg.addColorStop(1,'rgba(1,87,155,0.45)');
+      ctx.fillStyle=wg;ctx.fillRect(hx-hw,waterTop,hw*2,waterFill);
+      // Animated waves at surface
+      const wt=Date.now()/500;ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=2;
+      for(let wr=0;wr<2;wr++){ctx.beginPath();for(let wx=hx-hw;wx<=hx+hw;wx+=4){
+        const wy=waterTop+wr*8+Math.sin(wt+wx*0.08+wr*2)*3;
+        if(wx===hx-hw)ctx.moveTo(wx,wy);else ctx.lineTo(wx,wy)}ctx.stroke()}
+    }
     ctx.restore()}
   // Excavator
   drawExcavator(excX,digGroundY);
