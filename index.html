@@ -281,7 +281,7 @@ function showMenu(){
     {emoji:'✏️',label:'Trace!',bg:'linear-gradient(180deg,#fff176,#f9a825)',color:'#5d4037',fn:startTraceGame},
     {emoji:'🎹',label:'Music!',bg:'linear-gradient(180deg,#ce93d8,#6a1b9a)',fn:startMusicGame},
     {emoji:'🏁',label:'Maze!',bg:'linear-gradient(180deg,#a5d6a7,#2e7d32)',fn:startMazeGame},
-    {emoji:'🌱',label:'Garden!',bg:'linear-gradient(180deg,#c8e6c9,#66bb6a)',fn:startGardenGame},
+    {emoji:'🧱',label:'Build!',bg:'linear-gradient(180deg,#ffcc80,#ff8f00)',color:'#5d4037',fn:startBuildGame},
   ];
   games.forEach(g=>{
     const card=document.createElement('div');
@@ -3224,6 +3224,144 @@ function drawGardenGame(){
   drawParticles(0);drawConfetti();
 }
 
+// =============================================
+// BUILD GAME — drag shapes to matching outlines
+// =============================================
+const BUILD_PUZZLES=[
+  {name:'House',pieces:[
+    {type:'rect',x:0,y:0,w:80,h:70,color:'#e53935'},
+    {type:'tri',x:0,y:-55,w:100,h:55,color:'#ff8f00'},
+    {type:'rect',x:-10,y:30,w:25,h:40,color:'#8d6e63'},
+    {type:'rect',x:20,y:15,w:20,h:20,color:'#64b5f6'},
+  ]},
+  {name:'Boat',pieces:[
+    {type:'trap',x:0,y:20,w:100,h:35,color:'#e53935'},
+    {type:'rect',x:-5,y:-30,w:8,h:50,color:'#8d6e63'},
+    {type:'tri',x:5,y:-55,w:40,h:45,color:'#fff176'},
+  ]},
+  {name:'Tree',pieces:[
+    {type:'rect',x:0,y:30,w:20,h:50,color:'#8d6e63'},
+    {type:'tri',x:0,y:-10,w:70,h:50,color:'#43a047'},
+    {type:'tri',x:0,y:-45,w:55,h:45,color:'#66bb6a'},
+  ]},
+  {name:'Rocket',pieces:[
+    {type:'rect',x:0,y:0,w:35,h:70,color:'#e0e0e0'},
+    {type:'tri',x:0,y:-50,w:35,h:35,color:'#e53935'},
+    {type:'rect',x:0,y:30,w:50,h:12,color:'#ff8f00'},
+    {type:'tri',x:-25,y:35,w:18,h:25,color:'#ff8f00'},
+    {type:'tri',x:25,y:35,w:18,h:25,color:'#ff8f00'},
+  ]},
+  {name:'Fish',pieces:[
+    {type:'oval',x:0,y:0,w:70,h:40,color:'#ff9800'},
+    {type:'tri',x:-50,y:0,w:30,h:40,color:'#ff9800'},
+    {type:'circle',x:20,y:-8,w:8,h:8,color:'#212121'},
+  ]},
+];
+let buildPuzzleIdx,buildPieces,buildTargets,buildDrag,buildDone,buildScore;
+
+function startBuildGame(){
+  currentMode='build';particles=[];confetti=[];
+  buildPuzzleIdx=0;buildScore=0;buildDone=false;
+  setupBuildPuzzle();updateBuildButtons();
+}
+function setupBuildPuzzle(){
+  buildDone=false;buildDrag=null;
+  const puzzle=BUILD_PUZZLES[buildPuzzleIdx%BUILD_PUZZLES.length];
+  const cx=W*0.5,cy=H*0.3;
+  // Targets (where pieces should go)
+  buildTargets=puzzle.pieces.map(p=>({...p,cx:cx+p.x,cy:cy+p.y,filled:false}));
+  // Draggable pieces (scattered at bottom)
+  const shuffled=[...puzzle.pieces].sort(()=>Math.random()-0.5);
+  const startY=H*0.62,gap=W/(shuffled.length+1);
+  buildPieces=shuffled.map((p,i)=>({...p,cx:gap*(i+1),cy:startY+Math.random()*30-15,origX:gap*(i+1),origY:startY,placed:false,targetIdx:puzzle.pieces.indexOf(p)}));
+  sayWord(puzzle.name);
+  instruction.textContent='Build a '+puzzle.name+'!';
+}
+function updateBuildButtons(){
+  buttonsArea.innerHTML='';
+  if(buildDone){
+    instruction.textContent='Great! '+BUILD_PUZZLES[buildPuzzleIdx%BUILD_PUZZLES.length].name+'! 🎉';
+    addBtn('btn-go','➡️','Next',()=>{initAudio();buildPuzzleIdx++;setupBuildPuzzle();updateBuildButtons()});
+    addBtn('btn-again','🔄','Restart',()=>{initAudio();startBuildGame()});
+  }
+}
+function drawBuildShape(p,x,y,alpha){
+  ctx.globalAlpha=alpha||1;
+  ctx.fillStyle=p.color;
+  if(p.type==='rect'){drawRoundRect(x-p.w/2,y-p.h/2,p.w,p.h,4);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
+  else if(p.type==='tri'){ctx.beginPath();ctx.moveTo(x,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
+  else if(p.type==='trap'){ctx.beginPath();ctx.moveTo(x-p.w*0.35,y-p.h/2);ctx.lineTo(x+p.w*0.35,y-p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
+  else if(p.type==='oval'){ctx.beginPath();ctx.ellipse(x,y,p.w/2,p.h/2,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
+  else if(p.type==='circle'){ctx.beginPath();ctx.arc(x,y,p.w,0,Math.PI*2);ctx.fill()}
+  ctx.globalAlpha=1;
+}
+function handleBuildTap(tx,ty){
+  if(buildDone)return;
+  // Check if tapping a draggable piece
+  for(let i=buildPieces.length-1;i>=0;i--){
+    const p=buildPieces[i];if(p.placed)continue;
+    const dx=tx-p.cx,dy=ty-p.cy;
+    if(Math.abs(dx)<p.w/2+15&&Math.abs(dy)<p.h/2+15){
+      initAudio();buildDrag={idx:i,ofx:dx,ofy:dy};return;
+    }
+  }
+}
+function handleBuildMove(tx,ty){
+  if(!buildDrag)return;
+  const p=buildPieces[buildDrag.idx];
+  p.cx=tx-buildDrag.ofx;p.cy=ty-buildDrag.ofy;
+}
+function handleBuildEnd(){
+  if(!buildDrag)return;
+  const p=buildPieces[buildDrag.idx];
+  const t=buildTargets[p.targetIdx];
+  const dx=p.cx-t.cx,dy=p.cy-t.cy;
+  // Snap if close enough
+  if(dx*dx+dy*dy<(W*0.08)*(W*0.08)){
+    p.cx=t.cx;p.cy=t.cy;p.placed=true;t.filled=true;
+    playTone(400+buildScore*50,0.15,'sine',0.2);playPop();
+    spawnParticles(t.cx,t.cy,10,[p.color,'#fff'],{vyRange:5,spread:20,maxSize:6});
+    buildScore++;
+    // Check if all placed
+    if(buildPieces.every(pp=>pp.placed)){
+      buildDone=true;spawnConfetti();playJingle();setTimeout(()=>playTaDa(),500);
+      updateBuildButtons();
+    }
+  }else{
+    // Bounce back
+    p.cx=p.origX;p.cy=p.origY;
+    playTone(200,0.1,'triangle',0.1);
+  }
+  buildDrag=null;
+}
+function updateBuildGame(dt){updateParticles(dt);updateConfetti()}
+function drawBuildGame(){
+  // Background — craft table
+  ctx.fillStyle='#fff8e1';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#ffe0b2';ctx.fillRect(0,H*0.52,W,H*0.48);
+  ctx.fillStyle='#d7ccc8';ctx.fillRect(0,H*0.52,W,4);
+  // Target outlines (ghost shapes)
+  buildTargets.forEach(t=>{
+    if(!t.filled){ctx.setLineDash([6,4]);drawBuildShape(t,t.cx,t.cy,0.2);ctx.setLineDash([])}
+  });
+  // Placed pieces
+  buildPieces.forEach(p=>{if(p.placed)drawBuildShape(p,p.cx,p.cy,1)});
+  // Draggable pieces (unplaced)
+  buildPieces.forEach((p,i)=>{
+    if(p.placed)return;
+    const isDrag=buildDrag&&buildDrag.idx===i;
+    ctx.save();
+    if(isDrag){ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=10;ctx.shadowOffsetY=5}
+    drawBuildShape(p,p.cx,p.cy,isDrag?1:0.9);
+    ctx.restore();
+  });
+  // Puzzle label
+  const pname=BUILD_PUZZLES[buildPuzzleIdx%BUILD_PUZZLES.length].name;
+  ctx.fillStyle='#5d4037';ctx.font=`bold ${Math.max(16,W*0.04)}px sans-serif`;ctx.textAlign='center';
+  ctx.fillText(pname+' ('+(buildPuzzleIdx%BUILD_PUZZLES.length+1)+'/'+BUILD_PUZZLES.length+')',W/2,H*0.05+15);ctx.textAlign='left';
+  drawParticles(0);drawConfetti();
+}
+
 // Handle canvas taps for match game
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
@@ -3238,6 +3376,7 @@ canvas.addEventListener('click',e=>{
   else if(currentMode==='music')handleMusicTap(e.clientX,e.clientY);
   else if(currentMode==='garden')handleGardenTap(e.clientX,e.clientY);
   else if(currentMode==='maze')handleMazeMove(e.clientX,e.clientY);
+  else if(currentMode==='build')handleBuildTap(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
@@ -3252,6 +3391,7 @@ canvas.addEventListener('touchstart',e=>{
   else if(currentMode==='music'){e.preventDefault();handleMusicTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='garden'){e.preventDefault();handleGardenTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='maze'){e.preventDefault();handleMazeMove(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='build'){e.preventDefault();handleBuildTap(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
 canvas.addEventListener('mousemove',e=>{
   handlePaintMove(e.clientX,e.clientY);
@@ -3259,16 +3399,18 @@ canvas.addEventListener('mousemove',e=>{
   if(currentMode==='sort')handleSortMove(e.clientX,e.clientY);
   if(currentMode==='trace')handleTraceMove(e.clientX,e.clientY);
   if(currentMode==='maze')handleMazeMove(e.clientX,e.clientY);
+  if(currentMode==='build')handleBuildMove(e.clientX,e.clientY);
 });
-canvas.addEventListener('mouseup',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd();handleMazeEnd()});
+canvas.addEventListener('mouseup',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd();handleMazeEnd();handleBuildEnd()});
 canvas.addEventListener('touchmove',e=>{
   if(currentMode==='paint'){e.preventDefault();handlePaintMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='catch'){e.preventDefault();handleCatchMove(e.touches[0].clientX)}
   else if(currentMode==='sort'){e.preventDefault();handleSortMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='trace'){e.preventDefault();handleTraceMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='maze'){e.preventDefault();handleMazeMove(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='build'){e.preventDefault();handleBuildMove(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
-canvas.addEventListener('touchend',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd();handleMazeEnd()});
+canvas.addEventListener('touchend',()=>{handlePaintEnd();handleCatchEnd();handleSortEnd();handleTraceEnd();handleMazeEnd();handleBuildEnd()});
 // Block ALL browser gestures (pull-to-refresh, swipe navigation, minimize)
 document.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
 document.addEventListener('gesturestart',e=>{e.preventDefault()});
@@ -3778,6 +3920,7 @@ function gameLoop(ts){
   else if(currentMode==='music'){updateMusicGame(dt);drawMusicGame()}
   else if(currentMode==='maze'){updateMazeGame(dt);drawMazeGame()}
   else if(currentMode==='garden'){updateGardenGame(dt);drawGardenGame()}
+  else if(currentMode==='build'){updateBuildGame(dt);drawBuildGame()}
 
   requestAnimationFrame(gameLoop);
 }
