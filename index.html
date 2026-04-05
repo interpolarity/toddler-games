@@ -633,20 +633,22 @@ function drawDigGame(){
     const totalLayers=dumpHoleLayers.length;
     const lh=Math.max(6,(hh-12)/Math.max(totalLayers,1)); // shrink layers to fit, min 6px
     ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();
-    // Sand at bottom
+    // Calculate solid and water heights — solids push water up
     const sandLayers=[];const waterCount=dumpHoleLayers.filter(m=>m==='water').length;
+    const rockCount=dumpHoleLayers.filter(m=>m==='rocks').length;
     dumpHoleLayers.forEach((mat,i)=>{if(mat==='sand')sandLayers.push({mat,i})});
-    const solidCount=sandLayers.length+dumpHoleLayers.filter(m=>m==='rocks').length;
-    const sandLh=Math.max(6,(hh-12)/Math.max(solidCount+waterCount,1));
-    sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-(di+1)*sandLh;drawDigMaterialFill(hx-hw,ly,hw*2,sandLh+1,s.mat,5000+s.i*251)});
-    // Water — proportional to amount, rises from bottom
+    const layerH=(hh-12)/MAX_SCOOPS;
+    const solidH=(sandLayers.length+rockCount)*layerH; // how much space solids take
+    const waterH=waterCount*layerH; // how much water
+    // Sand layers fill from bottom
+    sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-2-(di+1)*layerH;drawDigMaterialFill(hx-hw,ly,hw*2,layerH+1,s.mat,5000+s.i*251)});
+    // Water sits ON TOP of solids, pushed up by them
     if(waterCount>0){
-      const maxWaterH=hh-10;
-      const waterFill=Math.min(maxWaterH,waterCount*(maxWaterH/MAX_SCOOPS));
-      const waterTop=digGroundY+hh-waterFill;
-      const wg=ctx.createLinearGradient(0,waterTop,0,waterTop+waterFill);
+      const waterBottom=digGroundY+hh-2-solidH; // top of solid pile
+      const waterTop=waterBottom-waterH;
+      const wg=ctx.createLinearGradient(0,waterTop,0,waterBottom);
       wg.addColorStop(0,'rgba(41,182,246,0.45)');wg.addColorStop(0.5,'rgba(2,136,209,0.4)');wg.addColorStop(1,'rgba(1,87,155,0.35)');
-      ctx.fillStyle=wg;ctx.fillRect(hx-hw,waterTop,hw*2,waterFill);
+      ctx.fillStyle=wg;ctx.fillRect(hx-hw,waterTop,hw*2,waterBottom-waterTop);
       const wt=Date.now()/500;ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=2;
       for(let wr=0;wr<2;wr++){ctx.beginPath();for(let wx=hx-hw;wx<=hx+hw;wx+=4){
         const wy=waterTop+wr*8+Math.sin(wt+wx*0.08+wr*2)*3;
