@@ -3086,54 +3086,40 @@ let gardenPlants=[],gardenButterflies=[],gardenDone=false;
 
 function startGardenGame(){
   currentMode='garden';particles=[];confetti=[];gardenDone=false;
-  gardenButterflies=[];
-  gardenPlants=[];
-  for(let i=0;i<5;i++)gardenPlants.push({stage:-1,water:0,color:FLOWER_COLORS[Math.floor(Math.random()*FLOWER_COLORS.length)],scaleAnim:0,waterAnim:0});
+  gardenButterflies=[];gardenPlants=[];
+  for(let i=0;i<5;i++)gardenPlants.push({stage:0,color:FLOWER_COLORS[Math.floor(Math.random()*FLOWER_COLORS.length)],scaleAnim:1,waterAnim:0});
   updateGardenButtons();
-  instruction.textContent='Tap soil to plant! 🌱';
+  sayWord('Tap to water!');
 }
 function updateGardenButtons(){
   buttonsArea.innerHTML='';
-  addBtn('btn-water','💧','Water',()=>{initAudio();waterNextPlant()});
+  instruction.textContent=gardenDone?'Beautiful garden! 🌸':'Tap plants to water! 💧';
   addBtn('btn-again','🌱','New Garden',()=>{initAudio();startGardenGame()});
-  addBtn('btn-menu','🏠','Menu',()=>{showMenu()});
 }
-function waterNextPlant(){
-  for(let i=0;i<gardenPlants.length;i++){
-    const p=gardenPlants[i];
-    if(p.stage>=0&&p.stage<4){waterPlant(i);return}
-  }
-}
-function waterPlant(idx){
-  const p=gardenPlants[idx];if(p.stage<0||p.stage>=4)return;
-  p.stage++;p.scaleAnim=0;p.waterAnim=1;
-  playTone(400+p.stage*80,0.3,'sine',0.15);
-  sayWord(GARDEN_STAGE_WORDS[p.stage]);
-  const spotX=getGardenSpotX(idx),spotY=H*0.72;
-  spawnParticles(spotX,spotY-20,8,['#64b5f6','#bbdefb','#e3f2fd'],{vyRange:5,spread:15,maxSize:5});
-  checkGardenDone();
-}
-function getGardenSpotX(i){return W*0.12+i*(W*0.76/4)}
+function getGardenSpotX(i){return W*0.1+i*(W*0.8/4)}
 function handleGardenTap(tx,ty){
+  if(gardenDone)return;
+  // Large hit zone — tap anywhere near a plant
   for(let i=0;i<gardenPlants.length;i++){
     const sx=getGardenSpotX(i),sy=H*0.72;
-    const dx=tx-sx,dy=ty-sy;
-    if(dx*dx+dy*dy<(W*0.08)*(W*0.08)){
+    const dx=tx-sx,dy=ty-(sy-40);
+    if(Math.abs(dx)<W*0.1&&dy>-H*0.25&&dy<H*0.1){
       initAudio();
       const p=gardenPlants[i];
-      if(p.stage===-1){
-        p.stage=0;p.scaleAnim=0;playPop();sayWord('Seed!');
-        instruction.textContent='Tap to water! 💧';
-      } else if(p.stage<4){waterPlant(i)}
+      if(p.stage<4){
+        p.stage++;p.scaleAnim=0;p.waterAnim=1;
+        playTone(400+p.stage*80,0.3,'sine',0.15);
+        sayWord(GARDEN_STAGE_WORDS[p.stage]);
+        spawnParticles(sx,sy-20,10,['#64b5f6','#bbdefb','#e3f2fd'],{vyRange:6,spread:20,maxSize:6});
+        if(gardenPlants.every(pl=>pl.stage>=4)&&!gardenDone){
+          gardenDone=true;spawnConfetti();playJingle();setTimeout(()=>playTaDa(),500);
+          instruction.textContent='Beautiful garden! 🌸';
+          for(let j=0;j<6;j++)gardenButterflies.push({x:Math.random()*W,y:H*0.15+Math.random()*H*0.35,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*1,wing:Math.random()*6});
+          updateGardenButtons();
+        }
+      }
       return;
     }
-  }
-}
-function checkGardenDone(){
-  if(gardenPlants.every(p=>p.stage>=4)&&!gardenDone){
-    gardenDone=true;spawnConfetti();playJingle();
-    instruction.textContent='Beautiful garden! 🌸';
-    for(let i=0;i<5;i++)gardenButterflies.push({x:Math.random()*W,y:H*0.2+Math.random()*H*0.3,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*1,wing:0});
   }
 }
 function updateGardenGame(dt){
@@ -3164,9 +3150,16 @@ function drawGardenGame(){
   // Soil spots and plants
   for(let i=0;i<5;i++){
     const sx=getGardenSpotX(i),sy=H*0.78;
-    // Soil mound
-    ctx.fillStyle='#5d4037';ctx.beginPath();ctx.ellipse(sx,sy,W*0.065,H*0.025,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#795548';ctx.beginPath();ctx.ellipse(sx,sy-H*0.005,W*0.055,H*0.018,0,0,Math.PI*2);ctx.fill();
+    // Soil mound — bigger
+    ctx.fillStyle='#5d4037';ctx.beginPath();ctx.ellipse(sx,sy,W*0.08,H*0.03,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#795548';ctx.beginPath();ctx.ellipse(sx,sy-H*0.005,W*0.07,H*0.022,0,0,Math.PI*2);ctx.fill();
+    // Pulsing hint on plants that need water
+    if(p.stage>=0&&p.stage<4&&!gardenDone){
+      const pulse=0.3+0.2*Math.sin(Date.now()/300+i);
+      ctx.fillStyle=`rgba(100,181,246,${pulse})`;ctx.beginPath();ctx.arc(sx,sy-30,W*0.06,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font=`${W*0.04}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('💧',sx,sy-30);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    }
     // Water droplets
     const p=gardenPlants[i];
     if(p.waterAnim>0){
