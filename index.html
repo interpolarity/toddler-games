@@ -2407,10 +2407,10 @@ function handleMatchTap(tx,ty){
 // WRECKING BALL GAME
 // =============================================
 const WRECK_BLOCKS=[
-  {id:'brick', emoji:'🧱',label:'Brick', color:'#c62828',dark:'#8e0000',light:'#ef5350',w:50,h:25},
-  {id:'wood',  emoji:'🪵',label:'Wood',  color:'#8d6e63',dark:'#5d4037',light:'#bcaaa4',w:50,h:20},
-  {id:'glass', emoji:'🪟',label:'Glass', color:'#90caf9',dark:'#42a5f5',light:'#e3f2fd',w:50,h:18},
-  {id:'stone', emoji:'🪨',label:'Stone', color:'#78909c',dark:'#455a64',light:'#b0bec5',w:50,h:28},
+  {id:'brick', emoji:'🏠',label:'Red',   color:'#c62828',dark:'#8e0000',light:'#ef5350',w:110,h:32},
+  {id:'wood',  emoji:'🏡',label:'Wood',  color:'#8d6e63',dark:'#5d4037',light:'#bcaaa4',w:110,h:28},
+  {id:'glass', emoji:'🏢',label:'Glass', color:'#90caf9',dark:'#42a5f5',light:'#e3f2fd',w:110,h:30},
+  {id:'stone', emoji:'🏤',label:'Stone', color:'#78909c',dark:'#455a64',light:'#b0bec5',w:110,h:34},
 ];
 let wreckState,wreckTower,wreckFlyingBlocks,wreckBallAngle,wreckBallVel,wreckBallReleased;
 let wreckBallX,wreckBallY,wreckBallVX,wreckBallVY,wreckGroundY;
@@ -2547,7 +2547,7 @@ function updateWreckGame(dt){
     wreckBallY+=wreckBallVY*dt;
     // Check collision with tower (only before smash)
     if(!wreckSmashed){
-      const towerX=W*0.38,towerW=55;
+      const towerX=W*0.38,towerW=65;
       if(wreckBallX>towerX-towerW&&wreckBallX<towerX+towerW&&wreckBallY>wreckGroundY-wreckTower.length*25-30){
         smashTower();wreckBallVX*=0.3;wreckBallVY=-100; // bounce off impact
       }
@@ -2602,28 +2602,36 @@ function drawWreckGame(){
     ty-=block.h;
     const lw=wobbleAngle*idx*0.5;
     const bx=towerX-block.w/2+lw,by2=ty;
-    // Block shadow
-    ctx.fillStyle='rgba(0,0,0,0.1)';
-    drawRoundRect(bx+2,by2+2,block.w,block.h,3);ctx.fill();
-    // Block
-    ctx.fillStyle=block.color;
-    drawRoundRect(bx,by2,block.w,block.h,3);ctx.fill();
-    ctx.strokeStyle=block.dark;ctx.lineWidth=2;ctx.stroke();
-    // Highlight
-    ctx.fillStyle=block.light;ctx.globalAlpha=0.3;
-    ctx.fillRect(bx+3,by2+2,block.w-6,block.h*0.35);
-    ctx.globalAlpha=1;
-    // Texture
-    if(block.id==='brick'){
-      ctx.strokeStyle=block.dark;ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(bx+block.w*0.5,by2);ctx.lineTo(bx+block.w*0.5,by2+block.h);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(bx,by2+block.h*0.5);ctx.lineTo(bx+block.w,by2+block.h*0.5);ctx.stroke();
-    }else if(block.id==='wood'){
-      ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;
-      for(let g=0;g<3;g++){ctx.beginPath();ctx.moveTo(bx+5+g*15,by2);ctx.lineTo(bx+5+g*15,by2+block.h);ctx.stroke()}
-    }else if(block.id==='glass'){
-      ctx.fillStyle='rgba(255,255,255,0.4)';
-      ctx.beginPath();ctx.moveTo(bx+5,by2+3);ctx.lineTo(bx+15,by2+3);ctx.lineTo(bx+8,by2+block.h-3);ctx.closePath();ctx.fill();
+    const bw=block.w,bh=block.h;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.1)';drawRoundRect(bx+3,by2+3,bw,bh,2);ctx.fill();
+    // Wall
+    ctx.fillStyle=block.color;drawRoundRect(bx,by2,bw,bh,2);ctx.fill();
+    ctx.strokeStyle=block.dark;ctx.lineWidth=1.5;ctx.stroke();
+    // Floor line at bottom
+    ctx.fillStyle=block.dark;ctx.fillRect(bx,by2+bh-3,bw,3);
+    // Windows — 3 evenly spaced
+    const winW=bw*0.18,winH=bh*0.5,winY=by2+bh*0.15,winGap=(bw-winW*3)/4;
+    for(let wi=0;wi<3;wi++){
+      const wx=bx+winGap+wi*(winW+winGap);
+      if(block.id==='glass'){
+        // Glass tower: big blue windows
+        ctx.fillStyle='#e3f2fd';ctx.fillRect(wx,winY,winW,winH);
+        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.fillRect(wx+1,winY+1,winW*0.4,winH*0.5);
+      }else{
+        // Regular windows: light yellow (lit up)
+        ctx.fillStyle='#fff9c4';ctx.fillRect(wx,winY,winW,winH);
+        // Window frame
+        ctx.strokeStyle=block.dark;ctx.lineWidth=1;ctx.strokeRect(wx,winY,winW,winH);
+        // Cross pane
+        ctx.beginPath();ctx.moveTo(wx+winW/2,winY);ctx.lineTo(wx+winW/2,winY+winH);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(wx,winY+winH/2);ctx.lineTo(wx+winW,winY+winH/2);ctx.stroke();
+      }
+    }
+    // Roof detail on top floor
+    if(idx===wreckTower.length-1){
+      ctx.fillStyle=block.dark;
+      ctx.beginPath();ctx.moveTo(bx-3,by2);ctx.lineTo(bx+bw/2,by2-8);ctx.lineTo(bx+bw+3,by2);ctx.closePath();ctx.fill();
     }
   });
   ctx.restore();
