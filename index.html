@@ -1944,7 +1944,7 @@ function updateWreckGame(dt){
   // Pendulum swing
   if(wreckState==='swinging'&&!wreckBallReleased){
     const gravity=4.5;
-    wreckBallVel+=gravity*Math.sin(wreckBallAngle)*dt;
+    wreckBallVel-=gravity*Math.sin(wreckBallAngle)*dt;
     wreckBallVel*=0.998; // slight damping
     wreckBallAngle+=wreckBallVel*dt;
   }
