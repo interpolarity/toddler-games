@@ -2411,7 +2411,7 @@ function updatePaintButtons(){
 
 let paintDragging=false;
 function paintAddSplat(tx,ty,big){
-  if(ty>H-100)return;
+  if(ty<40||ty>H-100)return;
   let c=paintColor;
   if(paintRainbow){c=PAINT_COLORS[paintRainbowIdx%PAINT_COLORS.length].color;paintRainbowIdx++}
   const sz=big?(20+Math.random()*30):(8+Math.random()*12);
