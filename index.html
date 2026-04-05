@@ -523,10 +523,10 @@ function updateDigGame(dt){
       dumpDrainProgress+=dt*pourSpeed;dumpStreamTimer+=dt;
       // Spawn streaming particles every frame
       const holeX=W*0.85;
-      const ds=W*0.002,bedEnd=75*ds,bedHt=45*ds;
-      // Pour from the mid-right of the tilted bed (where material exits)
-      const pourX=truckX+bedEnd*Math.cos(truckBedAngle)+bedHt*0.4*Math.sin(truckBedAngle);
-      const pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-bedHt*0.4*Math.cos(truckBedAngle);
+      const ds=W*0.002,bedEnd=75*ds;
+      // Pour from bottom-right of tilted bed (the open end that dips toward hole)
+      const pourX=truckX+bedEnd*Math.cos(truckBedAngle);
+      const pourY=digGroundY+bedEnd*Math.sin(truckBedAngle);
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
