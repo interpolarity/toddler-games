@@ -560,9 +560,12 @@ function updateDigGame(dt){
             const rockDumpsSoFar=dumpHoleLayers.filter(m=>m==='rocks').length; // includes this one
             const layerH=(hh-12)/MAX_SCOOPS;
             const surfaceY=digGroundY+hh-2-sandCount*layerH;
-            const rockStackH=(rockDumpsSoFar-1)*layerH*0.6; // each rock dump stacks ~60% of a layer
+            const rockStackH=(rockDumpsSoFar-1)*layerH*0.45; // each dump stacks 45% of a layer
             for(let ri=0;ri<12;ri++){const rr=3+Math.random()*6;
-              holeRocks.push({x:hx-hw*0.7+Math.random()*hw*1.4,y:surfaceY-rr-rockStackH-Math.random()*layerH*0.4,
+              // Scatter across the full band for this dump — no gaps
+              const bandTop=surfaceY-rockStackH-layerH*0.45;
+              const bandBot=surfaceY-rockStackH;
+              holeRocks.push({x:hx-hw*0.7+Math.random()*hw*1.4,y:bandBot-rr-(bandBot-bandTop)*Math.random(),
                 radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
                 rotation:Math.random()*Math.PI*2});
             }}
