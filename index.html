@@ -2556,15 +2556,14 @@ function updateWreckGame(dt){
         smashTower();wreckBallVX*=0.3;wreckBallVY=-100; // bounce off impact
       }
     }
-    // Ball hit ground — bounce and settle
+    // Ball hit ground — bounce, but DON'T auto-smash on miss
     if(wreckBallY>wreckGroundY){
       wreckBallY=wreckGroundY;wreckBallVY*=-0.3;wreckBallVX*=0.5;
-      if(!wreckSmashed&&wreckTower.length>0){smashTower()}
-      else if(!wreckSmashed){wreckSmashed=true;wreckState='done';updateWreckButtons()}
     }
-    // Snap back to rope after settling (once moving slowly)
-    if(wreckSmashed&&Math.abs(wreckBallVX)<5&&Math.abs(wreckBallVY)<5){
-      wreckBallReleased=false;wreckBallAngle=0;wreckBallVel=0;
+    // Snap back to rope after settling (hit or miss)
+    if(Math.abs(wreckBallVX)<5&&Math.abs(wreckBallVY)<5&&wreckBallY>=wreckGroundY-5){
+      wreckBallReleased=false;wreckBallAngle=0.8;wreckBallVel=0;
+      if(!wreckSmashed&&wreckTower.length>0){wreckState='swinging';updateWreckButtons()}
     }
   }
   // Flying blocks
@@ -2580,8 +2579,8 @@ function updateWreckGame(dt){
     }
     // Settle into debris when slowed
     if(b.life<=0.4&&Math.abs(b.vy)<3&&Math.abs(b.vx)<2){
-      // Split into 3-5 varied debris chunks per block
-      const chunks=3+Math.floor(Math.random()*3);
+      // Split into 5-8 varied debris chunks per block
+      const chunks=5+Math.floor(Math.random()*4);
       for(let c=0;c<chunks;c++){
         const sizeVar=0.3+Math.random()*0.8; // big variation
         const cw=b.w*sizeVar*0.45+5;
