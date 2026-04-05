@@ -1862,9 +1862,13 @@ function addPancakeFruit(id){
   const f=PANCAKE_FRUITS.find(f=>f.id===id);
   const rng=seededRand(id.length*333+pancakeFruits.length*77);
   if(!pancakeFruitPos[id])pancakeFruitPos[id]=[];
-  // Spread on oval top surface — wide range
-  const fa=rng()*Math.PI*2,fr=0.25+rng()*0.55;
-  pancakeFruitPos[id].push({x:Math.cos(fa)*fr*0.85,y:Math.sin(fa)*fr*0.5});
+  // Spread evenly on oval — golden angle for even distribution
+  const allFruits=Object.values(pancakeFruitPos).flat();
+  const n=allFruits.length;
+  const ga=2.399963; // golden angle
+  const angle=n*ga,rad=0.35+((n*3)%7)*0.08;
+  // Store as unit-circle coords (will be mapped to oval in drawing)
+  pancakeFruitPos[id].push({x:Math.cos(angle)*rad,y:Math.sin(angle)*rad});
   if(f){playPop();sayWord(f.label)}
   spawnParticles(W*0.35,H*0.7-getPancakeHeight()-10,6,f?[f.color,'#fff']:['#e91e63'],{vyRange:3,spread:15});
   updatePancakeButtons();
@@ -2010,7 +2014,9 @@ function drawPancakeGame(){
       const f=PANCAKE_FRUITS.find(f=>f.id===fid);if(!f)return;
       const positions=pancakeFruitPos[fid];if(!positions)return;
       positions.forEach(pos=>{
-        const fx=stackX+pos.x*hw,fy=topSurf2-hw*0.12+pos.y*hw*0.5+bncF+camShift;
+        // Map to pancake oval: x spans full width, y spans oval perspective height
+        const fx=stackX+pos.x*hw*0.75;
+        const fy=topSurf2+pos.y*hw*0.22+bncF+camShift;
         ctx.globalAlpha=1;
         ctx.fillText(f.emoji,fx,fy);
       });
