@@ -657,6 +657,17 @@ function drawHoleTransform(hx,gy,hw,hh){
     if(a>0.7){ctx.fillStyle='#4caf50';ctx.beginPath();ctx.arc(hx-hw*0.7,by-hw*0.2,hw*0.15,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#5d4037';ctx.fillRect(hx-hw*0.7-2,by-hw*0.05,4,hw*0.1)}
   }
+  // Big centered celebration text
+  if(a>0.3){
+    const labels={sandcastle:'🏰 Sandcastle!',pond:'🦆 Pond!',mountain:'⛰️ Mountain!'};
+    const fontSize=Math.max(28,W*0.08);
+    ctx.globalAlpha=Math.min(1,(a-0.3)*3);
+    ctx.fillStyle='#fff';ctx.font=`bold ${fontSize}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillText(labels[t]||'',W/2+3,H*0.18+3);
+    ctx.fillStyle='#fff';ctx.fillText(labels[t]||'',W/2,H*0.18);
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.globalAlpha=1;
+  }
   ctx.restore();
 }
 
