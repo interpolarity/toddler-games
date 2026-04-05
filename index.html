@@ -453,8 +453,10 @@ function updateDigGame(dt){
       dumpDrainProgress+=dt*pourSpeed;dumpStreamTimer+=dt;
       // Spawn streaming particles every frame
       const holeX=W*0.85;
-      const ds=W*0.002,bedEnd=75*ds;
-      const pourX=truckX+bedEnd*Math.cos(truckBedAngle),pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-ds*10;
+      const ds=W*0.002,bedEnd=75*ds,bedHt=45*ds;
+      // Pour from top edge of bed's open end (not bottom corner)
+      const pourX=truckX+bedEnd*Math.cos(truckBedAngle)+bedHt*Math.sin(truckBedAngle);
+      const pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-bedHt*Math.cos(truckBedAngle);
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
@@ -480,9 +482,10 @@ function updateDigGame(dt){
           const popped=truckLoad.pop();dumpHoleLayers.push(popped);
           // Add visual rocks to hole for rock layers
           if(popped==='rocks'){const hx=W*0.85,hw=W*0.13,hh=H*0.15;
-            const rockFill=holeRocks.length;const baseY=digGroundY+hh-6-(rockFill/4)*4;
-            for(let ri=0;ri<6;ri++){const rr=2+Math.random()*4;
-              holeRocks.push({x:hx-hw*0.55+Math.random()*hw*1.1,y:Math.min(baseY,digGroundY+hh-8-Math.random()*10),
+            const fillFrac=Math.min(0.85,holeRocks.length/(MAX_SCOOPS*5));
+            const fillTop=digGroundY+hh-4-(hh-14)*fillFrac;
+            for(let ri=0;ri<5;ri++){const rr=2+Math.random()*4;
+              holeRocks.push({x:hx-hw*0.5+Math.random()*hw*1.0,y:fillTop+Math.random()*8,
                 radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
                 rotation:Math.random()*Math.PI*2});
             }}
@@ -552,8 +555,10 @@ function drawDigGame(){
   ctx.fillStyle='#7cb342';ctx.beginPath();ctx.ellipse(hx,digGroundY+6,hw+5,10,0,0,Math.PI*2);ctx.fill();
   if(dumpHoleLayers.length>0){const ml=10,lh=(hh-12)/ml,vl=dumpHoleLayers.slice(-ml);
     ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();
-    // Draw sand/water layers normally
-    vl.forEach((mat,i)=>{if(mat!=='rocks'){const ly=digGroundY+hh-(i+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,mat,5000+i*251)}});
+    // Draw non-rock layers sorted: sand at bottom, water on top
+    const nonRock=[];vl.forEach((mat,i)=>{if(mat!=='rocks')nonRock.push({mat,i})});
+    nonRock.sort((a,b)=>(a.mat==='water'?1:0)-(b.mat==='water'?1:0));
+    nonRock.forEach((nr,di)=>{const ly=digGroundY+hh-(di+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,nr.mat,5000+nr.i*251)});
     // Draw accumulated rocks as individual boulders
     holeRocks.forEach(r=>{
       ctx.fillStyle=r.color;ctx.beginPath();
