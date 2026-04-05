@@ -412,8 +412,6 @@ function updateDigButtons(){
     const full=truckLoad.length>=MAX_SCOOPS;
     ['sand','rocks','water'].forEach(m=>addBtn(`btn-${m}`,DIG_MAT[m].emoji,DIG_MAT[m].label,()=>{if(digState!=='dig')return;initAudio();digStartDig(m)},full));
     addBtn('btn-go','🚛','GO!',()=>{initAudio();digStartDrive()},truckLoad.length===0);
-    const anyLow=pileSizes.sand<0.3||pileSizes.rocks<0.3||pileSizes.water<0.3;
-    addBtn('btn-again','🔄','Refill',()=>{initAudio();playPop();pileSizes={sand:1,rocks:1,water:1}},!anyLow);
   }else if(digState==='dump'){
 
     instruction.textContent='Tap to DUMP!';
@@ -455,7 +453,6 @@ function digDoDump(){
 function updateDigGame(dt){
   digGroundY=H>W*1.5?H*0.42:H*0.55;
   // Piles slowly regrow
-  ['sand','rocks','water'].forEach(t=>{if(pileSizes[t]<1)pileSizes[t]=Math.min(1,pileSizes[t]+dt*0.04)});
   // Screen shake
   if(screenShakeTimer>0){screenShakeTimer-=dt;screenShakeX=(Math.random()-0.5)*screenShakeTimer*40;screenShakeY=(Math.random()-0.5)*screenShakeTimer*25}else{screenShakeX=0;screenShakeY=0}
   // Excavator recoil spring-back
@@ -488,7 +485,7 @@ function updateDigGame(dt){
           size:dr_r,color:cols[Math.floor(Math.random()*cols.length)],
           life:1,decay:0.02,gravity:0.4,shape:'square'});
       }}
-      pileSizes[digTarget.type]=Math.max(0.35,pileSizes[digTarget.type]-0.12);
+      // piles stay static — no shrinking
       playSound_dig(digTarget.type);
     }
     if(t>=1){excAnimPhase=4;excAnimTime=0}}
@@ -530,9 +527,9 @@ function updateDigGame(dt){
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
-          // Rock particles — same system as sand/water but square shaped, larger
-          const cols=['#78909c','#546e7a','#90a4ae','#455a64'];
-          for(let i=0;i<3;i++){
+          // Rock particles — dense gravel stream
+          const cols=['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'];
+          for(let i=0;i<8;i++){
             particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,
               vx:(holeX-pourX)*0.015+(Math.random()-0.5)*2,
               vy:Math.random()*2+1,
@@ -561,7 +558,7 @@ function updateDigGame(dt){
             const sandCount=dumpHoleLayers.filter(m=>m==='sand').length;
             const layerH=(hh-12)/MAX_SCOOPS;
             const surfaceY=digGroundY+hh-2-sandCount*layerH;
-            for(let ri=0;ri<5;ri++){const rr=2+Math.random()*4;
+            for(let ri=0;ri<10;ri++){const rr=2+Math.random()*4;
               holeRocks.push({x:hx-hw*0.5+Math.random()*hw*1.0,y:surfaceY-rr,
                 radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
                 rotation:Math.random()*Math.PI*2});
@@ -603,22 +600,19 @@ function drawDigGame(){
     const bw=W*0.11*sz,bh=W*0.09*sz,py=digGroundY;
     if(type==='sand'){ctx.fillStyle=m.color;ctx.beginPath();ctx.moveTo(xc-bw,py+4);ctx.quadraticCurveTo(xc,py-bh*1.2,xc+bw,py+4);ctx.fill();
       ctx.fillStyle=m.light;ctx.globalAlpha=0.4;ctx.beginPath();ctx.moveTo(xc-bw*0.4,py);ctx.quadraticCurveTo(xc,py-bh*0.8,xc+bw*0.2,py);ctx.fill();ctx.globalAlpha=1}
-    else if(type==='rocks'){const rng2=seededRand(77);
-      [[-0.35,-0.15,0.34],[0.25,-0.1,0.28],[0,-0.48,0.26],[-0.12,-0.05,0.22],[0.15,-0.32,0.2],[0.05,-0.18,0.18],[-0.25,-0.38,0.16]].forEach(([dx,dy,r])=>{
-        const rx=xc+bw*dx,ry=py+bh*dy,rr=bw*r;
-        const rockCols=['#546e7a','#5d6d7e','#455a64','#607d8b','#6d7f8b'];
+    else if(type==='rocks'){
+      // Gravel mound — many small rocks matching dump particle size
+      ctx.fillStyle='#607d8b';ctx.beginPath();ctx.moveTo(xc-bw,py+4);ctx.quadraticCurveTo(xc,py-bh*1.1,xc+bw,py+4);ctx.fill();
+      const rng2=seededRand(77);const rockCols=['#546e7a','#5d6d7e','#455a64','#607d8b','#78909c'];
+      for(let gi=0;gi<25;gi++){
+        const ga=rng2()*Math.PI*2,gr=rng2()*bw*0.85;
+        const gx=xc+Math.cos(ga)*gr*0.9,gy=py-Math.sin(ga)*gr*0.45*rng2()-2;
+        if(gy>py+2)continue; // skip if below ground
+        const gs=2+rng2()*4;
         ctx.fillStyle=rockCols[Math.floor(rng2()*rockCols.length)];
-        // Natural stone — rounded polygon with moderate bumps
-        const pts=6;const vx2=[],vy2=[];
-        for(let p=0;p<pts;p++){const a=(p/pts)*Math.PI*2+(rng2()-0.5)*0.2,d=rr*(0.7+rng2()*0.3);
-          vx2.push(rx+Math.cos(a)*d);vy2.push(ry+Math.sin(a)*d)}
-        ctx.beginPath();ctx.moveTo((vx2[pts-1]+vx2[0])/2,(vy2[pts-1]+vy2[0])/2);
-        for(let p=0;p<pts;p++){const nx=(vx2[p]+vx2[(p+1)%pts])/2,ny=(vy2[p]+vy2[(p+1)%pts])/2;
-          ctx.quadraticCurveTo(vx2[p],vy2[p],nx,ny)}
-        ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.stroke();
-        // Soft highlight
-        ctx.fillStyle=m.light;ctx.globalAlpha=0.2;
-        ctx.beginPath();ctx.arc(rx-rr*0.15,ry-rr*0.2,rr*0.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1})}
+        ctx.beginPath();ctx.arc(gx,gy,gs,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=0.5;ctx.stroke();
+      }}
     else{ctx.fillStyle=m.color;ctx.globalAlpha=0.7;ctx.beginPath();ctx.ellipse(xc,py+2,bw,bh*0.35,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
       // Waves
       const t=Date.now()/500;ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;
