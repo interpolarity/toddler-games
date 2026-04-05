@@ -133,6 +133,7 @@ function sayNumber(n){
 // Particles
 let particles = [];
 function spawnParticles(x,y,count,colors,opts={}){
+  if(particles.length>200)return; // cap to prevent lag
   for(let i=0;i<count;i++){
     particles.push({x:x+(Math.random()-0.5)*(opts.spread||20),y,
       vx:(Math.random()-0.5)*(opts.vxRange||8),vy:-(Math.random()*(opts.vyRange||7)+2),
@@ -472,11 +473,11 @@ function updateDigGame(dt){
       const px=digTarget.x,py=digGroundY;
       const mt=digTarget.type,m=DIG_MAT[mt];
       const cols=mt==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64','#b0bec5']:mt==='water'?[m.color,m.light,'#fff','#81d4fa']:[m.color,m.light,m.dark,'#ffe082'];
-      spawnParticles(px,py,mt==='rocks'?40:25,cols,{vyRange:14,spread:35,maxSize:mt==='rocks'?12:6,shape:mt==='rocks'?'square':'circle',gravity:0.35});
+      spawnParticles(px,py,mt==='rocks'?20:15,cols,{vyRange:14,spread:35,maxSize:mt==='rocks'?10:6,shape:mt==='rocks'?'square':'circle',gravity:0.35});
       // Extra dirt particles
-      spawnParticles(px,py,10,['#8d6e63','#6d4c41','#a1887f'],{vyRange:8,spread:25,maxSize:4});
-      // Dust cloud — large, slow, low-alpha
-      spawnParticles(px,py,8,['#d7ccc8','#bcaaa4','#a1887f'],{vyRange:4,spread:40,maxSize:18,gravity:0.05});
+      spawnParticles(px,py,5,['#8d6e63','#6d4c41','#a1887f'],{vyRange:8,spread:25,maxSize:4});
+      // Dust cloud
+      spawnParticles(px,py,4,['#d7ccc8','#bcaaa4','#a1887f'],{vyRange:4,spread:40,maxSize:14,gravity:0.05});
       // Large debris rocks for rocks material
       if(mt==='rocks'){for(let dr=0;dr<5;dr++){
         const dr_r=W*0.004+Math.random()*W*0.006;
@@ -527,9 +528,9 @@ function updateDigGame(dt){
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
-          // Rock particles — dense gravel stream
+          // Rock particles — gravel stream (throttled)
           const cols=['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'];
-          for(let i=0;i<10;i++){
+          for(let i=0;i<4;i++){
             particles.push({x:pourX+(Math.random()-0.5)*12,y:pourY,
               vx:(holeX-pourX)*0.015+(Math.random()-0.5)*2,
               vy:Math.random()*2+1,
