@@ -552,10 +552,10 @@ function updateDigGame(dt){
           const popped=truckLoad.pop();dumpHoleLayers.push(popped);
           // Add visual rocks to hole for rock layers
           if(popped==='rocks'){const hx=W*0.85,hw=W*0.13,hh=H*0.15;
-            const fillFrac=Math.min(0.85,holeRocks.length/(MAX_SCOOPS*5));
-            const fillTop=digGroundY+hh-4-(hh-14)*fillFrac;
+            const fillFrac=Math.min(0.9,holeRocks.length/(MAX_SCOOPS*6));
+            const fillTop=Math.max(digGroundY+12,digGroundY+hh-4-(hh-14)*fillFrac);
             for(let ri=0;ri<5;ri++){const rr=2+Math.random()*4;
-              holeRocks.push({x:hx-hw*0.5+Math.random()*hw*1.0,y:fillTop+Math.random()*8,
+              holeRocks.push({x:hx-hw*0.5+Math.random()*hw*1.0,y:fillTop+Math.random()*6,
                 radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
                 rotation:Math.random()*Math.PI*2});
             }}
