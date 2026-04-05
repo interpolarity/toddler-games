@@ -564,8 +564,8 @@ function updateDigGame(dt){
             const rockDumpsSoFar=dumpHoleLayers.filter(m=>m==='rocks').length; // includes this one
             const layerH=(hh-12)/10;
             const surfaceY=digGroundY+hh-2-sandCount*layerH;
-            const rockStackH=(rockDumpsSoFar-1)*layerH*0.45; // each dump stacks 45% of a layer
-            const bandTop=surfaceY-rockStackH-layerH*0.45;
+            const rockStackH=(rockDumpsSoFar-1)*layerH;
+            const bandTop=surfaceY-rockStackH-layerH;
             const bandBot=surfaceY-rockStackH;
             for(let ri=0;ri<35;ri++){const rr=2+Math.random()*5;
               holeRocks.push({x:hx-hw*0.9+Math.random()*hw*1.8,y:bandBot-rr-(bandBot-bandTop)*Math.random(),
