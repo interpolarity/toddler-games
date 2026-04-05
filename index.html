@@ -244,6 +244,7 @@ function showMenu(){
     {emoji:'🚜',label:'Dig!',bg:'linear-gradient(180deg,#ffca28,#f9a825)',fn:startDigGame},
     {emoji:'🍔',label:'Burger!',bg:'linear-gradient(180deg,#ffe0b2,#d7a86e)',color:'#5d4037',fn:startBurgerGame},
     {emoji:'🍦',label:'Ice Cream!',bg:'linear-gradient(180deg,#f8bbd0,#f48fb1)',fn:startIceCreamGame},
+    {emoji:'🥞',label:'Pancake!',bg:'linear-gradient(180deg,#ffe0b2,#d7a86e)',color:'#5d4037',fn:startPancakeGame},
     {emoji:'🍕',label:'Pizza!',bg:'linear-gradient(180deg,#ff8a65,#e64a19)',fn:startPizzaGame},
     {emoji:'🃏',label:'Match!',bg:'linear-gradient(180deg,#66bb6a,#388e3c)',fn:startMatchGame},
     {emoji:'💥',label:'Smash!',bg:'linear-gradient(180deg,#ff7043,#d84315)',fn:startWreckGame},
@@ -1794,6 +1795,208 @@ function drawMatchGame(){
 }
 
 // =============================================
+// PANCAKE GAME
+// =============================================
+const PANCAKE_SYRUPS=[
+  {id:'maple',emoji:'🍯',label:'Maple',color:'#c49556',dark:'#8d6e63',react:'😊'},
+  {id:'chocolate',emoji:'🍫',label:'Choco',color:'#5d4037',dark:'#3e2723',react:'🤎'},
+  {id:'strawberry',emoji:'🍓',label:'Berry',color:'#e91e63',dark:'#c2185b',react:'❤️'},
+  {id:'blueberry',emoji:'🫐',label:'Blue',color:'#5c6bc0',dark:'#3949ab',react:'💙'},
+];
+const PANCAKE_FRUITS=[
+  {id:'strawberry',emoji:'🍓',label:'Strawberry',color:'#e53935'},
+  {id:'banana',emoji:'🍌',label:'Banana',color:'#fdd835'},
+  {id:'blueberry',emoji:'🫐',label:'Blueberry',color:'#5c6bc0'},
+  {id:'whipped',emoji:'🍦',label:'Cream',color:'#fafafa'},
+  {id:'cherry',emoji:'🍒',label:'Cherry',color:'#c62828'},
+];
+let pancakeState,pancakeStack,pancakeFruits,pancakeFruitPos;
+let pancakeCustomerX,pancakeEatCount,pancakeTotalLayers;
+let pancakeBounceTimer,pancakeCamY;
+
+function startPancakeGame(){
+  currentMode='pancake';particles=[];confetti=[];
+  pancakeState='stacking';pancakeStack=['plate'];pancakeFruits=[];pancakeFruitPos={};
+  pancakeCustomerX=W+80;pancakeEatCount=0;pancakeTotalLayers=0;
+  pancakeBounceTimer=0;pancakeCamY=0;
+  updatePancakeButtons();
+}
+function updatePancakeButtons(){
+  buttonsArea.innerHTML='';
+  if(pancakeState==='stacking'){
+    instruction.textContent=pancakeStack.length<=1?'Stack pancakes!':'Add more!';
+    addBtn('btn-food','🥞','Pancake',()=>{initAudio();addPancakeItem('pancake')});
+    PANCAKE_SYRUPS.forEach(s=>addBtn('btn-pizza',s.emoji,s.label,()=>{initAudio();addPancakeItem('syrup_'+s.id)},
+      pancakeStack[pancakeStack.length-1]==='plate'||pancakeStack[pancakeStack.length-1].startsWith('syrup_')));
+    addBtn('btn-done','🍓','Fruits!',()=>{initAudio();startPancakeFruits()},!pancakeStack.some(s=>s==='pancake'));
+  }else if(pancakeState==='topping'){
+    instruction.textContent='Add fruit toppings!';
+    PANCAKE_FRUITS.forEach(f=>addBtn('btn-icecream',f.emoji,f.label,()=>{initAudio();addPancakeFruit(f.id)}));
+    addBtn('btn-done','✅','Done!',()=>{initAudio();finishPancake()});
+  }else if(pancakeState==='pick_char'){
+    instruction.textContent='Who eats it?';
+    CHARACTERS.forEach(c=>addBtn('btn-char',c.emoji,c.label,()=>{initAudio();currentChar=c.id;playPop();pancakeState='customer_walking';pancakeCustomerX=W+80;updatePancakeButtons()}));
+  }else if(pancakeState==='eating'){
+    instruction.textContent='Tap NOM! 🥞';
+    addBtn('btn-nom','😋','NOM!',()=>{initAudio();pancakeDoEat()});
+  }else if(pancakeState==='done'){
+    instruction.textContent='Yummy! 🎉';
+    addBtn('btn-again','🔄','Again!',()=>{initAudio();startPancakeGame()});
+  }else{instruction.textContent='Here they come!'}
+}
+function addPancakeItem(id){
+  pancakeStack.push(id);pancakeBounceTimer=0.3;
+  wobbleVel+=(Math.random()-0.5)*0.06;
+  if(id==='pancake'){playTone(200,0.15,'triangle',0.2);playTone(150,0.1,'square',0.1);sayWord('Pancake!')}
+  else{const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);if(s){playTone(400,0.1,'sine',0.12);sayWord(s.label)}}
+  const totalH=getPancakeHeight();const visH=H*0.7-60;
+  pancakeCamY=Math.max(0,totalH-visH+60);
+  spawnParticles(W*0.35,H*0.7-15-totalH,8,['#d7a86e','#c49556','#ffca28'],{vyRange:4,spread:20});
+  updatePancakeButtons();
+}
+function startPancakeFruits(){
+  pancakeState='topping';updatePancakeButtons();
+}
+function addPancakeFruit(id){
+  pancakeFruits.push(id);pancakeBounceTimer=0.2;
+  const f=PANCAKE_FRUITS.find(f=>f.id===id);
+  const rng=seededRand(id.length*333+pancakeFruits.length*77);
+  if(!pancakeFruitPos[id])pancakeFruitPos[id]=[];
+  pancakeFruitPos[id].push({x:(rng()-0.5)*0.7,y:rng()*0.3-0.15});
+  if(f){playPop();sayWord(f.label)}
+  spawnParticles(W*0.35,H*0.7-getPancakeHeight()-10,6,f?[f.color,'#fff']:['#e91e63'],{vyRange:3,spread:15});
+  updatePancakeButtons();
+}
+function finishPancake(){
+  pancakeTotalLayers=pancakeStack.filter(s=>s!=='plate').length+pancakeFruits.length;
+  pancakeEatCount=0;pancakeState='pick_char';playPop();updatePancakeButtons();
+}
+function pancakeDoEat(){
+  if(pancakeState!=='eating'||mouthOpenTimer>0.15)return;
+  // Eat fruits first, then stack items
+  if(pancakeFruits.length>0){
+    const removed=pancakeFruits.pop();const f=PANCAKE_FRUITS.find(f=>f.id===removed);
+    if(f&&pancakeFruitPos[removed])pancakeFruitPos[removed].pop();
+    pancakeEatCount++;mouthOpenTimer=0.3;playChomp(350);
+    spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,f?f.emoji:'🍓',f?f.color:null);
+    spawnFloatingEmoji(pancakeCustomerX,H*0.7-80,'😋');
+  }else if(pancakeStack.length>1){
+    const removed=pancakeStack.pop();
+    pancakeEatCount++;mouthOpenTimer=0.3;
+    if(removed==='pancake'){playChomp(200);spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,'🥞','#d7a86e')}
+    else{const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===removed);playChomp(300);
+      spawnFlyingFood(W*0.35,H*0.55,pancakeCustomerX,H*0.7-45*1.7,s?s.emoji:'🍯',s?s.color:null)}
+    spawnFloatingEmoji(pancakeCustomerX,H*0.7-80,'😊');
+  }
+  spawnParticles(W*0.35,H*0.55,5,['#d7a86e','#c49556'],{vyRange:3,spread:15});
+  if(pancakeStack.length<=1&&pancakeFruits.length===0){
+    pancakeState='done';playJingle();spawnConfetti();
+    sayNumber(pancakeEatCount);setTimeout(()=>playTaDa(),600);
+    updatePancakeButtons();
+  }
+}
+function getPancakeHeight(){
+  let h=0;
+  pancakeStack.forEach(id=>{if(id==='plate')return;if(id==='pancake')h+=22;else h+=8});
+  return h;
+}
+function updatePancakeGame(dt){
+  if(pancakeBounceTimer>0)pancakeBounceTimer=Math.max(0,pancakeBounceTimer-dt);
+  wobbleVel+=-wobbleAngle*2.5*dt;wobbleVel*=0.95;wobbleAngle+=wobbleVel;
+  if(pancakeState==='customer_walking'){
+    pancakeCustomerX=lerp(pancakeCustomerX,W*0.72,dt*4);
+    if(Math.abs(pancakeCustomerX-W*0.72)<5){pancakeCustomerX=W*0.72;pancakeState='eating';updatePancakeButtons()}
+  }
+  if(mouthOpenTimer>0)mouthOpenTimer=Math.max(0,mouthOpenTimer-dt);
+  updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);updateFlyingFoods(dt);
+}
+function drawPancakeGame(){
+  ctx.fillStyle='#fff9c4';ctx.fillRect(0,0,W,H);
+  const floorY=H*0.7;
+  ctx.fillStyle='#ffe0b2';ctx.fillRect(0,floorY,W,H-floorY);
+  const ts=30;for(let x=0;x<W;x+=ts)for(let y=floorY;y<H;y+=ts){if((Math.floor(x/ts)+Math.floor(y/ts))%2===0){ctx.fillStyle='#ffcc80';ctx.fillRect(x,y,ts,ts)}}
+  ctx.fillStyle='#8d6e63';ctx.fillRect(0,floorY-8,W,12);
+  ctx.fillStyle='#a1887f';ctx.fillRect(0,floorY-8,W,4);
+  // Plate
+  const plateX=W*0.35,plateY=floorY-8;
+  ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(plateX,plateY,W*0.16,12,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#e0e0e0';ctx.lineWidth=2;ctx.stroke();
+
+  const stackX=plateX,bunBase=plateY-10;
+  const totalH=getPancakeHeight();const topY=bunBase-totalH;
+  const camShift=Math.max(0,50-topY);
+  const hw=W*0.12; // pancake half-width
+
+  ctx.save();ctx.translate(0,camShift);
+  ctx.translate(stackX,bunBase);ctx.rotate(wobbleAngle*(pancakeStack.length*0.02));ctx.translate(-stackX,-bunBase);
+  let curY=bunBase;
+  const bounce=pancakeBounceTimer>0?Math.sin(pancakeBounceTimer*20)*3:0;
+
+  pancakeStack.forEach((id,idx)=>{
+    if(id==='plate')return;
+    const isTop=idx===pancakeStack.length-1;
+    const lw=wobbleAngle*idx*0.3;
+    const bY=curY+(isTop&&pancakeFruits.length===0?bounce:0);
+    const bX=stackX+lw;
+    if(id==='pancake'){
+      // Fluffy pancake — rounded rect with gradient
+      const ph=22;
+      let pg=ctx.createLinearGradient(0,bY-ph,0,bY);
+      pg.addColorStop(0,'#e8c170');pg.addColorStop(0.3,'#d7a86e');pg.addColorStop(0.7,'#c49556');pg.addColorStop(1,'#b8864e');
+      ctx.fillStyle=pg;
+      drawRoundRect(bX-hw,bY-ph,hw*2,ph,8);ctx.fill();
+      ctx.strokeStyle='#a1724a';ctx.lineWidth=1.5;ctx.stroke();
+      // Browned spots
+      const rng=seededRand(idx*99);ctx.fillStyle='rgba(139,90,43,0.15)';
+      for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(bX-hw*0.6+rng()*hw*1.2,bY-ph*0.3-rng()*ph*0.4,3+rng()*5,0,Math.PI*2);ctx.fill()}
+      // Top highlight
+      ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fillRect(bX-hw+4,bY-ph+2,hw*2-8,4);
+      curY-=ph;
+    }else{
+      // Syrup drizzle layer
+      const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);
+      if(s){
+        const sh=8;ctx.fillStyle=s.color;ctx.globalAlpha=0.8;
+        ctx.fillRect(bX-hw+3,bY-sh,hw*2-6,sh);
+        // Drip details on sides
+        const rng=seededRand(idx*77);
+        for(let i=0;i<4;i++){const dx=bX-hw+8+rng()*(hw*2-16);
+          ctx.beginPath();ctx.ellipse(dx,bY,2+rng()*3,3+rng()*4,0,0,Math.PI*2);ctx.fill()}
+        ctx.globalAlpha=1;
+        // Shine
+        ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(bX-hw+6,bY-sh+1,hw*1.2,2);
+        curY-=sh;
+      }
+    }
+  });
+
+  // Fruit toppings on top of stack
+  if(pancakeFruits.length>0){
+    const topSurf=curY;const bncF=pancakeBounceTimer>0?bounce:0;
+    Object.keys(pancakeFruitPos).forEach(fid=>{
+      const f=PANCAKE_FRUITS.find(f=>f.id===fid);if(!f)return;
+      const positions=pancakeFruitPos[fid];if(!positions)return;
+      positions.forEach(pos=>{
+        const fx=stackX+pos.x*hw*2,fy=topSurf+pos.y*20+bncF-5;
+        ctx.font=`${Math.max(18,W*0.05)}px sans-serif`;ctx.textAlign='center';
+        ctx.fillText(f.emoji,fx,fy);
+      });
+    });
+    ctx.textAlign='left';
+  }
+  ctx.restore();
+
+  // Customer
+  if(pancakeState==='customer_walking'||pancakeState==='eating'||pancakeState==='done'){
+    drawCustomer(pancakeCustomerX,floorY,mouthOpenTimer>0);
+  }
+  if((pancakeState==='eating'||pancakeState==='done')&&pancakeEatCount>0){
+    drawEatCounter(pancakeEatCount,pancakeTotalLayers);
+  }
+  drawParticles(0);drawConfetti();drawFloatingEmojis();drawFlyingFoods();
+}
+
+// =============================================
 // PIZZA GAME
 // =============================================
 const PIZZA_TOPPINGS=[
@@ -2402,6 +2605,7 @@ function gameLoop(ts){
   else if(currentMode==='icecream'){updateIceCreamGame(dt);drawIceCreamGame()}
   else if(currentMode==='match'){updateMatchGame(dt);drawMatchGame()}
   else if(currentMode==='wreck'){updateWreckGame(dt);drawWreckGame()}
+  else if(currentMode==='pancake'){updatePancakeGame(dt);drawPancakeGame()}
   else if(currentMode==='pizza'){updatePizzaGame(dt);drawPizzaGame()}
 
   requestAnimationFrame(gameLoop);
