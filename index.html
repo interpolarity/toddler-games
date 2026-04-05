@@ -2583,16 +2583,25 @@ function updateWreckGame(dt){
       if(b.y<wreckGroundY-b.h)b.y=wreckGroundY-b.h/2;
       // Split into 7-12 varied debris chunks per block
       const chunks=7+Math.floor(Math.random()*6);
+      let hasWindow=false;
       for(let c=0;c<chunks;c++){
-        const sizeVar=0.15+Math.random()*1.0; // wider range: tiny to large
+        const sizeVar=0.15+Math.random()*1.0;
         const cw=b.w*sizeVar*0.4+3;
         const ch=b.h*sizeVar*0.5+3;
-        const detail=Math.floor(Math.random()*6);
-        const shape=Math.random(); // 0-0.5=rect, 0.5-0.75=square, 0.75-1=triangle
+        let detail=Math.floor(Math.random()*6);
+        // Guarantee at least one window piece (detail 0 or 4) — make it large
+        const isWindow=(detail===0||detail===4);
+        if(c===chunks-1&&!hasWindow){detail=0}
+        if(isWindow)hasWindow=true;
+        const shape=Math.random();
+        const isWinPiece=detail===0||detail===4;
+        const pw=isWinPiece?Math.max(cw,b.w*0.35):cw; // windows get bigger chunks
+        const ph=isWinPiece?Math.max(ch,b.h*0.5):ch;
         wreckDebris.push({x:b.x+(Math.random()-0.5)*b.w*0.9,y:b.y-Math.random()*10,
-          w:cw,h:shape<0.5?ch:(shape<0.75?Math.min(cw,ch):ch),
-          color:b.color,dark:b.dark,light:b.light,id:b.id,detail,shape:shape<0.5?'rect':shape<0.75?'sq':'tri',
-          rot:b.rot+(Math.random()-0.5)*1.5});
+          w:pw,h:shape<0.5?ph:(shape<0.75?Math.min(pw,ph):ph),
+          color:b.color,dark:b.dark,light:b.light,id:b.id,detail,
+          shape:isWinPiece?'rect':(shape<0.5?'rect':shape<0.75?'sq':'tri'),
+          zTop:isWinPiece,rot:b.rot+(Math.random()-0.5)*1.5});
       }
       wreckFlyingBlocks.splice(i,1);
     }
@@ -2676,8 +2685,9 @@ function drawWreckGame(){
   });
   ctx.restore();
 
-  // Debris pile — varied recognizable building chunks
-  wreckDebris.forEach(d=>{
+  // Debris pile — window pieces drawn on top
+  const sortedDebris=wreckDebris.slice().sort((a,b)=>(a.zTop?1:0)-(b.zTop?1:0));
+  sortedDebris.forEach(d=>{
     ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);
     const hw=d.w/2,hh=d.h/2;
     // Chunk shape — rect, square, or triangle with shade variation
@@ -2696,9 +2706,15 @@ function drawWreckGame(){
 
     // Material-appropriate details
     if(d.id==='glass'){
-      // Glass: shiny reflections, cracks, shards
-      if(d.detail<2){ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillRect(-hw+2,-hh+2,d.w*0.35,d.h*0.4);} // glare
-      if(d.detail===2||d.detail===3){// Spider crack
+      // Glass: windows (no cross panes), reflections, cracks
+      if((d.detail===0||d.detail===4)&&d.w>14){
+        // Glass window — bright blue, no cross lines
+        const ww=d.w*0.6,wh=d.h*0.6;
+        ctx.fillStyle='#bbdefb';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.strokeStyle='#42a5f5';ctx.lineWidth=1;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
+        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.fillRect(-ww/2+1,-wh/2+1,ww*0.35,wh*0.4);
+      }else if(d.detail<2){ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillRect(-hw+2,-hh+2,d.w*0.35,d.h*0.4);}
+      else{// Spider crack
         ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1;
         ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-hw*0.8,-hh*0.7);ctx.moveTo(0,0);ctx.lineTo(hw*0.6,hh*0.5);
         ctx.moveTo(0,0);ctx.lineTo(hw*0.3,-hh*0.8);ctx.moveTo(0,0);ctx.lineTo(-hw*0.5,hh*0.6);ctx.stroke();}
