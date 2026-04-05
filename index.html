@@ -562,7 +562,7 @@ function updateDigGame(dt){
             // Rocks land on current surface, stacking higher with each dump
             const sandCount=dumpHoleLayers.filter(m=>m==='sand').length;
             const rockDumpsSoFar=dumpHoleLayers.filter(m=>m==='rocks').length; // includes this one
-            const layerH=(hh-12)/MAX_SCOOPS;
+            const layerH=(hh-12)/10;
             const surfaceY=digGroundY+hh-2-sandCount*layerH;
             const rockStackH=(rockDumpsSoFar-1)*layerH*0.45; // each dump stacks 45% of a layer
             const bandTop=surfaceY-rockStackH-layerH*0.45;
@@ -589,7 +589,7 @@ function updateDigGame(dt){
     else if(dumpPhase===3){// Drive truck away to reveal hole
       const t=Math.min(1,dumpTime/0.8);truckX=lerp(W*0.72,W+150,easeInOut(t));
       if(t>=1){digState='celebrate';playJingle();spawnConfetti();
-        if(dumpHoleLayers.length>=5&&!holeTransform){
+        if(dumpHoleLayers.length>=10&&!holeTransform){
           const sand=dumpHoleLayers.filter(m=>m==='sand').length;
           const rocks=dumpHoleLayers.filter(m=>m==='rocks').length;
           const water=dumpHoleLayers.filter(m=>m==='water').length;
@@ -708,7 +708,7 @@ function drawDigGame(){
     // Sand stacks from bottom, water sits on sand, rocks scatter on surface
     const sandLayers=[];const waterCount=dumpHoleLayers.filter(m=>m==='water').length;
     dumpHoleLayers.forEach((mat,i)=>{if(mat==='sand')sandLayers.push({mat,i})});
-    const layerH=(hh-12)/MAX_SCOOPS;
+    const layerH=(hh-12)/10;
     const sandH=sandLayers.length*layerH;
     const waterH=waterCount*layerH;
     // Sand from bottom
