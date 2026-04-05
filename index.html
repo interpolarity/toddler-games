@@ -2321,8 +2321,8 @@ function drawPizzaScatter(cx,cy,innerR,id){
       ctx.fillStyle='#8e0000';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(px,py,sz*0.4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
     }else if(id==='mushroom'){
       // Mushroom slice — fan shape with visible gills
-      const ms=sz*1.1;
-      ctx.save();ctx.translate(px,py);ctx.rotate(pos.angle*0.5);
+      const ms=sz*1.8;
+      ctx.save();ctx.translate(px,py);ctx.rotate(pos.angle*0.15);
       // Cap
       ctx.fillStyle='#d7ccc8';
       ctx.beginPath();ctx.moveTo(-ms*0.7,0);ctx.quadraticCurveTo(-ms*0.6,-ms*0.9,0,-ms);
