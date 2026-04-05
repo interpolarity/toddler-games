@@ -547,7 +547,7 @@ function updateDigGame(dt){
               size:2+Math.random()*4,
               color:cols[Math.floor(Math.random()*cols.length)],
               life:1,decay:0.018+Math.random()*0.01,gravity:0.3,
-              shape:m==='water'?'circle':'circle'});
+              shape:'circle'});
           }
         }
         // Pop a layer when enough has drained
@@ -651,11 +651,26 @@ function drawDigGame(){
         const wy=waterTop+wr*8+Math.sin(wt+wx*0.08+wr*2)*3;
         if(wx===hx-hw)ctx.moveTo(wx,wy);else ctx.lineTo(wx,wy)}ctx.stroke()}
     }
-    // Rocks drawn LAST — visible on top of water (sitting in it like real rocks)
+    // Rocks: solid gravel fill per dump band + individual rocks on top for texture
+    const rockDumps=dumpHoleLayers.filter(m=>m==='rocks').length;
+    if(rockDumps>0){
+      const rlH=(hh-12)/MAX_SCOOPS;
+      const rSurf=digGroundY+hh-2-sandLayers.length*rlH;
+      const totalRockH=rockDumps*rlH*0.45;
+      // Solid gravel background
+      ctx.fillStyle='#6d7f8b';
+      ctx.fillRect(hx-hw,rSurf-totalRockH,hw*2,totalRockH);
+      // Texture: lighter/darker patches
+      const rng=seededRand(9999);
+      for(let gi=0;gi<15;gi++){ctx.fillStyle=rng()>0.5?'#78909c':'#546e7a';ctx.globalAlpha=0.4;
+        ctx.beginPath();ctx.arc(hx-hw+rng()*hw*2,rSurf-rng()*totalRockH,3+rng()*5,0,Math.PI*2);ctx.fill()}
+      ctx.globalAlpha=1;
+    }
+    // Individual rocks on top for detail
     holeRocks.forEach(r=>{
       ctx.fillStyle=r.color;ctx.beginPath();
       r.verts.forEach((v,i)=>{const vx=r.x+v.x*Math.cos(r.rotation)-v.y*Math.sin(r.rotation),vy=r.y+v.x*Math.sin(r.rotation)+v.y*Math.cos(r.rotation);if(i===0)ctx.moveTo(vx,vy);else ctx.lineTo(vx,vy)});
-      ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
+      ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=0.8;ctx.stroke();
     });
     ctx.restore()}
   // Excavator
