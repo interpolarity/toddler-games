@@ -639,7 +639,20 @@ function drawDigGame(){
     const waterH=waterCount*layerH;
     // Sand from bottom
     sandLayers.forEach((s,di)=>{const ly=digGroundY+hh-2-(di+1)*layerH;drawDigMaterialFill(hx-hw,ly,hw*2,layerH+1,s.mat,5000+s.i*251)});
-    // Water on top of sand (rocks don't displace water)
+    // Gravel fill BEFORE water (so water renders on top)
+    const rockDumps=dumpHoleLayers.filter(m=>m==='rocks').length;
+    if(rockDumps>0){
+      const rlH=(hh-12)/MAX_SCOOPS;
+      const rSurf=digGroundY+hh-2-sandLayers.length*rlH;
+      const totalRockH=rockDumps*rlH*0.45;
+      ctx.fillStyle='#6d7f8b';
+      ctx.fillRect(hx-hw,rSurf-totalRockH,hw*2,totalRockH);
+      const rng=seededRand(9999);
+      for(let gi=0;gi<15;gi++){ctx.fillStyle=rng()>0.5?'#78909c':'#546e7a';ctx.globalAlpha=0.4;
+        ctx.beginPath();ctx.arc(hx-hw+rng()*hw*2,rSurf-rng()*totalRockH,3+rng()*5,0,Math.PI*2);ctx.fill()}
+      ctx.globalAlpha=1;
+    }
+    // Water on top of everything solid
     if(waterCount>0){
       const waterBottom=digGroundY+hh-2-sandH;
       const waterTop=waterBottom-waterH;
@@ -651,22 +664,7 @@ function drawDigGame(){
         const wy=waterTop+wr*8+Math.sin(wt+wx*0.08+wr*2)*3;
         if(wx===hx-hw)ctx.moveTo(wx,wy);else ctx.lineTo(wx,wy)}ctx.stroke()}
     }
-    // Rocks: solid gravel fill per dump band + individual rocks on top for texture
-    const rockDumps=dumpHoleLayers.filter(m=>m==='rocks').length;
-    if(rockDumps>0){
-      const rlH=(hh-12)/MAX_SCOOPS;
-      const rSurf=digGroundY+hh-2-sandLayers.length*rlH;
-      const totalRockH=rockDumps*rlH*0.45;
-      // Solid gravel background
-      ctx.fillStyle='#6d7f8b';
-      ctx.fillRect(hx-hw,rSurf-totalRockH,hw*2,totalRockH);
-      // Texture: lighter/darker patches
-      const rng=seededRand(9999);
-      for(let gi=0;gi<15;gi++){ctx.fillStyle=rng()>0.5?'#78909c':'#546e7a';ctx.globalAlpha=0.4;
-        ctx.beginPath();ctx.arc(hx-hw+rng()*hw*2,rSurf-rng()*totalRockH,3+rng()*5,0,Math.PI*2);ctx.fill()}
-      ctx.globalAlpha=1;
-    }
-    // Individual rocks on top for detail
+    // Individual rocks on top for detail (visible through water)
     holeRocks.forEach(r=>{
       ctx.fillStyle=r.color;ctx.beginPath();
       r.verts.forEach((v,i)=>{const vx=r.x+v.x*Math.cos(r.rotation)-v.y*Math.sin(r.rotation),vy=r.y+v.x*Math.sin(r.rotation)+v.y*Math.cos(r.rotation);if(i===0)ctx.moveTo(vx,vy);else ctx.lineTo(vx,vy)});
