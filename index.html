@@ -219,11 +219,16 @@ function drawFlyingFoods(){
 
 // Button helper
 function addBtn(cls,emoji,label,onclick,disabled){
-  const btn=document.createElement('button');btn.className=`game-btn ${cls}${disabled?' disabled':''}`;
+  const btn=document.createElement('button');
+  // Delay restart/next buttons so celebrations can't be spam-skipped
+  const isRestart=cls==='btn-again'||label==='Next'||label==='Bulldoze!'||label==='New Garden';
+  const delayMs=isRestart?1500:0;
+  btn.className=`game-btn ${cls}${disabled||isRestart?' disabled':''}`;
   btn.innerHTML=`<span class="emoji">${emoji}</span>${label}`;
   if(!disabled){
     const handler=e=>{e.preventDefault();btn.style.transform='translateY(4px) scale(0.93)';setTimeout(()=>btn.style.transform='',150);onclick()};
-    btn.addEventListener('click',handler);
+    if(isRestart){setTimeout(()=>{btn.classList.remove('disabled');btn.addEventListener('click',handler)},delayMs)}
+    else{btn.addEventListener('click',handler)}
   }
   buttonsArea.appendChild(btn);
 }
