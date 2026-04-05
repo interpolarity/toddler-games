@@ -2415,13 +2415,14 @@ const WRECK_BLOCKS=[
 let wreckState,wreckTower,wreckFlyingBlocks,wreckBallAngle,wreckBallVel,wreckBallReleased;
 let wreckBallX,wreckBallY,wreckBallVX,wreckBallVY,wreckGroundY;
 let wreckShakeTimer=0,wreckShakeX=0,wreckShakeY=0;
+let wreckDebris=[],wreckDozerX,wreckDozerActive;
 let wreckSmashed=false;
 
 function startWreckGame(){
   currentMode='wreck';particles=[];confetti=[];
-  wreckState='building';wreckTower=[];wreckFlyingBlocks=[];
+  wreckState='building';wreckTower=[];wreckFlyingBlocks=[];wreckDebris=[];
   wreckBallAngle=0.8;wreckBallVel=0;wreckBallReleased=false;
-  wreckSmashed=false;wreckShakeTimer=0;
+  wreckSmashed=false;wreckShakeTimer=0;wreckDozerX=-100;wreckDozerActive=false;
   wreckGroundY=H*0.65;
   updateWreckButtons();
 }
@@ -2443,6 +2444,7 @@ function updateWreckButtons(){
   }else if(wreckState==='done'){
 
     instruction.textContent='Destroyed! 🎉';
+    addBtn('btn-dump','🚜','Bulldoze!',()=>{initAudio();wreckDozerActive=true;wreckDozerX=-W*0.15;playTone(80,0.5,'sawtooth',0.1);playTone(100,0.3,'triangle',0.08);updateWreckButtons()});
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startWreckGame()});
   }
 }
@@ -2525,7 +2527,7 @@ function smashTower(){
   playTone(100,0.3,'triangle',0.15,0.1); // mid thud
   playTone(50,0.4,'sawtooth',0.2,0.3); // trailing rumble
   for(let i=0;i<4;i++)playTone(150+Math.random()*200,0.1,'square',0.08,0.5+i*0.1); // settling clicks
-  setTimeout(()=>{wreckState='done';playJingle();spawnConfetti();playTaDa();updateWreckButtons()},2000);
+  // Transition to 'done' after blocks settle (handled in update)
   updateWreckButtons();
 }
 
@@ -2574,7 +2576,22 @@ function updateWreckGame(dt){
       b.y=wreckGroundY-b.h/2;b.vy*=-0.4;b.vx*=0.7;b.rotV*=0.6;
       if(Math.abs(b.vy)>2)playTone(100+Math.random()*80,0.06,'triangle',0.05);
     }
-    if(b.life<=0)wreckFlyingBlocks.splice(i,1);
+    // Settle into debris when stopped
+    if(b.life<=0.3&&Math.abs(b.vy)<2&&Math.abs(b.vx)<1){
+      wreckDebris.push({x:b.x,y:b.y,w:b.w,h:b.h,color:b.color,dark:b.dark,rot:b.rot});
+      wreckFlyingBlocks.splice(i,1);
+    }else if(b.life<=0){wreckFlyingBlocks.splice(i,1)}
+  }
+  // Transition to done when all blocks settled
+  if(wreckSmashed&&wreckFlyingBlocks.length===0&&wreckState==='smashing'){
+    wreckState='done';playJingle();spawnConfetti();playTaDa();updateWreckButtons();
+  }
+  // Bulldozer animation
+  if(wreckDozerActive){
+    wreckDozerX+=W*0.4*dt;
+    // Push debris to the right
+    wreckDebris.forEach(d=>{if(wreckDozerX+W*0.06>d.x-d.w/2){d.x=wreckDozerX+W*0.06+d.w/2+Math.random()*5;d.y=wreckGroundY-d.h/2-Math.random()*5}});
+    if(wreckDozerX>W+50){wreckDozerActive=false;wreckDebris=[];startWreckGame()}
   }
   updateParticles(dt);updateConfetti();
 }
@@ -2643,14 +2660,38 @@ function drawWreckGame(){
   });
   ctx.restore();
 
+  // Debris pile
+  wreckDebris.forEach(d=>{
+    ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);
+    ctx.fillStyle=d.color;drawRoundRect(-d.w/2,-d.h/2,d.w,d.h,2);ctx.fill();
+    ctx.strokeStyle=d.dark;ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  });
   // Flying blocks
   wreckFlyingBlocks.forEach(b=>{
-    ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);ctx.globalAlpha=b.life;
+    ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);ctx.globalAlpha=Math.max(0.3,b.life);
     ctx.fillStyle=b.color;
     drawRoundRect(-b.w/2,-b.h/2,b.w,b.h,3);ctx.fill();
     ctx.strokeStyle=b.dark;ctx.lineWidth=1.5;ctx.stroke();
     ctx.globalAlpha=1;ctx.restore();
   });
+  // Bulldozer
+  if(wreckDozerActive){
+    const dx=wreckDozerX,dy=wreckGroundY,ds=W*0.002;
+    // Tracks
+    ctx.fillStyle='#333';drawRoundRect(dx-25*ds,dy,50*ds,12*ds,6*ds);ctx.fill();
+    // Body
+    let bg=ctx.createLinearGradient(0,dy-30*ds,0,dy);bg.addColorStop(0,'#ffb300');bg.addColorStop(1,'#ff8f00');
+    ctx.fillStyle=bg;drawRoundRect(dx-20*ds,dy-28*ds,40*ds,28*ds,5*ds);ctx.fill();
+    ctx.strokeStyle='#e65100';ctx.lineWidth=2;ctx.stroke();
+    // Cab window
+    ctx.fillStyle='#b3e5fc';drawRoundRect(dx-15*ds,dy-25*ds,18*ds,12*ds,3*ds);ctx.fill();
+    // Blade
+    ctx.fillStyle='#757575';ctx.fillRect(dx+20*ds,dy-18*ds,8*ds,20*ds);
+    ctx.strokeStyle='#555';ctx.lineWidth=2;ctx.strokeRect(dx+20*ds,dy-18*ds,8*ds,20*ds);
+    // Exhaust
+    ctx.fillStyle='rgba(150,150,150,0.3)';ctx.beginPath();ctx.arc(dx-10*ds,dy-32*ds-Math.sin(Date.now()/200)*3,5*ds,0,Math.PI*2);ctx.fill();
+  }
 
   // Wrecking crane vehicle
   const craneX=W*0.82,gy=wreckGroundY;
