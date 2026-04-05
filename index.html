@@ -420,10 +420,9 @@ function updateDigButtons(){
     addBtn('btn-dump','⬇️','DUMP!',()=>{initAudio();digDoDump()});
   }else if(digState==='celebrate'){
     if(holeTransform){
-      const names={sandcastle:'Sandcastle! 🏰',pond:'Pond! 🦆',mountain:'Mountain! ⛰️'};
-      instruction.textContent=names[holeTransform.type]||'YAY! 🎉';
+      instruction.textContent='';
       addBtn('btn-go','🆕','New Hole',()=>{initAudio();dumpHoleLayers=[];holeRocks=[];holeTransform=null;digState='dig';updateDigButtons()});
-    }else{instruction.textContent='YAY! 🎉'}
+    }else{instruction.textContent='Dumped! Dig more!'}
     addBtn('btn-again','🔄','Again!',()=>{initAudio();startDigGame()});
   }else{
     // Digging/driving/dumping animation — no buttons, nothing to accidentally tap
@@ -588,14 +587,18 @@ function updateDigGame(dt){
       if(t>=1){truckBedAngle=0;dumpPhase=3;dumpTime=0}}
     else if(dumpPhase===3){// Drive truck away to reveal hole
       const t=Math.min(1,dumpTime/0.8);truckX=lerp(W*0.72,W+150,easeInOut(t));
-      if(t>=1){digState='celebrate';playJingle();spawnConfetti();
+      if(t>=1){digState='celebrate';
         if(dumpHoleLayers.length>=10&&!holeTransform){
+          playJingle();spawnConfetti();
           const sand=dumpHoleLayers.filter(m=>m==='sand').length;
           const rocks=dumpHoleLayers.filter(m=>m==='rocks').length;
           const water=dumpHoleLayers.filter(m=>m==='water').length;
           const dom=sand>=rocks&&sand>=water?'sandcastle':rocks>=sand&&rocks>=water?'mountain':'pond';
           holeTransform={type:dom,anim:0};
           sayWord(dom==='sandcastle'?'Sandcastle!':dom==='pond'?'Pond!':'Mountain!');
+        }else{
+          // Partial dump — small celebration
+          playPop();
         }
         updateDigButtons()}}
   }
