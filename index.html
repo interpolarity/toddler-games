@@ -2580,7 +2580,14 @@ function updateWreckGame(dt){
     }
     // Settle into debris when slowed
     if(b.life<=0.4&&Math.abs(b.vy)<3&&Math.abs(b.vx)<2){
-      wreckDebris.push({x:b.x,y:b.y,w:b.w,h:b.h,color:b.color,dark:b.dark,rot:b.rot});
+      // Split into 2-3 debris chunks per block
+      const chunks=2+Math.floor(Math.random()*2);
+      for(let c=0;c<chunks;c++){
+        const cw=b.w/(chunks+0.5)+Math.random()*8;
+        wreckDebris.push({x:b.x+(c-chunks/2)*cw*0.6+Math.random()*10,y:b.y-Math.random()*4,
+          w:cw,h:b.h*0.8+Math.random()*b.h*0.3,color:b.color,dark:b.dark,light:b.light,id:b.id,
+          rot:b.rot+(Math.random()-0.5)*0.5});
+      }
       wreckFlyingBlocks.splice(i,1);
     }else if(b.life<=0){wreckFlyingBlocks.splice(i,1)}
   }
@@ -2663,11 +2670,28 @@ function drawWreckGame(){
   });
   ctx.restore();
 
-  // Debris pile
+  // Debris pile — with recognizable building features
   wreckDebris.forEach(d=>{
     ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);
-    ctx.fillStyle=d.color;drawRoundRect(-d.w/2,-d.h/2,d.w,d.h,2);ctx.fill();
+    const hw=d.w/2,hh=d.h/2;
+    // Wall chunk
+    ctx.fillStyle=d.color;drawRoundRect(-hw,-hh,d.w,d.h,2);ctx.fill();
     ctx.strokeStyle=d.dark;ctx.lineWidth=1;ctx.stroke();
+    // Window on chunk (if big enough)
+    if(d.w>15&&d.h>12){
+      const ww=Math.min(d.w*0.4,14),wh=Math.min(d.h*0.5,10);
+      if(d.id==='glass'){
+        ctx.fillStyle='#e3f2fd';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillRect(-ww/2+1,-wh/2+1,ww*0.4,wh*0.5);
+      }else{
+        ctx.fillStyle='#fff9c4';ctx.fillRect(-ww/2,-wh/2,ww,wh);
+        ctx.strokeStyle=d.dark;ctx.lineWidth=0.7;ctx.strokeRect(-ww/2,-wh/2,ww,wh);
+        ctx.beginPath();ctx.moveTo(0,-wh/2);ctx.lineTo(0,wh/2);ctx.stroke();
+      }
+    }
+    // Crack lines
+    ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(-hw*0.5,-hh);ctx.lineTo(hw*0.3,hh*0.5);ctx.stroke();
     ctx.restore();
   });
   // Flying blocks
