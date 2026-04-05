@@ -421,9 +421,11 @@ function updateDigButtons(){
   }else if(digState==='celebrate'){
     if(holeTransform){
       instruction.textContent='';
-      addBtn('btn-go','🆕','New Hole',()=>{initAudio();dumpHoleLayers=[];holeRocks=[];holeTransform=null;digState='dig';updateDigButtons()});
-    }else{instruction.textContent='Dumped! Dig more!'}
-    addBtn('btn-again','🔄','Again!',()=>{initAudio();startDigGame()});
+      addBtn('btn-go','🆕','New Hole',()=>{initAudio();dumpHoleLayers=[];holeRocks=[];holeTransform=null;digState='dig';truckX=W*0.68;excX=W*0.08;updateDigButtons()});
+    }else{
+      instruction.textContent='Dumped! Dig more!';
+      addBtn('btn-go','🚛','Keep Going!',()=>{initAudio();digState='dig';truckX=W*0.68;excX=W*0.08;updateDigButtons()});
+    }
   }else{
     // Digging/driving/dumping animation — no buttons, nothing to accidentally tap
     instruction.textContent=digState==='drive'?'Vroom! 🚛💨':'Digging...';
