@@ -665,11 +665,6 @@ function drawDigGame(){
   drawExcavator(excX,digGroundY);
   // Truck
   drawDumpTruck(truckX,digGroundY);
-  // Load count on truck
-  if((digState==='dig'||digState==='digging')&&truckLoad.length>0){
-    ctx.fillStyle='#fff';ctx.font=`bold ${W*0.04}px sans-serif`;ctx.textAlign='center';
-    ctx.fillText(truckLoad.length+'/'+MAX_SCOOPS,truckX,digGroundY-W*0.15);ctx.textAlign='left';
-  }
   drawParticles(0);drawConfetti();
   ctx.restore(); // screen shake
 }
