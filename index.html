@@ -260,18 +260,69 @@ const PILES={sand:{xFrac:0.15},rocks:{xFrac:0.40},water:{xFrac:0.65}};
 let digState,truckLoad,dumpHoleLayers,pileSizes;
 let excX,excTargetX,excStartX,excArmAngle,excStickAngle,excBucketAngle,excBucketMat,excAnimPhase,excAnimTime;
 let screenShakeX=0,screenShakeY=0,screenShakeTimer=0;
+let excRecoil=0;
 let truckX,truckBedAngle,truckBedTargetAngle;
 let digTarget,animDuration,animCallback;
 let driveTime,driveStartTruckX,driveStartExcX,driveTargetTruckX;
 let dumpTime,dumpPhase,dumpParticleTimer;
 let dumpDrainProgress=0,dumpStreamTimer=0,dumpTotalToDump=0;
 let digGroundY;
+let dumpRocks=[],holeRocks=[];
+
+function makeRockVerts(radius){
+  const pts=5+Math.floor(Math.random()*3);
+  const v=[];
+  for(let i=0;i<pts;i++){const a=(i/pts)*Math.PI*2,d=radius*(0.6+Math.random()*0.4);v.push({x:Math.cos(a)*d,y:Math.sin(a)*d})}
+  return v;
+}
+function spawnDumpRock(x,y,targetX){
+  const r=W*0.005+Math.random()*W*0.008;
+  const cols=['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'];
+  dumpRocks.push({x,y,vx:(targetX-x)*0.01+(Math.random()-0.5)*2,vy:-1-Math.random()*3,
+    radius:r,rotation:Math.random()*Math.PI*2,rotVel:(Math.random()-0.5)*8,bounceCount:0,
+    verts:makeRockVerts(r),color:cols[Math.floor(Math.random()*cols.length)],
+    highlight:cols[Math.floor(Math.random()*cols.length)],settled:false,life:1,alpha:1});
+}
+function updateDumpRocks(dt){
+  const gy=digGroundY,holeX=W*0.85,holeHW=W*0.13;
+  for(let i=dumpRocks.length-1;i>=0;i--){
+    const r=dumpRocks[i];
+    if(r.settled){r.life-=dt*0.8;r.alpha=Math.max(0,r.life);if(r.life<=0){dumpRocks.splice(i,1)}continue}
+    r.vy+=550*dt;r.x+=r.vx*60*dt;r.y+=r.vy*dt;r.rotation+=r.rotVel*dt;
+    // Ground bounce
+    if(r.y+r.radius>gy){
+      r.y=gy-r.radius;r.vy*=-0.35;r.vx*=0.75;r.rotVel*=0.7;r.bounceCount++;
+      if(r.bounceCount<=3)playTone(50+Math.random()*80,0.06,'square',0.08);
+      if(r.bounceCount>=5)r.vx+=(holeX-r.x)*0.08;
+      if(r.bounceCount>=10||Math.abs(r.vy)<0.5&&Math.abs(r.vx)<0.3){r.settled=true;r.life=0.6}
+    }
+    // Reached hole
+    if(r.x>holeX-holeHW&&r.x<holeX+holeHW&&r.y>gy-15){
+      r.settled=true;r.life=0.4;
+      spawnParticles(r.x,gy,3,['#78909c','#546e7a'],{vyRange:3,spread:8,maxSize:3});
+    }
+  }
+}
+function drawDumpRocks(){
+  dumpRocks.forEach(r=>{
+    ctx.save();ctx.translate(r.x,r.y);ctx.rotate(r.rotation);ctx.globalAlpha=r.alpha;
+    // Rock body
+    ctx.fillStyle=r.color;ctx.beginPath();
+    r.verts.forEach((v,i)=>{if(i===0)ctx.moveTo(v.x,v.y);else ctx.lineTo(v.x,v.y)});
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1.5;ctx.stroke();
+    // Highlight
+    ctx.fillStyle=r.highlight;ctx.globalAlpha=r.alpha*0.35;
+    ctx.beginPath();ctx.arc(-r.radius*0.2,-r.radius*0.2,r.radius*0.35,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.restore();
+  });
+}
 
 function startDigGame(){
   const fromMenu=currentMode!=='dig';
-  currentMode='dig';particles=[];confetti=[];
+  currentMode='dig';particles=[];confetti=[];dumpRocks=[];holeRocks=[];
   digState='dig';truckLoad=[];
-  if(fromMenu){pileSizes={sand:1,rocks:1,water:1};dumpHoleLayers=[]}
+  if(fromMenu){pileSizes={sand:1,rocks:1,water:1};dumpHoleLayers=[];holeRocks=[]}
   if(!pileSizes)pileSizes={sand:1,rocks:1,water:1};
   if(!dumpHoleLayers)dumpHoleLayers=[];
   excArmAngle=0;excStickAngle=0;excBucketAngle=0;excBucketMat=null;excAnimPhase=0;excAnimTime=0;screenShakeTimer=0;
@@ -335,6 +386,8 @@ function updateDigGame(dt){
   ['sand','rocks','water'].forEach(t=>{if(pileSizes[t]<1)pileSizes[t]=Math.min(1,pileSizes[t]+dt*0.04)});
   // Screen shake
   if(screenShakeTimer>0){screenShakeTimer-=dt;screenShakeX=(Math.random()-0.5)*screenShakeTimer*40;screenShakeY=(Math.random()-0.5)*screenShakeTimer*25}else{screenShakeX=0;screenShakeY=0}
+  // Excavator recoil spring-back
+  if(Math.abs(excRecoil)>0.1){excRecoil*=Math.pow(0.05,dt)}else{excRecoil=0}
   // Excavator movement
   if(excAnimPhase===1){excAnimTime+=dt;const t=Math.min(1,excAnimTime/animDuration);excX=lerp(excStartX,excTargetX,easeInOut(t));if(t>=1){excX=excTargetX;excAnimPhase=0;if(animCallback){const cb=animCallback;animCallback=null;cb()}}}
   // Phase 2: Boom lowers, stick extends down
@@ -345,14 +398,24 @@ function updateDigGame(dt){
   else if(excAnimPhase===3){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.25);
     excBucketAngle=lerp(0.3,1.2,easeInOut(t));
     if(t>=0.3&&excAnimTime<0.15+dt*2&&digTarget){
-      // Impact! Big particle burst + screen shake + sound
-      screenShakeTimer=0.3;
+      // Impact! Big particle burst + screen shake + recoil + sound
+      screenShakeTimer=0.4;excRecoil=-W*0.012;
       const px=digTarget.x,py=digGroundY;
       const mt=digTarget.type,m=DIG_MAT[mt];
       const cols=mt==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64','#b0bec5']:mt==='water'?[m.color,m.light,'#fff','#81d4fa']:[m.color,m.light,m.dark,'#ffe082'];
-      spawnParticles(px,py,25,cols,{vyRange:12,spread:30,maxSize:mt==='rocks'?10:6,shape:mt==='rocks'?'square':'circle',gravity:0.35});
+      spawnParticles(px,py,mt==='rocks'?40:25,cols,{vyRange:14,spread:35,maxSize:mt==='rocks'?12:6,shape:mt==='rocks'?'square':'circle',gravity:0.35});
       // Extra dirt particles
-      spawnParticles(px,py,8,['#8d6e63','#6d4c41','#a1887f'],{vyRange:8,spread:25,maxSize:4});
+      spawnParticles(px,py,10,['#8d6e63','#6d4c41','#a1887f'],{vyRange:8,spread:25,maxSize:4});
+      // Dust cloud — large, slow, low-alpha
+      spawnParticles(px,py,8,['#d7ccc8','#bcaaa4','#a1887f'],{vyRange:4,spread:40,maxSize:18,gravity:0.05});
+      // Large debris rocks for rocks material
+      if(mt==='rocks'){for(let dr=0;dr<5;dr++){
+        const dr_r=W*0.004+Math.random()*W*0.006;
+        particles.push({x:px+(Math.random()-0.5)*20,y:py-5,
+          vx:(Math.random()-0.5)*6,vy:-3-Math.random()*5,
+          size:dr_r,color:cols[Math.floor(Math.random()*cols.length)],
+          life:1,decay:0.02,gravity:0.4,shape:'square'});
+      }}
       pileSizes[digTarget.type]=Math.max(0.35,pileSizes[digTarget.type]-0.12);
       playSound_dig(digTarget.type);
     }
@@ -389,23 +452,38 @@ function updateDigGame(dt){
       // Spawn streaming particles every frame
       const holeX=W*0.85;
       const ds=W*0.002,bedEnd=75*ds;
-      const pourX=truckX+bedEnd*Math.cos(truckBedAngle),pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-ds*10;
+      const pourX=truckX+bedEnd*Math.cos(truckBedAngle),pourY=digGroundY-bedEnd*Math.sin(truckBedAngle)-ds*10;
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
-        const cols=m==='rocks'?['#78909c','#546e7a','#90a4ae','#455a64']:[mat.color,mat.dark,mat.light];
-        // 3-5 particles per frame in a stream toward the hole
-        for(let i=0;i<(m==='water'?5:3);i++){
-          particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,
-            vx:(holeX-pourX)*0.015+(Math.random()-0.5)*2,
-            vy:Math.random()*2+1,
-            size:m==='rocks'?3+Math.random()*6:2+Math.random()*4,
-            color:cols[Math.floor(Math.random()*cols.length)],
-            life:1,decay:0.018+Math.random()*0.01,gravity:0.3,
-            shape:m==='rocks'?'square':'circle'});
+        if(m==='rocks'){
+          // Spawn rolling rocks
+          for(let ri=0;ri<2;ri++){if(Math.random()<0.5)spawnDumpRock(pourX+(Math.random()-0.5)*8,pourY,holeX)}
+          // Gravel dust alongside
+          if(Math.random()<0.4){const cols=['#78909c','#546e7a','#90a4ae'];
+            particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,vx:(holeX-pourX)*0.012+(Math.random()-0.5)*2,vy:Math.random()*2+1,size:1+Math.random()*2,color:cols[Math.floor(Math.random()*cols.length)],life:1,decay:0.03,gravity:0.35,shape:'square'});}
+        }else{
+          const cols=[mat.color,mat.dark,mat.light];
+          for(let i=0;i<(m==='water'?5:3);i++){
+            particles.push({x:pourX+(Math.random()-0.5)*10,y:pourY,
+              vx:(holeX-pourX)*0.015+(Math.random()-0.5)*2,
+              vy:Math.random()*2+1,
+              size:2+Math.random()*4,
+              color:cols[Math.floor(Math.random()*cols.length)],
+              life:1,decay:0.018+Math.random()*0.01,gravity:0.3,
+              shape:m==='water'?'circle':'circle'});
+          }
         }
         // Pop a layer when enough has drained
         if(dumpDrainProgress>=1){dumpDrainProgress-=1;
           const popped=truckLoad.pop();dumpHoleLayers.push(popped);
+          // Add visual rocks to hole for rock layers
+          if(popped==='rocks'){const hx=W*0.85,hw=W*0.13,hh=H*0.15;
+            const rockFill=holeRocks.length;const baseY=digGroundY+hh-6-(rockFill/4)*4;
+            for(let ri=0;ri<6;ri++){const rr=2+Math.random()*4;
+              holeRocks.push({x:hx-hw*0.55+Math.random()*hw*1.1,y:Math.min(baseY,digGroundY+hh-8-Math.random()*10),
+                radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
+                rotation:Math.random()*Math.PI*2});
+            }}
           screenShakeTimer=0.08;
           // Sound per material
           if(popped==='rocks')playTone(80+Math.random()*40,0.12,'square',0.15);
@@ -421,7 +499,7 @@ function updateDigGame(dt){
       const t=Math.min(1,dumpTime/0.4);truckBedAngle=lerp(truckBedTargetAngle,0,easeInOut(t));
       if(t>=1){truckBedAngle=0;digState='celebrate';playJingle();spawnConfetti();updateDigButtons()}}
   }
-  updateParticles(dt);updateConfetti();
+  updateDumpRocks(dt);updateParticles(dt);updateConfetti();
 }
 
 function drawDigGame(){
@@ -443,19 +521,43 @@ function drawDigGame(){
     const bw=W*0.11*sz,bh=W*0.09*sz,py=digGroundY;
     if(type==='sand'){ctx.fillStyle=m.color;ctx.beginPath();ctx.moveTo(xc-bw,py+4);ctx.quadraticCurveTo(xc,py-bh*1.2,xc+bw,py+4);ctx.fill();
       ctx.fillStyle=m.light;ctx.globalAlpha=0.4;ctx.beginPath();ctx.moveTo(xc-bw*0.4,py);ctx.quadraticCurveTo(xc,py-bh*0.8,xc+bw*0.2,py);ctx.fill();ctx.globalAlpha=1}
-    else if(type==='rocks'){[[-0.4,-0.2,0.38],[0.3,-0.15,0.33],[0,-0.55,0.3],[-0.15,-0.1,0.28],[0.18,-0.4,0.24]].forEach(([dx,dy,r])=>{ctx.fillStyle=m.dark;ctx.beginPath();ctx.arc(xc+bw*dx,py+bh*dy,bw*r,0,Math.PI*2);ctx.fill();ctx.fillStyle=m.light;ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(xc+bw*dx-bw*r*0.2,py+bh*dy-bw*r*0.2,bw*r*0.4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1})}
+    else if(type==='rocks'){const rng2=seededRand(77);
+      [[-0.35,-0.15,0.34],[0.25,-0.1,0.28],[0,-0.48,0.26],[-0.12,-0.05,0.22],[0.15,-0.32,0.2],[0.05,-0.18,0.18],[-0.25,-0.38,0.16]].forEach(([dx,dy,r])=>{
+        const rx=xc+bw*dx,ry=py+bh*dy,rr=bw*r;
+        const rockCols=['#546e7a','#5d6d7e','#455a64','#607d8b','#4a5c68'];
+        ctx.fillStyle=rockCols[Math.floor(rng2()*rockCols.length)];
+        // Angular polygon — wide vertex variation
+        ctx.beginPath();const pts=4+Math.floor(rng2()*3);
+        for(let p=0;p<pts;p++){const a=(p/pts)*Math.PI*2+(rng2()-0.5)*0.4,d=rr*(0.35+rng2()*0.65);
+          if(p===0)ctx.moveTo(rx+Math.cos(a)*d,ry+Math.sin(a)*d);else ctx.lineTo(rx+Math.cos(a)*d,ry+Math.sin(a)*d)}
+        ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1.5;ctx.stroke();
+        // Angular highlight
+        ctx.fillStyle=m.light;ctx.globalAlpha=0.2;
+        const hx2=rx-rr*0.15,hy2=ry-rr*0.2;
+        ctx.beginPath();ctx.moveTo(hx2-rr*0.2,hy2);ctx.lineTo(hx2,hy2-rr*0.15);ctx.lineTo(hx2+rr*0.2,hy2+rr*0.05);ctx.lineTo(hx2-rr*0.05,hy2+rr*0.15);ctx.closePath();ctx.fill();ctx.globalAlpha=1})}
     else{ctx.fillStyle=m.color;ctx.globalAlpha=0.7;ctx.beginPath();ctx.ellipse(xc,py+2,bw,bh*0.35,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
       // Waves
       const t=Date.now()/500;ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;
       for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(xc+(i-1)*bw*0.4,py+Math.sin(t+i)*2,bw*0.15,0.2,Math.PI-0.2);ctx.stroke()}}
     ctx.font=`${Math.max(24,W*0.06)}px sans-serif`;ctx.textAlign='center';
-    ctx.fillText(DIG_MAT[type].emoji,xc,py-bh-10);
+    ctx.fillText(DIG_MAT[type].emoji,xc,py-W*0.09-10);
   });
   // Dump hole — bigger
   const hx=W*0.85,hw=W*0.13,hh=H*0.15;
   ctx.fillStyle='#3e2723';ctx.beginPath();ctx.moveTo(hx-hw,digGroundY+6);ctx.lineTo(hx-hw+10,digGroundY+hh);ctx.lineTo(hx+hw-10,digGroundY+hh);ctx.lineTo(hx+hw,digGroundY+6);ctx.closePath();ctx.fill();
   ctx.fillStyle='#7cb342';ctx.beginPath();ctx.ellipse(hx,digGroundY+6,hw+5,10,0,0,Math.PI*2);ctx.fill();
-  if(dumpHoleLayers.length>0){const ml=10,lh=(hh-12)/ml,vl=dumpHoleLayers.slice(-ml);ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();vl.forEach((mat,i)=>{const ly=digGroundY+hh-(i+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,mat,5000+i*251)});ctx.restore()}
+  if(dumpHoleLayers.length>0){const ml=10,lh=(hh-12)/ml,vl=dumpHoleLayers.slice(-ml);
+    ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();
+    // Draw sand/water layers normally
+    vl.forEach((mat,i)=>{if(mat!=='rocks'){const ly=digGroundY+hh-(i+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,mat,5000+i*251)}});
+    // Draw accumulated rocks as individual boulders
+    holeRocks.forEach(r=>{
+      ctx.fillStyle=r.color;ctx.beginPath();
+      r.verts.forEach((v,i)=>{const vx=r.x+v.x*Math.cos(r.rotation)-v.y*Math.sin(r.rotation),vy=r.y+v.x*Math.sin(r.rotation)+v.y*Math.cos(r.rotation);if(i===0)ctx.moveTo(vx,vy);else ctx.lineTo(vx,vy)});
+      ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle='#b0bec5';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(r.x-r.radius*0.15,r.y-r.radius*0.2,r.radius*0.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    });
+    ctx.restore()}
   // Excavator
   drawExcavator(excX,digGroundY);
   // Truck
@@ -465,13 +567,29 @@ function drawDigGame(){
     for(let i=0;i<MAX_SCOOPS;i++){const bx=sx+i*(bs+gap);ctx.fillStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].color:'rgba(255,255,255,0.2)';drawRoundRect(bx,iy,bs,bs,4);ctx.fill();ctx.strokeStyle=i<truckLoad.length?DIG_MAT[truckLoad[i]].dark:'rgba(255,255,255,0.15)';ctx.lineWidth=2;ctx.stroke()}
     if(truckLoad.length>=MAX_SCOOPS){ctx.fillStyle='#fff';ctx.font=`bold ${W*0.04}px sans-serif`;ctx.textAlign='center';ctx.fillText('FULL!',truckX,iy-W*0.02)}
   }
-  drawParticles(0);drawConfetti();
+  drawDumpRocks();drawParticles(0);drawConfetti();
   ctx.restore(); // screen shake
 }
 
 function drawDigMaterialFill(x,y,w,h,matType,seed){
   const m=DIG_MAT[matType],rng=seededRand(seed);ctx.fillStyle=m.color;ctx.fillRect(x,y,w,h);
-  if(matType==='rocks'){const rc=Math.max(3,Math.floor(w*h/200));for(let i=0;i<rc;i++){const rx=x+rng()*(w-8)+4,ry=y+rng()*(h-6)+3,rr=3+rng()*(Math.min(w,h)*0.25);ctx.fillStyle=rng()>0.5?m.dark:'#5d6d7e';ctx.beginPath();const pts=5+Math.floor(rng()*3);for(let p=0;p<pts;p++){const a=(p/pts)*Math.PI*2,d=rr*(0.6+rng()*0.4);if(p===0)ctx.moveTo(rx+Math.cos(a)*d,ry+Math.sin(a)*d);else ctx.lineTo(rx+Math.cos(a)*d,ry+Math.sin(a)*d)}ctx.closePath();ctx.fill();ctx.fillStyle=m.light;ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(rx-rr*0.2,ry-rr*0.2,rr*0.35,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}}
+  if(matType==='rocks'){
+    const rc=Math.max(3,Math.floor(w*h/350));const rockCols=['#78909c','#546e7a','#5d6d7e','#455a64','#607d8b'];
+    for(let i=0;i<rc;i++){
+      const rx=x+rng()*(w-6)+3,ry=y+rng()*(h-4)+2,rr=Math.max(4,Math.min(w,h)*0.18+rng()*Math.min(w,h)*0.22);
+      ctx.fillStyle=rockCols[Math.floor(rng()*rockCols.length)];
+      ctx.beginPath();const pts=5+Math.floor(rng()*3);
+      for(let p=0;p<pts;p++){const a=(p/pts)*Math.PI*2,d=rr*(0.55+rng()*0.45);if(p===0)ctx.moveTo(rx+Math.cos(a)*d,ry+Math.sin(a)*d);else ctx.lineTo(rx+Math.cos(a)*d,ry+Math.sin(a)*d)}
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
+      // 3D highlight
+      ctx.fillStyle=m.light;ctx.globalAlpha=0.35;
+      ctx.beginPath();ctx.ellipse(rx-rr*0.15,ry-rr*0.2,rr*0.4,rr*0.25,rng()*0.5,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+      // Dark shadow at bottom
+      ctx.fillStyle='rgba(0,0,0,0.15)';
+      ctx.beginPath();ctx.ellipse(rx+rr*0.1,ry+rr*0.3,rr*0.5,rr*0.15,0,0,Math.PI*2);ctx.fill();
+    }}
   else if(matType==='water'){const grd2=ctx.createLinearGradient(x,y,x,y+h);grd2.addColorStop(0,m.light);grd2.addColorStop(1,m.dark);ctx.fillStyle=grd2;ctx.globalAlpha=0.8;ctx.fillRect(x,y,w,h);ctx.globalAlpha=1;const t=Date.now()/600;ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=1.5;for(let r=0;r<2;r++){ctx.beginPath();const wy=y+h*(0.3+r*0.4);for(let i=0;i<=w;i+=4){const yy=wy+Math.sin(t+i*0.12+r*2+seed)*2;if(i===0)ctx.moveTo(x+i,yy);else ctx.lineTo(x+i,yy)}ctx.stroke()}}
   else{const gc=Math.max(5,Math.floor(w*h/100));for(let i=0;i<gc;i++){ctx.fillStyle=rng()>0.5?m.light:m.dark;ctx.globalAlpha=0.4+rng()*0.3;ctx.beginPath();ctx.arc(x+rng()*w,y+rng()*h,1+rng()*2,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1}
 }
@@ -483,66 +601,118 @@ function drawExcavator(x,y){
   const stickLen=50*s,stickW=10*s;
   const bucketW=26*s,bucketH=28*s;
 
-  ctx.save();ctx.translate(x,y);
+  ctx.save();ctx.translate(x+excRecoil,y);
+
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.15)';
+  ctx.beginPath();ctx.ellipse(0,6*s,bodyW*0.7,5*s,0,0,Math.PI*2);ctx.fill();
 
   // Tracks — single connected undercarriage
   const trackW=bodyW+10*s,trackH=20*s,trackY=0;
-  // Track frame
-  ctx.fillStyle='#333';
+  let tg=ctx.createLinearGradient(0,trackY,0,trackY+trackH);
+  tg.addColorStop(0,'#3a3a3a');tg.addColorStop(0.3,'#2a2a2a');tg.addColorStop(0.7,'#222');tg.addColorStop(1,'#1a1a1a');
+  ctx.fillStyle=tg;
   drawRoundRect(-trackW/2,trackY,trackW,trackH,trackH/2);ctx.fill();
-  ctx.strokeStyle='#222';ctx.lineWidth=2.5;ctx.stroke();
-  // Tread pattern
-  ctx.strokeStyle='#444';ctx.lineWidth=1.5;
-  for(let i=0;i<8;i++){const tx2=-trackW/2+8*s+i*(trackW-16*s)/7;ctx.beginPath();ctx.moveTo(tx2,trackY+3);ctx.lineTo(tx2,trackY+trackH-3);ctx.stroke()}
-  // Drive wheels (large at ends, small in middle)
-  const wheelPositions=[[-trackW/2+trackH/2,trackH/2],[trackW/2-trackH/2,trackH/2]];
-  wheelPositions.forEach(([wx,wy])=>{ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(wx,trackY+wy,trackH/2-3,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(wx,trackY+wy,trackH/4,0,Math.PI*2);ctx.fill()});
-  // Smaller rollers in between
-  for(let i=1;i<=3;i++){const rx=-trackW/2+trackH/2+i*(trackW-trackH)/(4);ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(rx,trackY+trackH/2,trackH/3.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(rx,trackY+trackH/2,trackH/6,0,Math.PI*2);ctx.fill()}
+  ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.stroke();
+  // Track grouser plates
+  ctx.strokeStyle='#484848';ctx.lineWidth=2;
+  for(let i=0;i<10;i++){const tx2=-trackW/2+6*s+i*(trackW-12*s)/9;
+    ctx.beginPath();ctx.moveTo(tx2,trackY+2);ctx.lineTo(tx2,trackY+trackH-2);ctx.stroke();
+    ctx.fillStyle='#3d3d3d';ctx.fillRect(tx2-1,trackY+2,3,trackH-4)}
+  // Drive sprockets (large at ends)
+  [[-trackW/2+trackH/2,trackH/2],[trackW/2-trackH/2,trackH/2]].forEach(([wx,wy])=>{
+    const wr=trackH/2-2;
+    let wg=ctx.createRadialGradient(wx-wr*0.2,trackY+wy-wr*0.2,0,wx,trackY+wy,wr);
+    wg.addColorStop(0,'#606060');wg.addColorStop(0.5,'#484848');wg.addColorStop(1,'#333');
+    ctx.fillStyle=wg;ctx.beginPath();ctx.arc(wx,trackY+wy,wr,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.stroke();
+    // Hub
+    ctx.fillStyle='#777';ctx.beginPath();ctx.arc(wx,trackY+wy,wr*0.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#555';ctx.beginPath();ctx.arc(wx,trackY+wy,wr*0.15,0,Math.PI*2);ctx.fill();
+    // Spokes
+    ctx.strokeStyle='#555';ctx.lineWidth=1.5;
+    for(let sp=0;sp<6;sp++){const a=sp*Math.PI/3;ctx.beginPath();ctx.moveTo(wx+Math.cos(a)*wr*0.2,trackY+wy+Math.sin(a)*wr*0.2);ctx.lineTo(wx+Math.cos(a)*wr*0.7,trackY+wy+Math.sin(a)*wr*0.7);ctx.stroke()}
+  });
+  // Rollers
+  for(let i=1;i<=3;i++){const rx=-trackW/2+trackH/2+i*(trackW-trackH)/4;
+    ctx.fillStyle='#4a4a4a';ctx.beginPath();ctx.arc(rx,trackY+trackH/2,trackH/3.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#666';ctx.beginPath();ctx.arc(rx,trackY+trackH/2,trackH/7,0,Math.PI*2);ctx.fill()}
 
-  // Body (house)
-  ctx.fillStyle='#ff8f00';
+  // Body (house) — gradient for 3D
+  let bg=ctx.createLinearGradient(-bodyW/2,-bodyH,-bodyW/2,0);
+  bg.addColorStop(0,'#ffb300');bg.addColorStop(0.3,'#ffa000');bg.addColorStop(0.7,'#ff8f00');bg.addColorStop(1,'#e65100');
+  ctx.fillStyle=bg;
   drawRoundRect(-bodyW/2,-bodyH,bodyW,bodyH,8*s);ctx.fill();
-  ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.stroke();
-  // Body detail stripe
-  ctx.fillStyle='#e65100';ctx.fillRect(-bodyW/2+4*s,-8*s,bodyW-8*s,4*s);
+  ctx.strokeStyle='#bf360c';ctx.lineWidth=2;ctx.stroke();
+  // Panel lines
+  ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-bodyW/2+4*s,-bodyH*0.5);ctx.lineTo(bodyW/2-4*s,-bodyH*0.5);ctx.stroke();
+  // Vent grille
+  ctx.fillStyle='#e65100';
+  for(let i=0;i<4;i++){ctx.fillRect(bodyW/2-20*s-i*5*s,-bodyH+8*s,3*s,bodyH-16*s)}
+  // Safety stripe
+  const stripeY=-4*s;
+  ctx.fillStyle='#212121';ctx.fillRect(-bodyW/2+3*s,stripeY,bodyW-6*s,5*s);
+  ctx.fillStyle='#ffd600';
+  for(let i=0;i<8;i++){ctx.save();ctx.beginPath();ctx.rect(-bodyW/2+3*s,stripeY,bodyW-6*s,5*s);ctx.clip();
+    const sx=-bodyW/2+i*12*s;ctx.beginPath();ctx.moveTo(sx,stripeY);ctx.lineTo(sx+6*s,stripeY);ctx.lineTo(sx+3*s,stripeY+5*s);ctx.lineTo(sx-3*s,stripeY+5*s);ctx.closePath();ctx.fill();ctx.restore()}
 
-  // Cabin
-  ctx.fillStyle='#ffa726';
+  // Cabin — gradient
+  let cg=ctx.createLinearGradient(-bodyW/2+6*s,-bodyH-cabH+4*s,-bodyW/2+6*s,-bodyH+4*s);
+  cg.addColorStop(0,'#ffcc02');cg.addColorStop(0.5,'#ffb300');cg.addColorStop(1,'#ff8f00');
+  ctx.fillStyle=cg;
   drawRoundRect(-bodyW/2+6*s,-bodyH-cabH+4*s,cabW,cabH,6*s);ctx.fill();
-  ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.stroke();
-  // Window
-  ctx.fillStyle='#b3e5fc';
-  drawRoundRect(-bodyW/2+12*s,-bodyH-cabH+10*s,cabW*0.55,cabH*0.5,4*s);ctx.fill();
-  ctx.strokeStyle='#0288d1';ctx.lineWidth=1.5;ctx.stroke();
-  // Exhaust pipe
-  ctx.fillStyle='#616161';ctx.fillRect(-bodyW/2+cabW+10*s,-bodyH-14*s,5*s,14*s);
-  // Exhaust puff (animated)
-  if(excAnimPhase>0){const t=Date.now()/300;ctx.fillStyle='rgba(200,200,200,0.3)';
-    ctx.beginPath();ctx.arc(-bodyW/2+cabW+12*s,-bodyH-16*s-Math.sin(t)*3,4*s+Math.sin(t*2)*2,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(-bodyW/2+cabW+10*s,-bodyH-22*s-Math.cos(t)*4,3*s,0,Math.PI*2);ctx.fill()}
+  ctx.strokeStyle='#e65100';ctx.lineWidth=2;ctx.stroke();
+  // Window with sky reflection
+  const winX=-bodyW/2+12*s,winY=-bodyH-cabH+10*s,winW=cabW*0.55,winH=cabH*0.5;
+  let wg=ctx.createLinearGradient(winX,winY,winX,winY+winH);
+  wg.addColorStop(0,'#e1f5fe');wg.addColorStop(0.4,'#81d4fa');wg.addColorStop(1,'#4fc3f7');
+  ctx.fillStyle=wg;drawRoundRect(winX,winY,winW,winH,4*s);ctx.fill();
+  ctx.strokeStyle='#0277bd';ctx.lineWidth=1.5;ctx.stroke();
+  // Window glare
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.beginPath();ctx.moveTo(winX+3*s,winY+2*s);ctx.lineTo(winX+winW*0.4,winY+2*s);ctx.lineTo(winX+winW*0.2,winY+winH*0.4);ctx.lineTo(winX+3*s,winY+winH*0.3);ctx.closePath();ctx.fill();
+
+  // Exhaust pipe with cap
+  let eg=ctx.createLinearGradient(-bodyW/2+cabW+10*s,0,-bodyW/2+cabW+15*s,0);
+  eg.addColorStop(0,'#555');eg.addColorStop(0.5,'#888');eg.addColorStop(1,'#555');
+  ctx.fillStyle=eg;ctx.fillRect(-bodyW/2+cabW+10*s,-bodyH-14*s,5*s,16*s);
+  ctx.fillStyle='#666';drawRoundRect(-bodyW/2+cabW+9*s,-bodyH-16*s,7*s,3*s,1.5*s);ctx.fill();
+  // Exhaust puff
+  if(excAnimPhase>0){const t=Date.now()/300;
+    for(let pi=0;pi<3;pi++){ctx.fillStyle=`rgba(180,180,180,${0.25-pi*0.07})`;
+      ctx.beginPath();ctx.arc(-bodyW/2+cabW+12*s,-bodyH-18*s-pi*6*s-Math.sin(t+pi)*3,3*s+pi*1.5*s+Math.sin(t*2+pi)*1.5,0,Math.PI*2);ctx.fill()}}
 
   // === ARTICULATED ARM ===
   const pivotX=bodyW/2-8*s,pivotY=-bodyH-cabH*0.3;
 
   // BOOM (upper arm) — pivots from cabin
   ctx.save();ctx.translate(pivotX,pivotY);ctx.rotate(excArmAngle);
-  // Hydraulic cylinder on boom
-  ctx.fillStyle='#bdbdbd';ctx.fillRect(5*s,-boomW*0.3,boomLen*0.6,boomW*0.35);
-  ctx.strokeStyle='#9e9e9e';ctx.lineWidth=1.5;ctx.stroke();
-  // Boom arm
-  ctx.fillStyle='#ffa726';
+  // Hydraulic cylinder — chrome look
+  let hg=ctx.createLinearGradient(0,-boomW*0.3,0,boomW*0.05);
+  hg.addColorStop(0,'#ccc');hg.addColorStop(0.3,'#eee');hg.addColorStop(0.5,'#aaa');hg.addColorStop(1,'#999');
+  ctx.fillStyle=hg;ctx.fillRect(8*s,-boomW*0.25,boomLen*0.55,boomW*0.3);
+  ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.strokeRect(8*s,-boomW*0.25,boomLen*0.55,boomW*0.3);
+  // Boom arm — gradient
+  let bmg=ctx.createLinearGradient(0,-boomW/2,0,boomW/2);
+  bmg.addColorStop(0,'#ffcc02');bmg.addColorStop(0.3,'#ffb300');bmg.addColorStop(0.7,'#ff8f00');bmg.addColorStop(1,'#e65100');
+  ctx.fillStyle=bmg;
   ctx.fillRect(0,-boomW/2,boomLen,boomW);
-  ctx.strokeStyle='#e65100';ctx.lineWidth=2.5;ctx.strokeRect(0,-boomW/2,boomLen,boomW);
+  ctx.strokeStyle='#bf360c';ctx.lineWidth=2;ctx.strokeRect(0,-boomW/2,boomLen,boomW);
 
   // STICK (lower arm) — pivots from end of boom
   ctx.save();ctx.translate(boomLen,0);ctx.rotate(excStickAngle);
-  // Stick arm
-  ctx.fillStyle='#ffa726';
+  // Stick arm — gradient
+  let sg=ctx.createLinearGradient(0,-stickW/2,0,stickW/2);
+  sg.addColorStop(0,'#ffcc02');sg.addColorStop(0.3,'#ffb300');sg.addColorStop(0.7,'#ff8f00');sg.addColorStop(1,'#e65100');
+  ctx.fillStyle=sg;
   ctx.fillRect(0,-stickW/2,stickLen,stickW);
-  ctx.strokeStyle='#e65100';ctx.lineWidth=2;ctx.strokeRect(0,-stickW/2,stickLen,stickW);
-  // Hydraulic on stick
-  ctx.fillStyle='#bdbdbd';ctx.fillRect(3*s,stickW*0.1,stickLen*0.5,stickW*0.3);
+  ctx.strokeStyle='#bf360c';ctx.lineWidth=1.5;ctx.strokeRect(0,-stickW/2,stickLen,stickW);
+  // Hydraulic cylinder on stick — chrome
+  let hg2=ctx.createLinearGradient(0,stickW*0.1,0,stickW*0.4);
+  hg2.addColorStop(0,'#ccc');hg2.addColorStop(0.3,'#eee');hg2.addColorStop(0.5,'#bbb');hg2.addColorStop(1,'#999');
+  ctx.fillStyle=hg2;ctx.fillRect(3*s,stickW*0.1,stickLen*0.45,stickW*0.28);
 
   // BUCKET — curved scoop shape, pivots from end of stick
   ctx.save();ctx.translate(stickLen,0);ctx.rotate(excBucketAngle);
@@ -649,22 +819,42 @@ function drawExcavator(x,y){
     ctx.closePath();ctx.clip();
     // Fill
     ctx.fillStyle=m.color;ctx.fillRect(-bkW/2,bkH*0.2,bkW,bkH);
-    // Mound heaped above the rim
-    ctx.fillStyle=m.dark;ctx.globalAlpha=0.6;
-    ctx.beginPath();
-    ctx.moveTo(-bkW*0.38,bkH*0.25);
-    ctx.quadraticCurveTo(-bkW*0.15,bkH*0.05,0,bkH*0.1);
-    ctx.quadraticCurveTo(bkW*0.15,bkH*0.05,bkW*0.38,bkH*0.25);
-    ctx.fill();
-    ctx.globalAlpha=1;ctx.restore()}
+    if(excBucketMat==='rocks'){
+      // Draw boulders in bucket
+      const brng=seededRand(42);const rockCols=['#78909c','#546e7a','#5d6d7e','#455a64'];
+      for(let bi=0;bi<4;bi++){
+        const bx=-bkW*0.3+brng()*bkW*0.6,by=bkH*0.35+brng()*bkH*0.45,br=bkW*0.12+brng()*bkW*0.1;
+        ctx.fillStyle=rockCols[Math.floor(brng()*rockCols.length)];
+        ctx.beginPath();const pts=5+Math.floor(brng()*2);
+        for(let p=0;p<pts;p++){const a=(p/pts)*Math.PI*2,d=br*(0.6+brng()*0.4);if(p===0)ctx.moveTo(bx+Math.cos(a)*d,by+Math.sin(a)*d);else ctx.lineTo(bx+Math.cos(a)*d,by+Math.sin(a)*d)}
+        ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle='#b0bec5';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(bx-br*0.2,by-br*0.2,br*0.3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      }
+    }else{
+      // Mound heaped above the rim
+      ctx.fillStyle=m.dark;ctx.globalAlpha=0.6;
+      ctx.beginPath();
+      ctx.moveTo(-bkW*0.38,bkH*0.25);
+      ctx.quadraticCurveTo(-bkW*0.15,bkH*0.05,0,bkH*0.1);
+      ctx.quadraticCurveTo(bkW*0.15,bkH*0.05,bkW*0.38,bkH*0.25);
+      ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    ctx.restore()}
 
   ctx.restore(); // bucket
   ctx.restore(); // stick
-  // Joint bolt at boom-stick connection
-  ctx.fillStyle='#e65100';ctx.beginPath();ctx.arc(boomLen,0,3.5*s,0,Math.PI*2);ctx.fill();
+  // Joint bolt at boom-stick — chrome pin
+  let jg1=ctx.createRadialGradient(boomLen-1*s,-1*s,0,boomLen,0,3.5*s);
+  jg1.addColorStop(0,'#eee');jg1.addColorStop(0.5,'#bbb');jg1.addColorStop(1,'#888');
+  ctx.fillStyle=jg1;ctx.beginPath();ctx.arc(boomLen,0,3.5*s,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.stroke();
   ctx.restore(); // boom
-  // Joint bolt at pivot
-  ctx.fillStyle='#e65100';ctx.beginPath();ctx.arc(pivotX,pivotY,4*s,0,Math.PI*2);ctx.fill();
+  // Joint bolt at pivot — chrome pin
+  let jg2=ctx.createRadialGradient(pivotX-1*s,pivotY-1*s,0,pivotX,pivotY,4*s);
+  jg2.addColorStop(0,'#eee');jg2.addColorStop(0.5,'#bbb');jg2.addColorStop(1,'#888');
+  ctx.fillStyle=jg2;ctx.beginPath();ctx.arc(pivotX,pivotY,4*s,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.stroke();
 
   ctx.restore(); // main
 }
@@ -672,26 +862,93 @@ function drawExcavator(x,y){
 function drawDumpTruck(x,y){
   const s=W*0.002,cw=42*s,ch=42*s,bedW=75*s,bedH=45*s,wr=13*s;
   ctx.save();ctx.translate(x,y);
-  [[-cw*0.3,4*s],[bedW*0.4,4*s]].forEach(([wx,wy])=>{ctx.fillStyle='#424242';ctx.beginPath();ctx.arc(wx,wy,wr,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#212121';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#9e9e9e';ctx.beginPath();ctx.arc(wx,wy,wr*0.35,0,Math.PI*2);ctx.fill()});
-  ctx.fillStyle='#e53935';drawRoundRect(-cw-2*s,-ch,cw,ch,6*s);ctx.fill();ctx.strokeStyle='#b71c1c';ctx.lineWidth=3;ctx.stroke();
-  ctx.fillStyle='#b3e5fc';drawRoundRect(-cw+4*s,-ch+6*s,cw*0.6,ch*0.5,4*s);ctx.fill();
+
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.12)';
+  ctx.beginPath();ctx.ellipse(bedW*0.2,8*s,bedW*0.65,5*s,0,0,Math.PI*2);ctx.fill();
+
+  // Wheels — gradient tires with hubs
+  [[-cw*0.3,4*s],[bedW*0.4,4*s]].forEach(([wx,wy])=>{
+    let tg=ctx.createRadialGradient(wx-wr*0.2,wy-wr*0.2,0,wx,wy,wr);
+    tg.addColorStop(0,'#4a4a4a');tg.addColorStop(0.7,'#333');tg.addColorStop(1,'#222');
+    ctx.fillStyle=tg;ctx.beginPath();ctx.arc(wx,wy,wr,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#111';ctx.lineWidth=2.5;ctx.stroke();
+    // Tire tread marks
+    ctx.strokeStyle='#3a3a3a';ctx.lineWidth=1.5;
+    for(let ti=0;ti<8;ti++){const a=ti*Math.PI/4;
+      ctx.beginPath();ctx.moveTo(wx+Math.cos(a)*wr*0.75,wy+Math.sin(a)*wr*0.75);
+      ctx.lineTo(wx+Math.cos(a)*wr*0.95,wy+Math.sin(a)*wr*0.95);ctx.stroke()}
+    // Hub cap — chrome
+    let hg=ctx.createRadialGradient(wx-wr*0.08,wy-wr*0.08,0,wx,wy,wr*0.4);
+    hg.addColorStop(0,'#eee');hg.addColorStop(0.5,'#bbb');hg.addColorStop(1,'#888');
+    ctx.fillStyle=hg;ctx.beginPath();ctx.arc(wx,wy,wr*0.35,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.stroke();
+    // Lug nuts
+    for(let li=0;li<5;li++){const a=li*Math.PI*2/5;ctx.fillStyle='#777';ctx.beginPath();ctx.arc(wx+Math.cos(a)*wr*0.2,wy+Math.sin(a)*wr*0.2,1.5*s,0,Math.PI*2);ctx.fill()}
+  });
+
+  // Cab — gradient
+  let cg=ctx.createLinearGradient(-cw-2*s,-ch,-cw-2*s,0);
+  cg.addColorStop(0,'#ef5350');cg.addColorStop(0.4,'#e53935');cg.addColorStop(0.7,'#d32f2f');cg.addColorStop(1,'#c62828');
+  ctx.fillStyle=cg;drawRoundRect(-cw-2*s,-ch,cw,ch,6*s);ctx.fill();
+  ctx.strokeStyle='#b71c1c';ctx.lineWidth=2.5;ctx.stroke();
+  // Cab panel line
+  ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-cw+2*s,-ch*0.3);ctx.lineTo(-4*s,-ch*0.3);ctx.stroke();
+  // Door handle
+  ctx.fillStyle='#bbb';ctx.fillRect(-cw*0.4,-ch*0.4,6*s,2*s);
+  // Window — sky reflection
+  let wg=ctx.createLinearGradient(0,-ch+6*s,0,-ch+6*s+ch*0.5);
+  wg.addColorStop(0,'#e1f5fe');wg.addColorStop(0.4,'#81d4fa');wg.addColorStop(1,'#4fc3f7');
+  ctx.fillStyle=wg;drawRoundRect(-cw+4*s,-ch+6*s,cw*0.6,ch*0.5,4*s);ctx.fill();
+  ctx.strokeStyle='#0277bd';ctx.lineWidth=1.5;ctx.stroke();
+  // Window glare
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.beginPath();ctx.moveTo(-cw+6*s,-ch+8*s);ctx.lineTo(-cw+cw*0.35,-ch+8*s);ctx.lineTo(-cw+cw*0.2,-ch+6*s+ch*0.25);ctx.lineTo(-cw+6*s,-ch+6*s+ch*0.2);ctx.closePath();ctx.fill();
+  // Headlight
+  let hlg=ctx.createRadialGradient(-cw-1*s,-ch*0.6,0,-cw-1*s,-ch*0.6,4*s);
+  hlg.addColorStop(0,'#fff9c4');hlg.addColorStop(0.5,'#ffee58');hlg.addColorStop(1,'#fbc02d');
+  ctx.fillStyle=hlg;ctx.beginPath();ctx.arc(-cw-1*s,-ch*0.6,4*s,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#f57f17';ctx.lineWidth=1;ctx.stroke();
+  // Bed — pivots at left (cab side), right end tilts up
   ctx.save();ctx.rotate(truckBedAngle);
-  ctx.fillStyle='#c62828';ctx.fillRect(-2*s,-bedH,bedW,bedH);ctx.strokeStyle='#b71c1c';ctx.lineWidth=3;ctx.strokeRect(-2*s,-bedH,bedW,bedH);
-  ctx.fillStyle='#b71c1c';ctx.fillRect(-2*s,-bedH,6*s,bedH);
-  // Tailgate — hinges at top, swings open when bed tilts
+  // Bed body — gradient
+  let bdg=ctx.createLinearGradient(0,-bedH,0,0);
+  bdg.addColorStop(0,'#e53935');bdg.addColorStop(0.3,'#d32f2f');bdg.addColorStop(0.7,'#c62828');bdg.addColorStop(1,'#b71c1c');
+  ctx.fillStyle=bdg;ctx.fillRect(-2*s,-bedH,bedW,bedH);
+  ctx.strokeStyle='#8e0000';ctx.lineWidth=2.5;ctx.strokeRect(-2*s,-bedH,bedW,bedH);
+  // Bed side ribs
+  ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=1.5;
+  for(let ri=0;ri<3;ri++){const rx=-2*s+12*s+ri*(bedW-24*s)/2;
+    ctx.beginPath();ctx.moveTo(rx,-bedH+3*s);ctx.lineTo(rx,-3*s);ctx.stroke()}
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(-2*s,-bedH,bedW,3*s);
+  // Reinforced front wall (cab side)
+  let fwg=ctx.createLinearGradient(-2*s,0,6*s,0);
+  fwg.addColorStop(0,'#c62828');fwg.addColorStop(0.5,'#b71c1c');fwg.addColorStop(1,'#a31515');
+  ctx.fillStyle=fwg;ctx.fillRect(-2*s,-bedH,8*s,bedH);
+  ctx.strokeStyle='#8e0000';ctx.lineWidth=1;ctx.strokeRect(-2*s,-bedH,8*s,bedH);
+  // Hydraulic ram
+  let hrg=ctx.createLinearGradient(0,-bedH*0.3,0,-bedH*0.3+5*s);
+  hrg.addColorStop(0,'#ddd');hrg.addColorStop(0.3,'#fff');hrg.addColorStop(0.7,'#bbb');hrg.addColorStop(1,'#999');
+  ctx.fillStyle=hrg;ctx.fillRect(10*s,-bedH*0.3,bedW*0.2,4*s);
+  ctx.strokeStyle='#888';ctx.lineWidth=0.5;ctx.strokeRect(10*s,-bedH*0.3,bedW*0.2,4*s);
+  // Tailgate — hinges at BOTTOM of right wall, drops open
   ctx.save();
-  ctx.translate(bedW-2*s,-bedH); // hinge point at top-right of bed
+  ctx.translate(bedW-2*s,0); // hinge at bottom-right
   if(truckBedAngle>0.1){
-    // Swing open — hangs down from hinge
-    const gateAngle=Math.min(1.2,truckBedAngle*2);
-    ctx.rotate(gateAngle);
+    const gateAngle=Math.min(1.2,truckBedAngle*2.5);
+    ctx.rotate(-gateAngle); // drops open outward (counter-clockwise from bottom hinge)
   }
-  ctx.fillStyle='#b71c1c';ctx.fillRect(-4*s,0,6*s,bedH);
-  ctx.strokeStyle='#8e0000';ctx.lineWidth=1.5;ctx.strokeRect(-4*s,0,6*s,bedH);
-  // Hinge bolts
-  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(-1*s,3*s,2*s,0,Math.PI*2);ctx.fill();
+  let gtg=ctx.createLinearGradient(-4*s,-bedH,2*s,-bedH);
+  gtg.addColorStop(0,'#c62828');gtg.addColorStop(0.5,'#b71c1c');gtg.addColorStop(1,'#a31515');
+  ctx.fillStyle=gtg;ctx.fillRect(-4*s,-bedH,6*s,bedH); // extends UPWARD from hinge
+  ctx.strokeStyle='#8e0000';ctx.lineWidth=1.5;ctx.strokeRect(-4*s,-bedH,6*s,bedH);
+  // Hinge bolts at bottom
+  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-1*s,-3*s,2*s,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(-1*s,-3*s,1*s,0,Math.PI*2);ctx.fill();
   ctx.restore();
-  if(truckLoad.length>0){const lh=(bedH-4*s)/MAX_SCOOPS;ctx.save();ctx.beginPath();ctx.rect(4*s,-bedH+2*s,bedW-12*s,bedH-4*s);ctx.clip();truckLoad.forEach((mat,i)=>{drawDigMaterialFill(4*s,-4*s-(i+1)*lh,bedW-12*s,lh,mat,1000+i*137)});ctx.restore()}
+  // Load inside bed
+  if(truckLoad.length>0){const lh=(bedH-4*s)/MAX_SCOOPS;ctx.save();ctx.beginPath();ctx.rect(6*s,-bedH+2*s,bedW-14*s,bedH-4*s);ctx.clip();truckLoad.forEach((mat,i)=>{drawDigMaterialFill(6*s,-4*s-(i+1)*lh,bedW-14*s,lh,mat,1000+i*137)});ctx.restore()}
   ctx.restore();ctx.restore();
 }
 
@@ -1508,11 +1765,14 @@ canvas.addEventListener('touchstart',e=>{
 },{passive:false});
 
 function handleDigTap(tx,ty){
-  if(digState!=='dig'||truckRocks.length>=MAX_ROCKS||rockPile.length===0)return;
-  // Check if tap is near the rock pile area
-  const cx=W*0.35,gy=digGroundY;
-  if(tx>cx-W*0.15&&tx<cx+W*0.15&&ty>gy-W*0.12&&ty<gy+10){
-    initAudio();digStartDig();
+  if(digState!=='dig'||truckLoad.length>=MAX_SCOOPS)return;
+  for(const mat of Object.keys(PILES)){
+    if(pileSizes[mat]<=0.35)continue;
+    const cx=W*PILES[mat].xFrac,gy=digGroundY;
+    const bw=W*0.11*pileSizes[mat];
+    if(tx>cx-bw-W*0.03&&tx<cx+bw+W*0.03&&ty>gy-W*0.12&&ty<gy+10){
+      initAudio();digStartDig(mat);return;
+    }
   }
 }
 
