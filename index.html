@@ -3340,8 +3340,11 @@ function drawBuildGame(){
   ctx.fillStyle='#fff8e1';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#ffe0b2';ctx.fillRect(0,H*0.52,W,H*0.48);
   ctx.fillStyle='#d7ccc8';ctx.fillRect(0,H*0.52,W,4);
-  // Placed pieces first
-  buildPieces.forEach(p=>{if(p.placed)drawBuildShape(p,p.cx,p.cy,1)});
+  // Placed pieces — draw in placement order (last placed on top)
+  const placedOrder=buildPieces.filter(p=>p.placed);
+  // Sort: larger pieces first (background), smaller pieces on top (details)
+  placedOrder.sort((a,b)=>(b.w*b.h)-(a.w*a.h));
+  placedOrder.forEach(p=>drawBuildShape(p,p.cx,p.cy,1));
   // Unfilled target outlines ON TOP of placed pieces so always visible
   buildTargets.forEach(t=>{
     if(!t.filled){ctx.setLineDash([7,5]);drawBuildShape(t,t.cx,t.cy,0.25);ctx.setLineDash([])}
