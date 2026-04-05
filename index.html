@@ -3340,12 +3340,12 @@ function drawBuildGame(){
   ctx.fillStyle='#fff8e1';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#ffe0b2';ctx.fillRect(0,H*0.52,W,H*0.48);
   ctx.fillStyle='#d7ccc8';ctx.fillRect(0,H*0.52,W,4);
-  // Target outlines (ghost shapes)
-  buildTargets.forEach(t=>{
-    if(!t.filled){ctx.setLineDash([6,4]);drawBuildShape(t,t.cx,t.cy,0.2);ctx.setLineDash([])}
-  });
-  // Placed pieces
+  // Placed pieces first
   buildPieces.forEach(p=>{if(p.placed)drawBuildShape(p,p.cx,p.cy,1)});
+  // Unfilled target outlines ON TOP of placed pieces so always visible
+  buildTargets.forEach(t=>{
+    if(!t.filled){ctx.setLineDash([7,5]);drawBuildShape(t,t.cx,t.cy,0.25);ctx.setLineDash([])}
+  });
   // Draggable pieces (unplaced)
   buildPieces.forEach((p,i)=>{
     if(p.placed)return;
