@@ -453,10 +453,10 @@ function updateDigGame(dt){
       dumpDrainProgress+=dt*pourSpeed;dumpStreamTimer+=dt;
       // Spawn streaming particles every frame
       const holeX=W*0.85;
-      const ds=W*0.002,bedEnd=75*ds,bedHt=45*ds;
-      // Pour from top edge of bed's open end (not bottom corner)
-      const pourX=truckX+bedEnd*Math.cos(truckBedAngle)+bedHt*Math.sin(truckBedAngle);
-      const pourY=digGroundY+bedEnd*Math.sin(truckBedAngle)-bedHt*Math.cos(truckBedAngle);
+      const ds=W*0.002,bedEnd=75*ds;
+      // Pour from where bed's open end meets ground level
+      const pourX=truckX+bedEnd*Math.cos(truckBedAngle);
+      const pourY=digGroundY-ds*5;
       if(truckLoad.length>0){
         const m=truckLoad[truckLoad.length-1],mat=DIG_MAT[m];
         if(m==='rocks'){
@@ -954,10 +954,12 @@ function drawDumpTruck(x,y){
   ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-1*s,-3*s,2*s,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#888';ctx.beginPath();ctx.arc(-1*s,-3*s,1*s,0,Math.PI*2);ctx.fill();
   ctx.restore();
-  // Load inside bed — draw each layer at its stacked position
+  // Load inside bed — sorted: rocks bottom, sand middle, water top
   if(truckLoad.length>0){const lh=(bedH-4*s)/MAX_SCOOPS;
     ctx.save();ctx.beginPath();ctx.rect(6*s,-bedH+2*s,bedW-14*s,bedH-4*s);ctx.clip();
-    truckLoad.forEach((mat,i)=>{drawDigMaterialFill(6*s,-4*s-(i+1)*lh,bedW-14*s,lh,mat,1000+i*137)});
+    const wt={rocks:0,sand:1,water:2};
+    const sorted=[...truckLoad].map((mat,i)=>({mat,i})).sort((a,b)=>wt[a.mat]-wt[b.mat]);
+    sorted.forEach((s2,di)=>{drawDigMaterialFill(6*s,-4*s-(di+1)*lh,bedW-14*s,lh,s2.mat,1000+s2.i*137)});
     ctx.restore()}
   ctx.restore();ctx.restore();
 }
