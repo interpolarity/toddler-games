@@ -1896,8 +1896,9 @@ function pancakeDoEat(){
   }
 }
 function getPancakeHeight(){
+  const hw=W*0.12;
   let h=0;
-  pancakeStack.forEach(id=>{if(id==='plate')return;if(id==='pancake')h+=22;else h+=8});
+  pancakeStack.forEach(id=>{if(id==='plate')return;if(id==='pancake')h+=hw*0.38;else h+=hw*0.12});
   return h;
 }
 function updatePancakeGame(dt){
@@ -1939,45 +1940,51 @@ function drawPancakeGame(){
     const bY=curY+(isTop&&pancakeFruits.length===0?bounce:0);
     const bX=stackX+lw;
     if(id==='pancake'){
-      // 3D oval pancake
-      const ph=18,side=8,ry=hw*0.35;
-      // Side (visible thickness) — darker edge
+      // 3D oval pancake — warm buttery colors
+      const ph=hw*0.38,side=hw*0.16,ry=hw*0.35;
+      // Side (visible thickness) — warm golden edge
       let sg=ctx.createLinearGradient(0,bY-side,0,bY);
-      sg.addColorStop(0,'#b8864e');sg.addColorStop(0.5,'#a1724a');sg.addColorStop(1,'#8d6340');
+      sg.addColorStop(0,'#dbb06e');sg.addColorStop(0.5,'#cfa05a');sg.addColorStop(1,'#c49550');
       ctx.fillStyle=sg;
       ctx.beginPath();ctx.ellipse(bX,bY,hw,ry,0,0,Math.PI);ctx.fill();
       ctx.beginPath();ctx.ellipse(bX,bY-side,hw,ry,0,Math.PI,Math.PI*2);
       ctx.lineTo(bX+hw,bY);ctx.ellipse(bX,bY,hw,ry,0,0,Math.PI,true);ctx.lineTo(bX-hw,bY-side);
       ctx.closePath();ctx.fill();
-      // Top surface — lighter golden oval
-      let pg=ctx.createRadialGradient(bX-hw*0.2,bY-side-ry*0.3,0,bX,bY-side,hw);
-      pg.addColorStop(0,'#f0d090');pg.addColorStop(0.4,'#e8c170');pg.addColorStop(0.7,'#d7a86e');pg.addColorStop(1,'#c49556');
+      // Top surface — soft warm gradient
+      let pg=ctx.createRadialGradient(bX-hw*0.15,bY-side-ry*0.2,hw*0.1,bX,bY-side,hw*0.95);
+      pg.addColorStop(0,'#f5dfa0');pg.addColorStop(0.3,'#efd48a');pg.addColorStop(0.6,'#e8c878');pg.addColorStop(1,'#dbb06e');
       ctx.fillStyle=pg;
       ctx.beginPath();ctx.ellipse(bX,bY-side,hw,ry,0,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#a1724a';ctx.lineWidth=1;ctx.stroke();
-      // Browned spots on top
-      const rng=seededRand(idx*99);ctx.fillStyle='rgba(139,90,43,0.12)';
-      for(let i=0;i<6;i++){const sa=rng()*Math.PI*2,sr=rng()*hw*0.7;
-        ctx.beginPath();ctx.arc(bX+Math.cos(sa)*sr,bY-side+Math.sin(sa)*sr*0.35,2+rng()*4,0,Math.PI*2);ctx.fill()}
-      // Highlight gleam
-      ctx.fillStyle='rgba(255,255,255,0.15)';
-      ctx.beginPath();ctx.ellipse(bX-hw*0.15,bY-side-ry*0.15,hw*0.5,ry*0.3,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(180,140,70,0.4)';ctx.lineWidth=1;ctx.stroke();
+      // Subtle butter pat highlight
+      ctx.fillStyle='rgba(255,255,230,0.2)';
+      ctx.beginPath();ctx.ellipse(bX-hw*0.1,bY-side-ry*0.1,hw*0.4,ry*0.25,-0.2,0,Math.PI*2);ctx.fill();
       curY-=ph;
     }else{
-      // Syrup drizzle layer — oval matching pancake shape
+      // Syrup layer with visible drips down the sides
       const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);
       if(s){
-        const sh=6,sry=hw*0.3;
-        ctx.fillStyle=s.color;ctx.globalAlpha=0.75;
-        ctx.beginPath();ctx.ellipse(bX,bY-sh/2,hw*0.9,sry,0,0,Math.PI*2);ctx.fill();
-        // Drip details hanging off edges
+        const sh=hw*0.12,sry=hw*0.28;
+        // Main syrup pool on top
+        ctx.fillStyle=s.color;ctx.globalAlpha=0.85;
+        ctx.beginPath();ctx.ellipse(bX,bY-sh/2,hw*0.88,sry,0,0,Math.PI*2);ctx.fill();
+        // Visible drips running down the sides
         const rng=seededRand(idx*77);
-        for(let i=0;i<5;i++){const da=rng()*Math.PI*2,dr=hw*0.7+rng()*hw*0.25;
-          ctx.beginPath();ctx.ellipse(bX+Math.cos(da)*dr,bY-sh/2+Math.sin(da)*dr*0.35+2,2+rng()*2,3+rng()*4,0,0,Math.PI*2);ctx.fill()}
+        for(let i=0;i<7;i++){
+          const da=-Math.PI*0.15+rng()*Math.PI*1.3; // drips mostly on front-facing side
+          const edgeX=bX+Math.cos(da)*hw*0.85;
+          const edgeY=bY-sh/2+Math.sin(da)*sry*0.9;
+          const dripLen=hw*0.08+rng()*hw*0.18;
+          const dripW=hw*0.04+rng()*hw*0.04;
+          // Drip body
+          ctx.beginPath();ctx.ellipse(edgeX,edgeY+dripLen*0.4,dripW,dripLen,0,0,Math.PI*2);ctx.fill();
+          // Drip tip (teardrop)
+          ctx.beginPath();ctx.arc(edgeX,edgeY+dripLen*0.8,dripW*0.7,0,Math.PI*2);ctx.fill();
+        }
         ctx.globalAlpha=1;
-        // Shine
+        // Syrup shine
         ctx.fillStyle='rgba(255,255,255,0.2)';
-        ctx.beginPath();ctx.ellipse(bX-hw*0.1,bY-sh/2-sry*0.2,hw*0.4,sry*0.25,0,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(bX-hw*0.1,bY-sh/2-sry*0.15,hw*0.35,sry*0.2,0,0,Math.PI*2);ctx.fill();
         curY-=sh;
       }
     }
