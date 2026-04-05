@@ -350,7 +350,7 @@ function makeRockVerts(radius){
 function spawnDumpRock(x,y,targetX){
   const r=W*0.005+Math.random()*W*0.008;
   const cols=['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'];
-  dumpRocks.push({x,y,vx:(targetX-x)*0.008+(Math.random()-0.5)*1.5,vy:1+Math.random()*2,
+  dumpRocks.push({x,y,vx:(targetX-x)*0.5+(Math.random()-0.5)*60,vy:50+Math.random()*80,
     radius:r,rotation:Math.random()*Math.PI*2,rotVel:(Math.random()-0.5)*8,bounceCount:0,
     verts:makeRockVerts(r),color:cols[Math.floor(Math.random()*cols.length)],
     highlight:cols[Math.floor(Math.random()*cols.length)],settled:false,life:1,alpha:1});
@@ -360,7 +360,7 @@ function updateDumpRocks(dt){
   for(let i=dumpRocks.length-1;i>=0;i--){
     const r=dumpRocks[i];
     if(r.settled){r.life-=dt*0.8;r.alpha=Math.max(0,r.life);if(r.life<=0){dumpRocks.splice(i,1)}continue}
-    r.vy+=550*dt;r.x+=r.vx*60*dt;r.y+=r.vy*dt;r.rotation+=r.rotVel*dt;
+    r.vy+=550*dt;r.x+=r.vx*dt;r.y+=r.vy*dt;r.rotation+=r.rotVel*dt;
     // Ground bounce
     if(r.y+r.radius>gy){
       r.y=gy-r.radius;r.vy*=-0.35;r.vx*=0.75;r.rotVel*=0.7;r.bounceCount++;
