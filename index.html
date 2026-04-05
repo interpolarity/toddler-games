@@ -626,10 +626,12 @@ function drawDigGame(){
   const hx=W*0.85,hw=W*0.13,hh=H*0.15;
   ctx.fillStyle='#3e2723';ctx.beginPath();ctx.moveTo(hx-hw,digGroundY+6);ctx.lineTo(hx-hw+10,digGroundY+hh);ctx.lineTo(hx+hw-10,digGroundY+hh);ctx.lineTo(hx+hw,digGroundY+6);ctx.closePath();ctx.fill();
   ctx.fillStyle='#7cb342';ctx.beginPath();ctx.ellipse(hx,digGroundY+6,hw+5,10,0,0,Math.PI*2);ctx.fill();
-  if(dumpHoleLayers.length>0){const ml=10,lh=(hh-12)/ml,vl=dumpHoleLayers.slice(-ml);
+  if(dumpHoleLayers.length>0){
+    const totalLayers=dumpHoleLayers.length;
+    const lh=Math.max(6,(hh-12)/Math.max(totalLayers,1)); // shrink layers to fit, min 6px
     ctx.save();ctx.beginPath();ctx.moveTo(hx-hw+2,digGroundY+8);ctx.lineTo(hx-hw+12,digGroundY+hh-2);ctx.lineTo(hx+hw-12,digGroundY+hh-2);ctx.lineTo(hx+hw-2,digGroundY+8);ctx.clip();
-    // Draw non-rock layers sorted: sand at bottom, water on top
-    const nonRock=[];vl.forEach((mat,i)=>{if(mat!=='rocks')nonRock.push({mat,i})});
+    // Draw non-rock layers sorted: sand at bottom, water on top, fill from bottom
+    const nonRock=[];dumpHoleLayers.forEach((mat,i)=>{if(mat!=='rocks')nonRock.push({mat,i})});
     nonRock.sort((a,b)=>(a.mat==='water'?1:0)-(b.mat==='water'?1:0));
     nonRock.forEach((nr,di)=>{const ly=digGroundY+hh-(di+1)*lh;drawDigMaterialFill(hx-hw,ly,hw*2,lh+1,nr.mat,5000+nr.i*251)});
     // Draw accumulated rocks as individual boulders
