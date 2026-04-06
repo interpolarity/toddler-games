@@ -53,6 +53,7 @@
 <button class="menu-btn-fixed" id="menuBtnFixed" onclick="initAudio();showMenu()">🏠</button>
 <div class="menu-grid" id="menuGrid"></div>
 <div class="buttons-area" id="buttonsArea"></div>
+<script>window.onerror=function(m,s,l){document.body.style.background='#4fc3f7';document.body.innerHTML='<div style="color:#fff;text-align:center;padding:40px;font-family:sans-serif"><h2>Error</h2><p>'+m+'</p><p>Line: '+l+'</p></div>';return true}</script>
 <script>
 // =============================================
 // SHARED ENGINE
@@ -4790,7 +4791,7 @@ function gameLoop(ts){
   requestAnimationFrame(gameLoop);
 }
 
-try{showMenu();requestAnimationFrame(gameLoop)}catch(e){document.body.style.background='#4fc3f7';document.body.innerHTML='<h1 style="color:#fff;text-align:center;padding:40px">Error: '+e.message+'</h1>'}
+showMenu();requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
