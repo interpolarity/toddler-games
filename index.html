@@ -19,7 +19,7 @@
   .game-btn .emoji{font-size:32px;line-height:1;margin-bottom:2px}
   .btn-sand{background:linear-gradient(180deg,#ffca28,#f9a825)}.btn-rocks{background:linear-gradient(180deg,#90a4ae,#607d8b)}.btn-water{background:linear-gradient(180deg,#4fc3f7,#0288d1)}
   .btn-go{background:linear-gradient(180deg,#66bb6a,#388e3c);min-width:90px}.btn-dump{background:linear-gradient(180deg,#ff7043,#d84315);min-width:120px;font-size:18px}
-  .btn-again{background:linear-gradient(180deg,#9e9e9e,#757575);min-width:70px;font-size:12px;opacity:0.7}
+  .btn-again{background:linear-gradient(180deg,#ab47bc,#7b1fa2);min-width:140px;font-size:16px}
   .btn-menu{background:linear-gradient(180deg,#78909c,#546e7a);min-width:70px;font-size:12px;min-height:60px}
   .btn-done{background:linear-gradient(180deg,#66bb6a,#2e7d32);min-width:100px;font-size:18px}
   .btn-food{background:linear-gradient(180deg,#ffe0b2,#ffcc80);color:#5d4037;min-width:70px}
@@ -2614,8 +2614,7 @@ function startBalloonGame(){
 
 function updateBalloonButtons(){
   buttonsArea.innerHTML='';
-  instruction.textContent='Popped: '+balloonScore+' 🎈';
-  addBtn('btn-again','🔄','Again!',()=>{initAudio();startBalloonGame()});
+  instruction.textContent='';
 }
 
 function spawnBalloon(){
@@ -2718,7 +2717,6 @@ function startCatchGame(){
 function updateCatchButtons(){
   buttonsArea.innerHTML='';
   instruction.textContent='';
-  addBtn('btn-again','🔄','Again!',()=>{initAudio();startCatchGame()});
 }
 function spawnCatchObject(){
   const f=CATCH_FRUITS[Math.floor(Math.random()*CATCH_FRUITS.length)];
@@ -3029,8 +3027,6 @@ function newMaze(){
 }
 function updateMazeButtons(){
   buttonsArea.innerHTML='';
-  addBtn('btn-again','🔄','New',()=>{initAudio();newMaze();updateMazeButtons()});
-
 }
 function getMazeCell(px,py){
   const c=Math.floor((px-mazeOfsX)/mazeCellW),r=Math.floor((py-mazeOfsY)/mazeCellH);
@@ -3166,7 +3162,6 @@ function updateBuildButtons(){
   if(buildDone){
     instruction.textContent='Great! '+BUILD_PUZZLES[buildPuzzleIdx%BUILD_PUZZLES.length].name+'! 🎉';
     addBtn('btn-go','➡️','Next',()=>{initAudio();buildPuzzleIdx++;setupBuildPuzzle();updateBuildButtons()});
-    addBtn('btn-again','🔄','Restart',()=>{initAudio();startBuildGame()});
   }
 }
 function drawBuildShape(p,x,y,alpha){
@@ -4338,7 +4333,6 @@ function updateWreckButtons(){
 
     instruction.textContent='Destroyed! 🎉';
     addBtn('btn-dump','🚜','Bulldoze!',()=>{initAudio();wreckDozerActive=true;wreckDozerX=-W*0.15;playTone(80,0.5,'sawtooth',0.1);playTone(100,0.3,'triangle',0.08);updateWreckButtons()});
-    addBtn('btn-again','🔄','Again!',()=>{initAudio();startWreckGame()});
   }
 }
 
