@@ -3043,22 +3043,24 @@ function handleMazeMove(tx,ty){
   const steps=Math.ceil(dist/speed);
   const sx=dx/steps,sy=dy/steps;
   for(let i=0;i<steps;i++){
-    const nx=mazeBall.x+sx,ny=mazeBall.y+sy;
-    const curCell=getMazeCell(mazeBall.x,mazeBall.y);
-    const newCell=getMazeCell(nx,ny);
-    const r=curCell.r,c=curCell.c;
-    if(r<0||r>=mazeRows||c<0||c>=mazeCols)break;
-    const cell=mazeGrid[r][c];
-    let blocked=false;
-    // Check wall crossings
-    const cellLeft=mazeOfsX+c*mazeCellW,cellTop=mazeOfsY+r*mazeCellH;
+    const r0=getMazeCell(mazeBall.x,mazeBall.y);
+    if(r0.r<0||r0.r>=mazeRows||r0.c<0||r0.c>=mazeCols)break;
+    const cell=mazeGrid[r0.r][r0.c];
+    const cellLeft=mazeOfsX+r0.c*mazeCellW,cellTop=mazeOfsY+r0.r*mazeCellH;
     const cellRight=cellLeft+mazeCellW,cellBottom=cellTop+mazeCellH;
     const br=W*0.03;
-    if(nx<cellLeft+br&&cell.left)blocked=true;
-    if(nx>cellRight-br&&cell.right)blocked=true;
-    if(ny<cellTop+br&&cell.top)blocked=true;
-    if(ny>cellBottom-br&&cell.bottom)blocked=true;
-    if(!blocked){mazeBall.x=nx;mazeBall.y=ny}else break;
+    // Try X movement independently
+    const nx=mazeBall.x+sx;
+    let xOk=true;
+    if(nx<cellLeft+br&&cell.left)xOk=false;
+    if(nx>cellRight-br&&cell.right)xOk=false;
+    if(xOk)mazeBall.x=nx;
+    // Try Y movement independently
+    const ny=mazeBall.y+sy;
+    let yOk=true;
+    if(ny<cellTop+br&&cell.top)yOk=false;
+    if(ny>cellBottom-br&&cell.bottom)yOk=false;
+    if(yOk)mazeBall.y=ny;
   }
   // Check win
   const gc=getMazeCell(mazeBall.x,mazeBall.y);
