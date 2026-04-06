@@ -3423,7 +3423,7 @@ function updateTrainButtons(){
   });
   addBtn('btn-traingo','🚀','Go!',()=>{
     if(trainCars.length>0){
-      trainState='driving';trainX=0;trainSpeed=0;
+      trainState='driving';trainX=-trainCars.length*(Math.min(W,H)*0.12+4);trainSpeed=0;
       // Whistle
       playTone(800,0.4,'sine',0.15);playTone(1000,0.3,'sine',0.1,0.15);
       instruction.textContent='🚂 Choo choo!';
