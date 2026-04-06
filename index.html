@@ -3577,7 +3577,7 @@ function drawTrainGame(){
 // HIDE & SEEK GAME
 // =============================================
 const HS_ANIMALS=[{emoji:'🐱',name:'Cat'},{emoji:'🐶',name:'Dog'},{emoji:'🐸',name:'Frog'},{emoji:'🐰',name:'Bunny'},{emoji:'🐻',name:'Bear'},{emoji:'🦊',name:'Fox'}];
-let hsState='hiding',hsScore=0,hsRound=0,hsTotalRounds=5;
+let hsState='hiding',hsScore=0,hsRound=0,hsTotalRounds=5,hsAnimalQueue=[];
 let hsAnimal=null,hsSpotIdx=0,hsPeekTimer=0,hsPeekPhase=0,hsPeekOffset=0,hsPeekDir=1;
 let hsFoundTimer=0,hsFoundBounce=0,hsDoneTimer=0;
 let hsSpots=[],hsWobble=[0,0,0,0,0],hsClouds=[];
@@ -3598,6 +3598,8 @@ function hsGetSpots(){
 function startHideSeekGame(){
   currentMode='hideseek';particles=[];confetti=[];
   hsScore=0;hsRound=0;hsDoneTimer=0;
+  // Shuffle animals so each round is unique
+  hsAnimalQueue=[...HS_ANIMALS].sort(()=>Math.random()-0.5).slice(0,5);
   hsClouds=[];
   for(let i=0;i<4;i++)hsClouds.push({x:Math.random()*W,y:H*0.04+Math.random()*H*0.12,s:0.5+Math.random()*0.5,vx:0.3+Math.random()*0.3});
   hsWobble=[0,0,0,0,0];
@@ -3607,7 +3609,7 @@ function startHideSeekGame(){
 function hsStartRound(){
   hsState='hiding';hsPeekTimer=0;hsPeekPhase=0;hsPeekOffset=0;hsFoundTimer=0;hsFoundBounce=0;
   hsSpots=hsGetSpots();
-  hsAnimal=HS_ANIMALS[Math.floor(Math.random()*HS_ANIMALS.length)];
+  hsAnimal=hsAnimalQueue[hsRound%hsAnimalQueue.length];
   hsSpotIdx=Math.floor(Math.random()*5);
   hsPeekDir=Math.random()<0.5?-1:1;
   updateHideSeekButtons();
