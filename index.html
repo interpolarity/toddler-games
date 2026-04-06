@@ -19,8 +19,7 @@
   .game-btn .emoji{font-size:32px;line-height:1;margin-bottom:2px}
   .btn-sand{background:linear-gradient(180deg,#ffca28,#f9a825)}.btn-rocks{background:linear-gradient(180deg,#90a4ae,#607d8b)}.btn-water{background:linear-gradient(180deg,#4fc3f7,#0288d1)}
   .btn-go{background:linear-gradient(180deg,#66bb6a,#388e3c);min-width:90px}.btn-dump{background:linear-gradient(180deg,#ff7043,#d84315);min-width:120px;font-size:18px}
-  .btn-again{background:linear-gradient(180deg,#9e9e9e,#757575);min-width:50px;min-height:44px;font-size:10px;opacity:0.65;position:fixed;top:8px;right:8px;z-index:60;padding:4px 8px}
-  .btn-again .emoji{font-size:18px}
+  .btn-again{background:linear-gradient(180deg,#9e9e9e,#757575);min-width:70px;font-size:12px;opacity:0.7}
   .btn-menu{background:linear-gradient(180deg,#78909c,#546e7a);min-width:70px;font-size:12px;min-height:60px}
   .btn-done{background:linear-gradient(180deg,#66bb6a,#2e7d32);min-width:100px;font-size:18px}
   .btn-food{background:linear-gradient(180deg,#ffe0b2,#ffcc80);color:#5d4037;min-width:70px}
@@ -226,15 +225,22 @@ function drawFlyingFoods(){
 // Button helper
 function addBtn(cls,emoji,label,onclick,disabled){
   const btn=document.createElement('button');
-  // Delay restart/next buttons so celebrations can't be spam-skipped
   const isRestart=cls==='btn-again'||label==='Next'||label==='Bulldoze!';
   const delayMs=isRestart?1500:0;
   btn.className=`game-btn ${cls}${disabled||isRestart?' disabled':''}`;
   btn.innerHTML=`<span class="emoji">${emoji}</span>${label}`;
   if(!disabled){
-    const handler=e=>{e.preventDefault();btn.style.transform='translateY(4px) scale(0.93)';setTimeout(()=>btn.style.transform='',150);onclick()};
-    if(isRestart){setTimeout(()=>{btn.classList.remove('disabled');btn.addEventListener('click',handler)},delayMs)}
-    else{btn.addEventListener('click',handler)}
+    let enabled=!isRestart;
+    const fire=()=>{if(!enabled)return;btn.style.transform='translateY(4px) scale(0.93)';setTimeout(()=>btn.style.transform='',150);onclick()};
+    // Drag-tolerant: track start position, fire if finger stays within 30px
+    let tx=0,ty=0;
+    btn.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:false});
+    btn.addEventListener('touchend',e=>{e.preventDefault();
+      if(!e.changedTouches.length)return;const t=e.changedTouches[0];
+      if(Math.abs(t.clientX-tx)<30&&Math.abs(t.clientY-ty)<30)fire();
+    },{passive:false});
+    btn.addEventListener('click',e=>{e.preventDefault();fire()});
+    if(isRestart){setTimeout(()=>{enabled=true;btn.classList.remove('disabled')},delayMs)}
   }
   buttonsArea.appendChild(btn);
 }
