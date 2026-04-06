@@ -1232,7 +1232,7 @@ function burgerDoEat(){
 }
 
 function getBurgerHeight(){
-  let h=35; // bun bottom
+  let h=18; // bun bottom (flat)
   burgerStack.forEach(id=>{if(id==='bun_bottom')return;if(id==='bun_top'){h+=55;return}const item=BURGER_ITEMS.find(b=>b.id===id);if(item)h+=item.h});
   return h;
 }
@@ -1289,7 +1289,7 @@ function drawBurgerGame(){
     const layerWobble=wobbleAngle*idx*0.3; // each layer wobbles more
     const bY=curY+(isTop?bounce:0);
     const bX=stackX+layerWobble;
-    if(id==='bun_bottom'){drawBunBottom(bX,bY);curY-=35}
+    if(id==='bun_bottom'){drawBunBottom(bX,bY);curY-=18}
     else if(id==='bun_top'){drawBunTop(bX,bY);curY-=55}
     else{
       const item=BURGER_ITEMS.find(b=>b.id===id);
