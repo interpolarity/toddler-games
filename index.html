@@ -3864,7 +3864,7 @@ function startSpiderGame(){
 
 function updateSpiderButtons(){
   buttonsArea.innerHTML='';
-  instruction.textContent=SPIDER_LYRICS[spiderPage];
+  instruction.textContent='';
   if(spiderPage===0||spiderPage===3){
     if(spiderState==='waiting')addBtn('btn-go','👆','Climb!',()=>{initAudio();spiderDoClimb()});
   }
