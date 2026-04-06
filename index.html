@@ -3865,9 +3865,6 @@ function startSpiderGame(){
 function updateSpiderButtons(){
   buttonsArea.innerHTML='';
   instruction.textContent='';
-  if(spiderPage===0||spiderPage===3){
-    if(spiderState==='waiting')addBtn('btn-go','👆','Climb!',()=>{initAudio();spiderDoClimb()});
-  }
   if(spiderState==='done'&&spiderPage===3){
     addBtn('btn-again','🔄','Again',()=>{initAudio();startSpiderGame()});
   }
@@ -3886,13 +3883,13 @@ function spiderGoToPage(pg){
   spiderPage=pg;spiderState='waiting';spiderAutoTimer=0;spiderPageTimer=0;spiderTapCount=0;
   const S=Math.min(W,H);
   if(pg===1){
-    spiderState='animating';spiderCloudDark=0;
+    spiderState='waiting';spiderCloudDark=0;
     spiderRainDrops=[];spiderRainTimer=0;
     spiderY=spiderSpoutTop+S*0.08;
   }else if(pg===2){
-    spiderState='animating';
+    spiderState='waiting';
     spiderSunSize=0;spiderSunTarget=S*0.18;spiderSunRays=0;
-    spiderPuddles=[{x:W*0.2,s:1},{x:W*0.45,s:1},{x:W*0.75,s:1}];
+    spiderPuddles=[{x:W*0.2,s:5},{x:W*0.45,s:5},{x:W*0.75,s:5}];
   }else if(pg===3){
     spiderState='waiting';
     spiderY=spiderSpoutBot;spiderTargetY=spiderSpoutBot;
@@ -3903,26 +3900,44 @@ function spiderGoToPage(pg){
 
 function handleSpiderTap(tx,ty){
   initAudio();
-  if(spiderPage===0&&spiderState==='waiting')spiderDoClimb();
-  else if(spiderPage===1){
-    // Tap anywhere to make rain — each tap counts toward advancing
+  const S=Math.min(W,H);
+  if((spiderPage===0||spiderPage===3)&&spiderState==='waiting'){
+    // Each tap moves spider up one step (not auto-climb)
+    spiderY-=S*0.06;
+    spiderLegPhase+=2;
+    playTone(400+spiderTapCount*30,0.08,'sine',0.08);
     spiderTapCount++;
-    for(let i=0;i<10;i++){
-      spiderRainDrops.push({x:tx-40+Math.random()*80,y:ty+Math.random()*20,vy:3+Math.random()*4,s:2+Math.random()*3});
+    if(spiderY<=spiderTargetY){
+      spiderY=spiderTargetY;spiderState='done';
+      if(spiderPage===0){playPop();setTimeout(()=>spiderGoToPage(1),1200)}
+      else{playJingle();playTaDa();spawnConfetti();spawnConfetti();spiderDoneTimer=0;updateSpiderButtons()}
     }
-    playTone(150+Math.random()*100,0.2,'sine',0.06);
-    if(navigator.vibrate)navigator.vibrate(15);
-    spawnParticles(tx,ty,5,['#64b5f6','#90caf9'],{vyRange:3,spread:20,maxSize:4});
-  }else if(spiderPage===2){
-    // Tap anywhere to grow sun — each tap counts toward advancing
+  }else if(spiderPage===1){
+    // Tap sky area to make rain clouds burst
     spiderTapCount++;
-    spiderSunTarget=Math.min(Math.min(W,H)*0.3,spiderSunTarget+15);
-    // Speed up puddle drying with each tap
-    spiderPuddles.forEach(p=>{p.s=Math.max(0,p.s-2)});
-    playTone(600+spiderTapCount*50,0.2,'sine',0.08);
-    playTone(800+spiderTapCount*50,0.15,'sine',0.06,0.05);
-    spawnParticles(tx,ty,5,['#ffeb3b','#fff9c4'],{vyRange:3,spread:20,maxSize:4});
-  }else if(spiderPage===3&&spiderState==='waiting')spiderDoClimb();
+    spiderCloudDark=Math.min(1,spiderTapCount*0.2);
+    for(let i=0;i<12;i++){
+      spiderRainDrops.push({x:W*0.1+Math.random()*W*0.8,y:H*0.1+Math.random()*H*0.1,vy:3+Math.random()*4,s:2+Math.random()*3});
+    }
+    playTone(100+Math.random()*80,0.15,'sine',0.06);
+    if(navigator.vibrate)navigator.vibrate(15);
+    // After 5 taps, spider starts washing down
+    if(spiderTapCount>=5&&spiderY<spiderSpoutBot){
+      spiderY=Math.min(spiderSpoutBot,spiderY+S*0.08);
+    }
+    // Advance when spider fully down
+    if(spiderY>=spiderSpoutBot&&spiderTapCount>=5){spiderGoToPage(2)}
+  }else if(spiderPage===2){
+    // Tap to grow sun and dry puddles
+    spiderTapCount++;
+    spiderSunTarget=Math.min(S*0.25,spiderSunTarget+S*0.02);
+    spiderPuddles.forEach(p=>{p.s=Math.max(0,p.s-1)});
+    spiderCloudDark=Math.max(0,spiderCloudDark-0.2);
+    playTone(500+spiderTapCount*40,0.15,'sine',0.08);
+    spawnParticles(W*0.25,H*0.2,4,['#ffeb3b','#fff9c4'],{vyRange:3,spread:15,maxSize:4});
+    // Advance when puddles gone (takes ~5 taps since s starts at 5)
+    if(spiderPuddles.every(p=>p.s<=0)){spiderGoToPage(3)}
+  }
 }
 
 function updateSpiderGame(dt){
@@ -3932,84 +3947,16 @@ function updateSpiderGame(dt){
   spiderEyeBlink+=dt;
   spiderLegPhase+=dt*6;
 
-  // Page 0 & 3: climbing
-  if((spiderPage===0||spiderPage===3)&&spiderState==='animating'){
-    spiderClimbTimer+=dt;
-    const speed=S*0.15;
-    spiderY-=speed*dt;
-    // wiggle side to side while climbing
-    if(spiderY<=spiderTargetY){
-      spiderY=spiderTargetY;
-      spiderState='done';
-      if(spiderPage===0){
-        playPop();
-        setTimeout(()=>spiderGoToPage(1),1200);
-      }else{
-        // Page 3 done - celebration!
-        playJingle();playTaDa();
-        spawnConfetti();spawnConfetti();
-        spiderDoneTimer=0;
-        instruction.textContent='The End! 🎉';
-        updateSpiderButtons();
-      }
-    }
+  // All pages: update rain drops (falling animation only)
+  for(let i=spiderRainDrops.length-1;i>=0;i--){
+    spiderRainDrops[i].y+=spiderRainDrops[i].vy;
+    if(spiderRainDrops[i].y>spiderGroundY)spiderRainDrops.splice(i,1);
   }
 
-  // Page 1: rain
-  if(spiderPage===1&&spiderState==='animating'){
-    spiderPageTimer+=dt;
-    spiderCloudDark=Math.min(1,spiderPageTimer*0.5);
-    spiderRainTimer+=dt;
-    // Spawn rain
-    if(spiderRainTimer>0.05){
-      spiderRainTimer=0;
-      for(let i=0;i<3;i++){
-        spiderRainDrops.push({x:Math.random()*W,y:-10,vy:4+Math.random()*5,s:2+Math.random()*3});
-      }
-    }
-    // Rain sound
-    if(Math.random()<0.03)playTone(100+Math.random()*80,0.3,'sine',0.04);
-    // Update rain
-    for(let i=spiderRainDrops.length-1;i>=0;i--){
-      spiderRainDrops[i].y+=spiderRainDrops[i].vy;
-      if(spiderRainDrops[i].y>spiderGroundY){spiderRainDrops.splice(i,1)}
-    }
-    // Spider slides down
-    if(spiderPageTimer>1.0&&spiderY<spiderSpoutBot){
-      spiderY+=S*0.25*dt;
-      if(spiderY>=spiderSpoutBot)spiderY=spiderSpoutBot;
-    }
-    // Advance only after spider fully washed down AND tapped clouds 3+ times
-    if(spiderY>=spiderSpoutBot&&spiderTapCount>=3){
-      spiderGoToPage(2);
-    }
-  }
-
-  // Page 2: sun
-  if(spiderPage===2&&spiderState==='animating'){
-    spiderPageTimer+=dt;
-    spiderCloudDark=Math.max(0,spiderCloudDark-dt*0.4);
+  // Page 2: smooth sun size animation
+  if(spiderPage===2){
     spiderSunSize+=(spiderSunTarget-spiderSunSize)*dt*2;
     spiderSunRays+=dt*2;
-    // Shrink puddles
-    spiderPuddles.forEach(p=>{p.s=Math.max(0,p.s-dt*0.2)});
-    // Fade rain
-    for(let i=spiderRainDrops.length-1;i>=0;i--){
-      spiderRainDrops[i].y+=spiderRainDrops[i].vy;
-      if(spiderRainDrops[i].y>spiderGroundY)spiderRainDrops.splice(i,1);
-    }
-    if(spiderPageTimer>0.5&&spiderRainDrops.length>0){
-      // rapidly remove rain
-      if(spiderRainDrops.length>0)spiderRainDrops.splice(0,Math.min(2,spiderRainDrops.length));
-    }
-    // Sun sound on start
-    if(spiderPageTimer<0.1){
-      playTone(523,0.3,'sine',0.08);playTone(659,0.25,'sine',0.07,0.1);playTone(784,0.2,'sine',0.06,0.2);
-    }
-    // Advance only after tapped sun 3+ times and puddles dried
-    if(spiderTapCount>=3&&spiderPuddles.every(p=>p.s<=0)){
-      spiderGoToPage(3);
-    }
   }
 
   // Done celebration confetti
