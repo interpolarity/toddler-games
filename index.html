@@ -3830,7 +3830,7 @@ function drawHideSeekGame(){
 // =============================================
 // ITSY BITSY SPIDER STORYBOOK
 // =============================================
-let spiderPage=0,spiderState='waiting',spiderY=0,spiderTargetY=0;
+let spiderPage=0,spiderState='waiting',spiderY=0,spiderTargetY=0,spiderTapCount=0;
 let spiderClimbTimer=0,spiderWiggle=0,spiderEyeBlink=0;
 let spiderRainDrops=[],spiderRainTimer=0,spiderCloudDark=0;
 let spiderSunSize=0,spiderSunTarget=0,spiderSunRays=0;
@@ -3883,7 +3883,7 @@ function spiderDoClimb(){
 }
 
 function spiderGoToPage(pg){
-  spiderPage=pg;spiderState='waiting';spiderAutoTimer=0;spiderPageTimer=0;
+  spiderPage=pg;spiderState='waiting';spiderAutoTimer=0;spiderPageTimer=0;spiderTapCount=0;
   const S=Math.min(W,H);
   if(pg===1){
     spiderState='animating';spiderCloudDark=0;
@@ -3905,20 +3905,23 @@ function handleSpiderTap(tx,ty){
   initAudio();
   if(spiderPage===0&&spiderState==='waiting')spiderDoClimb();
   else if(spiderPage===1){
-    // Tap clouds for more rain
-    if(ty<H*0.35){
-      for(let i=0;i<8;i++){
-        spiderRainDrops.push({x:tx-30+Math.random()*60,y:ty+Math.random()*20,vy:3+Math.random()*4,s:2+Math.random()*3});
-      }
-      playTone(150+Math.random()*100,0.2,'sine',0.06);
+    // Tap anywhere to make rain — each tap counts toward advancing
+    spiderTapCount++;
+    for(let i=0;i<10;i++){
+      spiderRainDrops.push({x:tx-40+Math.random()*80,y:ty+Math.random()*20,vy:3+Math.random()*4,s:2+Math.random()*3});
     }
+    playTone(150+Math.random()*100,0.2,'sine',0.06);
+    if(navigator.vibrate)navigator.vibrate(15);
+    spawnParticles(tx,ty,5,['#64b5f6','#90caf9'],{vyRange:3,spread:20,maxSize:4});
   }else if(spiderPage===2){
-    // Tap sun to make it bigger
-    if(tx>W*0.05&&tx<W*0.5&&ty<H*0.5){
-      spiderSunTarget=Math.min(Math.min(W,H)*0.3,spiderSunTarget+10);
-      playTone(600+spiderSunSize*2,0.2,'sine',0.08);
-      playTone(800+spiderSunSize*2,0.15,'sine',0.06,0.05);
-    }
+    // Tap anywhere to grow sun — each tap counts toward advancing
+    spiderTapCount++;
+    spiderSunTarget=Math.min(Math.min(W,H)*0.3,spiderSunTarget+15);
+    // Speed up puddle drying with each tap
+    spiderPuddles.forEach(p=>{p.s=Math.max(0,p.s-2)});
+    playTone(600+spiderTapCount*50,0.2,'sine',0.08);
+    playTone(800+spiderTapCount*50,0.15,'sine',0.06,0.05);
+    spawnParticles(tx,ty,5,['#ffeb3b','#fff9c4'],{vyRange:3,spread:20,maxSize:4});
   }else if(spiderPage===3&&spiderState==='waiting')spiderDoClimb();
 }
 
@@ -3976,8 +3979,8 @@ function updateSpiderGame(dt){
       spiderY+=S*0.25*dt;
       if(spiderY>=spiderSpoutBot)spiderY=spiderSpoutBot;
     }
-    // Auto-advance
-    if(spiderPageTimer>4.5){
+    // Advance only after spider fully washed down AND tapped clouds 3+ times
+    if(spiderY>=spiderSpoutBot&&spiderTapCount>=3){
       spiderGoToPage(2);
     }
   }
@@ -4003,8 +4006,8 @@ function updateSpiderGame(dt){
     if(spiderPageTimer<0.1){
       playTone(523,0.3,'sine',0.08);playTone(659,0.25,'sine',0.07,0.1);playTone(784,0.2,'sine',0.06,0.2);
     }
-    // Auto-advance
-    if(spiderPageTimer>5.0){
+    // Advance only after tapped sun 3+ times and puddles dried
+    if(spiderTapCount>=3&&spiderPuddles.every(p=>p.s<=0)){
       spiderGoToPage(3);
     }
   }
@@ -4211,15 +4214,16 @@ function drawCuteSpider(sx,sy,radius){
   ctx.strokeStyle='#4e342e';ctx.lineWidth=Math.max(2,r*0.12);ctx.lineCap='round';
   for(let side=-1;side<=1;side+=2){
     for(let i=0;i<4;i++){
-      const angle=(i-1.5)*0.35+side*0.8;
-      const legLen=r*1.3;
-      const midX=side*r*0.5+Math.cos(angle)*legLen*0.5;
-      const midY=-r*0.3+i*r*0.35+Math.sin(angle)*legLen*0.3;
-      const tipX=side*r*1.2+Math.cos(angle)*legLen*(climbing?0.6+Math.sin(spiderLegPhase+i*1.5)*0.2:0.7);
-      const tipY=-r*0.3+i*r*0.35+Math.sin(angle)*legLen*0.7+(climbing?Math.sin(spiderLegPhase+i*1.5+side)*r*0.3:0);
+      const spread=(i-1.5)*0.5; // wider vertical spread
+      const legLen=r*1.6;
+      const baseY=(-0.6+i*0.45)*r;
+      const kneeX=side*r*0.9;
+      const kneeY=baseY-r*0.2+(climbing?Math.sin(spiderLegPhase+i*1.2+side)*r*0.15:0);
+      const tipX=side*r*1.8+(climbing?Math.sin(spiderLegPhase+i*1.2)*r*0.2:0);
+      const tipY=baseY+r*0.3+(climbing?Math.sin(spiderLegPhase+i*1.2+side+1)*r*0.2:0);
       ctx.beginPath();
-      ctx.moveTo(side*r*0.3,(-0.3+i*0.35)*r);
-      ctx.quadraticCurveTo(midX,midY,tipX,tipY);
+      ctx.moveTo(side*r*0.35,baseY);
+      ctx.quadraticCurveTo(kneeX,kneeY,tipX,tipY);
       ctx.stroke();
     }
   }
