@@ -108,7 +108,7 @@ function findEnVoice(){
   enVoice=v.find(x=>x.name==='Samantha')||v.find(x=>x.name.includes('Google')&&x.lang.startsWith('en'))
     ||v.find(x=>x.lang==='en-US'&&!x.localService===false)||v.find(x=>x.lang.startsWith('en'))||null;
 }
-if(window.speechSynthesis){speechSynthesis.addEventListener('voiceschanged',findEnVoice);findEnVoice()}
+if(window.speechSynthesis){if(speechSynthesis.addEventListener)speechSynthesis.addEventListener('voiceschanged',findEnVoice);else if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=findEnVoice;findEnVoice()}
 function setEnVoice(utt){utt.lang='en-US';findEnVoice();if(enVoice)utt.voice=enVoice}
 
 function sayWord(word){
