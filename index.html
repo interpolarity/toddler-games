@@ -2683,13 +2683,13 @@ function startCatchGame(){
 }
 function updateCatchButtons(){
   buttonsArea.innerHTML='';
-  instruction.textContent='Caught: '+catchScore+' 🧺';
+  instruction.textContent='';
   addBtn('btn-again','🔄','Again!',()=>{initAudio();startCatchGame()});
 }
 function spawnCatchObject(){
   const f=CATCH_FRUITS[Math.floor(Math.random()*CATCH_FRUITS.length)];
   const margin=W*0.1;
-  catchObjects.push({x:margin+Math.random()*(W-margin*2),y:-W*0.1,emoji:f.emoji,name:f.name,vy:H*0.06+Math.random()*H*0.03});
+  catchObjects.push({x:margin+Math.random()*(W-margin*2),y:-W*0.1,emoji:f.emoji,name:f.name,vy:H*0.12+Math.random()*H*0.05});
 }
 function handleCatchMove(tx){
   if(currentMode!=='catch')return;
@@ -2702,7 +2702,7 @@ function handleCatchTap(tx){
 function handleCatchEnd(){catchDragging=false}
 function updateCatchGame(dt){
   catchSpawnTimer+=dt;
-  if(catchSpawnTimer>1.5+Math.random()*0.5){catchSpawnTimer=0;spawnCatchObject()}
+  if(catchSpawnTimer>0.8+Math.random()*0.4){catchSpawnTimer=0;spawnCatchObject()}
   const bw=W*0.125,by=H*0.68;
   for(let i=catchObjects.length-1;i>=0;i--){
     const o=catchObjects[i];o.y+=o.vy*dt;
