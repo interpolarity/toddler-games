@@ -3103,32 +3103,32 @@ function drawMazeGame(){
 // =============================================
 const BUILD_PUZZLES=[
   {name:'House',pieces:[
-    {type:'rect',x:0,y:0,w:80,h:70,color:'#e53935'},
-    {type:'tri',x:0,y:-55,w:100,h:55,color:'#ff8f00'},
-    {type:'rect',x:-10,y:30,w:25,h:40,color:'#8d6e63'},
-    {type:'rect',x:20,y:15,w:20,h:20,color:'#64b5f6'},
+    {type:'rect',x:0,y:0,w:110,h:95,color:'#e53935'},
+    {type:'tri',x:0,y:-72,w:140,h:72,color:'#ff8f00'},
+    {type:'rect',x:-15,y:40,w:32,h:55,color:'#8d6e63'},
+    {type:'rect',x:28,y:20,w:28,h:28,color:'#64b5f6'},
   ]},
   {name:'Boat',pieces:[
-    {type:'trap',x:0,y:20,w:110,h:35,color:'#1e88e5'},
-    {type:'rect',x:-5,y:-20,w:10,h:55,color:'#8d6e63'},
-    {type:'tri',x:22,y:-20,w:50,h:55,color:'#fff176'},
+    {type:'trap',x:0,y:25,w:150,h:45,color:'#1e88e5'},
+    {type:'rect',x:0,y:-30,w:12,h:75,color:'#8d6e63'},
+    {type:'rtri',x:30,y:-30,w:55,h:75,color:'#fff176'},
   ]},
   {name:'Tree',pieces:[
-    {type:'rect',x:0,y:30,w:20,h:50,color:'#8d6e63'},
-    {type:'tri',x:0,y:-10,w:70,h:50,color:'#43a047'},
-    {type:'tri',x:0,y:-45,w:55,h:45,color:'#66bb6a'},
+    {type:'rect',x:0,y:40,w:28,h:70,color:'#8d6e63'},
+    {type:'tri',x:0,y:-12,w:100,h:65,color:'#43a047'},
+    {type:'tri',x:0,y:-58,w:78,h:58,color:'#66bb6a'},
   ]},
   {name:'Rocket',pieces:[
-    {type:'rect',x:0,y:0,w:35,h:70,color:'#e0e0e0'},
-    {type:'tri',x:0,y:-50,w:35,h:35,color:'#e53935'},
-    {type:'rect',x:0,y:30,w:50,h:12,color:'#ff8f00'},
-    {type:'tri',x:-25,y:35,w:18,h:25,color:'#ff8f00'},
-    {type:'tri',x:25,y:35,w:18,h:25,color:'#ff8f00'},
+    {type:'rect',x:0,y:0,w:48,h:95,color:'#e0e0e0'},
+    {type:'tri',x:0,y:-65,w:48,h:48,color:'#e53935'},
+    {type:'rect',x:0,y:42,w:68,h:16,color:'#ff8f00'},
+    {type:'tri',x:-34,y:48,w:24,h:34,color:'#ff8f00'},
+    {type:'tri',x:34,y:48,w:24,h:34,color:'#ff8f00'},
   ]},
   {name:'Fish',pieces:[
-    {type:'oval',x:0,y:0,w:70,h:40,color:'#ff9800'},
-    {type:'tri',x:-50,y:0,w:30,h:40,color:'#ff9800'},
-    {type:'circle',x:20,y:-8,w:8,h:8,color:'#212121'},
+    {type:'oval',x:0,y:0,w:100,h:55,color:'#ff9800'},
+    {type:'tri',x:-70,y:0,w:40,h:55,color:'#ff9800'},
+    {type:'circle',x:28,y:-10,w:10,h:10,color:'#212121'},
   ]},
 ];
 let buildPuzzleIdx,buildPieces,buildTargets,buildDrag,buildDone,buildScore;
@@ -3164,6 +3164,7 @@ function drawBuildShape(p,x,y,alpha){
   ctx.fillStyle=p.color;
   if(p.type==='rect'){drawRoundRect(x-p.w/2,y-p.h/2,p.w,p.h,4);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
   else if(p.type==='tri'){ctx.beginPath();ctx.moveTo(x,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
+  else if(p.type==='rtri'){ctx.beginPath();ctx.moveTo(x-p.w/2,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
   else if(p.type==='trap'){ctx.beginPath();ctx.moveTo(x-p.w/2,y-p.h/2);ctx.lineTo(x+p.w/2,y-p.h/2);ctx.lineTo(x+p.w*0.35,y+p.h/2);ctx.lineTo(x-p.w*0.35,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
   else if(p.type==='oval'){ctx.beginPath();ctx.ellipse(x,y,p.w/2,p.h/2,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
   else if(p.type==='circle'){ctx.beginPath();ctx.arc(x,y,p.w,0,Math.PI*2);ctx.fill()}
