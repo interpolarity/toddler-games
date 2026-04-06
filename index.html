@@ -2233,6 +2233,8 @@ function updatePizzaButtons(){
   }else{instruction.textContent='Here they come!'}
 }
 function addPizzaTopping(id){
+  const totalToppings=Object.values(pizzaToppingPos).flat().length;
+  if(id!=='sauce'&&id!=='cheese'&&totalToppings>=40)return; // cap to prevent lag
   pizzaToppings.push(id);
   const t=PIZZA_TOPPINGS.find(t=>t.id===id);
   if(t&&t.type==='topping'){
