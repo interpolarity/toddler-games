@@ -1232,7 +1232,7 @@ function burgerDoEat(){
 }
 
 function getBurgerHeight(){
-  let h=18; // bun bottom (flat)
+  let h=20; // bun bottom
   burgerStack.forEach(id=>{if(id==='bun_bottom')return;if(id==='bun_top'){h+=55;return}const item=BURGER_ITEMS.find(b=>b.id===id);if(item)h+=item.h});
   return h;
 }
@@ -1289,7 +1289,7 @@ function drawBurgerGame(){
     const layerWobble=wobbleAngle*idx*0.3; // each layer wobbles more
     const bY=curY+(isTop?bounce:0);
     const bX=stackX+layerWobble;
-    if(id==='bun_bottom'){drawBunBottom(bX,bY);curY-=18}
+    if(id==='bun_bottom'){drawBunBottom(bX,bY);curY-=20}
     else if(id==='bun_top'){drawBunTop(bX,bY);curY-=55}
     else{
       const item=BURGER_ITEMS.find(b=>b.id===id);
@@ -1311,13 +1311,13 @@ function drawBurgerGame(){
 }
 
 function drawBunBottom(x,y){
-  // Flat bottom bun — wide, low profile
+  // Bottom bun — thick bread slice style
+  const hw=70,bh=20;
   ctx.fillStyle='#d7a86e';
-  ctx.beginPath();ctx.moveTo(x-75,y);ctx.lineTo(x-72,y-14);ctx.quadraticCurveTo(x,y-20,x+72,y-14);ctx.lineTo(x+75,y);ctx.closePath();ctx.fill();
+  drawRoundRect(x-hw,y-bh,hw*2,bh,5);ctx.fill();
   ctx.strokeStyle='#c49556';ctx.lineWidth=2;ctx.stroke();
-  // Subtle top highlight
-  ctx.fillStyle='rgba(255,255,255,0.1)';
-  ctx.beginPath();ctx.moveTo(x-60,y-12);ctx.quadraticCurveTo(x,y-18,x+60,y-12);ctx.quadraticCurveTo(x,y-14,x-60,y-12);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.fillRect(x-hw+4,y-bh+2,hw*2-8,5);
 }
 function drawBunTop(x,y){
   ctx.fillStyle='#d7a86e';
