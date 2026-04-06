@@ -3487,10 +3487,16 @@ function drawTrainGame(){
 
   // Draw locomotive + cars
   const ts=Math.min(W,H);const locoW=ts*0.16,locoH=ts*0.12;const carW=ts*0.12,carH=ts*0.09;
-  // Center the train — shift left as more cars are added
+  // Building: center on screen. Driving: start from left, cross full screen
   const totalTrainW=locoW+trainCars.length*(carW+4);
-  const centerOffset=Math.max(0,(W-totalTrainW)/2);
-  const startX=centerOffset+trainCars.length*(carW+4)+trainX;
+  let startX;
+  if(trainState==='driving'||trainState==='done'){
+    // Locomotive starts at left edge, drives right across full screen
+    startX=trainCars.length*(carW+4)+trainX;
+  }else{
+    const centerOffset=Math.max(0,(W-totalTrainW)/2);
+    startX=centerOffset+trainCars.length*(carW+4);
+  }
   const baseY=ty-locoH+2;
 
   // Locomotive
