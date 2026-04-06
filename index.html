@@ -96,7 +96,7 @@ function playTaDa(){
   [392,494,587].forEach(f=>{playTone(f,0.15,'sine',0.1)});
   [523,659,784,1047].forEach(f=>{playTone(f,0.5,'sine',0.1,0.2)});playTone(262,0.5,'triangle',0.06,0.2);
 }
-function playMatch(){playTone(523,0.15,'sine',0.2);setTimeout(()=>playTone(659,0.15,'sine',0.2),100);setTimeout(()=>playTone(784,0.2,'sine',0.2),200)}
+function playMatch(){playTone(523,0.15,'sine',0.12);playTone(659,0.15,'sine',0.12,0.1);playTone(784,0.2,'sine',0.12,0.2)}
 function playWrong(){playTone(200,0.2,'square',0.1);setTimeout(()=>playTone(160,0.25,'square',0.1),150)}
 function playFlip(){playTone(800,0.08,'sine',0.1)}
 let enVoice=null;
@@ -478,7 +478,7 @@ function updateDigGame(dt){
   else if(excAnimPhase===5){excAnimTime+=dt;const t=Math.min(1,excAnimTime/0.35);
     excArmAngle=lerp(-0.3,0.15,easeInOut(t));excStickAngle=lerp(-0.2,0.3,easeInOut(t));excBucketAngle=lerp(0.4,1.5,easeInOut(t));
     if(t>=0.5&&excBucketMat){truckLoad.push(excBucketMat);
-      playTone(300,0.12,'triangle',0.2);playTone(200,0.15,'square',0.1);
+      playTone(300,0.12,'triangle',0.12);playTone(200,0.15,'square',0.08);
       spawnParticles(truckX,digGroundY-W*0.08,12,[DIG_MAT[excBucketMat].color,DIG_MAT[excBucketMat].light,DIG_MAT[excBucketMat].dark],{vyRange:6,spread:15});
       screenShakeTimer=0.1;excBucketMat=null}
     if(t>=1){excAnimPhase=6;excAnimTime=0}}
@@ -2007,7 +2007,7 @@ function updatePancakeButtons(){
 function addPancakeItem(id){
   pancakeStack.push(id);pancakeBounceTimer=0.3;
   wobbleVel+=(Math.random()-0.5)*0.06;
-  if(id==='pancake'){playTone(200,0.15,'triangle',0.2);playTone(150,0.1,'square',0.1);sayWord('Pancake!')}
+  if(id==='pancake'){playTone(200,0.15,'triangle',0.12);playTone(150,0.1,'square',0.08);sayWord('Pancake!')}
   else{const s=PANCAKE_SYRUPS.find(s=>'syrup_'+s.id===id);if(s){playTone(400,0.1,'sine',0.12);sayWord(s.voice||s.label)}}
   const totalH=getPancakeHeight();const visH=H*0.7-60;
   pancakeCamY=Math.max(0,totalH-visH+60);
@@ -2799,8 +2799,10 @@ function startTraceGame(){
 function updateTraceButtons(){
   buttonsArea.innerHTML='';
   const shapeName=TRACE_SHAPES[traceShapeIdx%TRACE_SHAPES.length].name;
-  instruction.textContent=traceDone?'Great! '+traceScore+'/5':'Trace the '+shapeName+'! ('+traceScore+'/5)';
-  addBtn('btn-again','🔄','Again!',()=>{initAudio();startTraceGame()});
+  if(traceScore>=5){
+    instruction.textContent='Great job! 🎉';
+    addBtn('btn-again','🔄','Again!',()=>{initAudio();startTraceGame()});
+  }else{instruction.textContent='Trace the '+shapeName+'! ('+traceScore+'/5)'}
 }
 function setupTraceShape(){
   traceDone=false;
@@ -3201,7 +3203,7 @@ function handleBuildEnd(){
   // Snap if close enough
   if(dx*dx+dy*dy<(W*0.08)*(W*0.08)){
     p.cx=t.cx;p.cy=t.cy;p.placed=true;t.filled=true;
-    playTone(400+buildScore*50,0.15,'sine',0.2);playPop();
+    playTone(400+buildScore*50,0.15,'sine',0.12);playPop();
     spawnParticles(t.cx,t.cy,10,[p.color,'#fff'],{vyRange:5,spread:20,maxSize:6});
     buildScore++;
     // Check if all placed
