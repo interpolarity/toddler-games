@@ -2236,7 +2236,8 @@ function updatePizzaButtons(){
     addBtn('btn-pizza','🧀','Cheese',()=>{initAudio();addPizzaTopping('cheese')},!hasSauce||hasCheese);
     PIZZA_TOPPINGS.filter(t=>t.type==='topping').forEach(t=>{
       const count=(pizzaToppingPos[t.id]||[]).length;
-      addBtn('btn-pizza',t.emoji,t.label,()=>{initAudio();addPizzaTopping(t.id)},!hasCheese||count>=8);
+      const maxed=count>=8;
+      addBtn('btn-pizza',t.emoji,maxed?'Full!':t.label,()=>{initAudio();addPizzaTopping(t.id)},!hasCheese||maxed);
     });
     addBtn('btn-go','🔥','Bake!',()=>{initAudio();startBakePizza()},!hasCheese);
   }else if(pizzaState==='baking'){
