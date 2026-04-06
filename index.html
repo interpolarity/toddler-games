@@ -1152,7 +1152,7 @@ const BURGER_ITEMS = [
   {id:'tomato', emoji:'🍅', label:'Tomato',  color:'#ef5350', dark:'#c62828', h:16, shape:'tomato', pitch:280, react:'😊'},
   {id:'onion',  emoji:'🧅', label:'Onion',   color:'#e0c8ff', dark:'#b39ddb', h:12, shape:'onion',  pitch:180, react:'😭'},
   {id:'bacon',  emoji:'🥓', label:'Bacon',   color:'#d84315', dark:'#bf360c', h:12, shape:'bacon',  pitch:200, react:'🤩'},
-  {id:'bread',  emoji:'🍞', label:'Bread',   color:'#d7a86e', dark:'#c49556', h:20, shape:'bread',  pitch:220, react:'😋'},
+  {id:'bread',  emoji:'🍞', label:'Bread',   color:'#d7a86e', dark:'#c49556', h:12, shape:'bread',  pitch:220, react:'😋'},
 ];
 let burgerStack, burgerState, burgerCustomerX, burgerCustomerPhase, burgerEatTimer, burgerBounceTimer;
 let burgerCamY, burgerEatCount, burgerTotalLayers;
@@ -1387,11 +1387,14 @@ function drawBurgerLayer(x,y,item){
     }
     ctx.beginPath();ctx.moveTo(x+10,y-2);ctx.lineTo(x+30,y-item.h+2);ctx.stroke();
   }else if(item.shape==='bread'){
-    // Mid-bun like a Big Mac
-    drawRoundRect(x-hw,y-item.h,hw*2,item.h,5);ctx.fill();
-    ctx.strokeStyle=item.dark;ctx.lineWidth=2;ctx.stroke();
-    // Slight shine on top
-    ctx.fillStyle='rgba(255,255,255,0.2)';
+    // Flat bread slice — thin, clearly different from buns
+    ctx.fillStyle='#e8c878';
+    drawRoundRect(x-hw+2,y-item.h,hw*2-4,item.h,3);ctx.fill();
+    ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
+    // Porous bread texture dots
+    ctx.fillStyle='rgba(180,140,70,0.15)';
+    for(let i=0;i<8;i++){ctx.beginPath();ctx.arc(x-50+i*14+Math.random()*5,y-item.h/2,1.5+Math.random(),0,Math.PI*2);ctx.fill()}
+    ctx.fillStyle='rgba(255,255,255,0.15)';
     drawRoundRect(x-hw+6,y-item.h+2,hw*2-12,4,2);ctx.fill();
   }
 }
