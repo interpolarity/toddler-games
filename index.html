@@ -3233,7 +3233,7 @@ function updateCarWashButtons(){
   buttonsArea.innerHTML='';
   if(cwState==='done'){
     addBtn('btn-again','🚗','New Car!',()=>{playPop();startCarWashGame()});
-    addBtn('btn-menu','🏠','Menu',()=>{playPop();showMenu()});
+
     return;
   }
   const labels=[['💧','Spray'],['🧼','Soap'],['🧽','Scrub'],['🚿','Rinse'],['💨','Dry']];
@@ -3242,7 +3242,7 @@ function updateCarWashButtons(){
       if(i===cwStep&&!cwAnimating){playPop();cwAnimating=true;cwTimer=0;}
     },i!==cwStep||cwAnimating);
   });
-  addBtn('btn-menu','🏠','Menu',()=>{playPop();showMenu()});
+
 }
 function updateCarWashGame(dt){
   updateParticles(dt);updateConfetti();
@@ -3394,7 +3394,7 @@ function updateTrainButtons(){
   buttonsArea.innerHTML='';
   if(trainState==='done'){
     addBtn('btn-again','🚂','Again!',()=>{playPop();startTrainGame()});
-    addBtn('btn-menu','🏠','Menu',()=>{playPop();showMenu()});
+
     return;
   }
   if(trainState==='driving'){return;}
@@ -3430,7 +3430,7 @@ function updateTrainButtons(){
       updateTrainButtons();
     }
   },trainCars.length===0);
-  addBtn('btn-menu','🏠','Menu',()=>{playPop();showMenu()});
+
 }
 function updateTrainGame(dt){
   updateParticles(dt);updateConfetti();
