@@ -3442,12 +3442,13 @@ function updateTrainGame(dt){
     // Chug sound
     if(trainChugTimer>0.25){trainChugTimer=0;playTone(80+Math.random()*30,0.12,'square',0.04);}
     // Smoke puffs
-    const locoW=W*0.14;const totalW=locoW+trainCars.length*(W*0.1+4);
-    const locoScreenX=W*0.1+trainX;
-    if(Math.random()<0.4){trainSmoke.push({x:locoScreenX+locoW*0.6,y:H*0.47,r:3+Math.random()*4,vy:-1-Math.random(),vx:0.5+Math.random(),life:1});}
-    // Update smoke
+    const ts2=Math.min(W,H),lw2=ts2*0.16,cw2=ts2*0.12;
+    const totalW=lw2+trainCars.length*(cw2+4);
+    const cOfs=Math.max(0,(W-totalW)/2);
+    const locoScreenX=cOfs+trainCars.length*(cw2+4)+trainX;
+    const smokeY=(H>W*1.5?H*0.5:H*0.65)-ts2*0.12*0.5;
+    if(Math.random()<0.4){trainSmoke.push({x:locoScreenX+lw2*0.6,y:smokeY,r:3+Math.random()*4,vy:-1-Math.random(),vx:0.5+Math.random(),life:1});}
     for(let i=trainSmoke.length-1;i>=0;i--){const s=trainSmoke[i];s.x+=s.vx;s.y+=s.vy;s.r+=dt*4;s.life-=dt*0.6;if(s.life<=0)trainSmoke.splice(i,1);}
-    // Check if exited
     if(trainX>W+totalW){
       trainState='done';
       instruction.textContent='🎉 '+trainCars.length+' cars!';
@@ -3486,7 +3487,10 @@ function drawTrainGame(){
 
   // Draw locomotive + cars
   const ts=Math.min(W,H);const locoW=ts*0.16,locoH=ts*0.12;const carW=ts*0.12,carH=ts*0.09;
-  const startX=W*0.1+trainX;
+  // Center the train — shift left as more cars are added
+  const totalTrainW=locoW+trainCars.length*(carW+4);
+  const centerOffset=Math.max(0,(W-totalTrainW)/2);
+  const startX=centerOffset+trainCars.length*(carW+4)+trainX;
   const baseY=ty-locoH+2;
 
   // Locomotive
