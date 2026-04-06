@@ -2231,11 +2231,12 @@ function updatePizzaButtons(){
   if(pizzaState==='building'){
 
     const hasSauce=pizzaToppings.includes('sauce'),hasCheese=pizzaToppings.includes('cheese');
-    instruction.textContent=pizzaToppings.length<=1?'Make a pizza!':'Add toppings!';
+    const toppingsFull=Object.values(pizzaToppingPos).flat().length>=40;
+    instruction.textContent=toppingsFull?'Pizza is loaded! Bake it!':pizzaToppings.length<=1?'Make a pizza!':'Add toppings!';
     addBtn('btn-pizza','🍅','Sauce',()=>{initAudio();addPizzaTopping('sauce')},hasSauce);
     addBtn('btn-pizza','🧀','Cheese',()=>{initAudio();addPizzaTopping('cheese')},!hasSauce||hasCheese);
     PIZZA_TOPPINGS.filter(t=>t.type==='topping').forEach(t=>{
-      addBtn('btn-pizza',t.emoji,t.label,()=>{initAudio();addPizzaTopping(t.id)},!hasCheese);
+      addBtn('btn-pizza',t.emoji,t.label,()=>{initAudio();addPizzaTopping(t.id)},!hasCheese||toppingsFull);
     });
     addBtn('btn-go','🔥','Bake!',()=>{initAudio();startBakePizza()},!hasCheese);
   }else if(pizzaState==='baking'){
@@ -2261,7 +2262,6 @@ function updatePizzaButtons(){
 }
 function addPizzaTopping(id){
   const totalToppings=Object.values(pizzaToppingPos).flat().length;
-  if(id!=='sauce'&&id!=='cheese'&&totalToppings>=40)return; // cap to prevent lag
   pizzaToppings.push(id);
   const t=PIZZA_TOPPINGS.find(t=>t.id===id);
   if(t&&t.type==='topping'){
