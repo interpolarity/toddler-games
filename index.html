@@ -4126,31 +4126,15 @@ function drawSpiderGame(){
     ctx.restore();
   }
 
-  // Tap hint
-  if((spiderPage===0||spiderPage===3)&&spiderState==='waiting'){
-    const hintY=spiderY+S*0.08;
-    const pulse=0.7+Math.sin(spiderWiggle*1.5)*0.3;
-    ctx.globalAlpha=pulse;
-    ctx.font=`bold ${S*0.03}px sans-serif`;ctx.textAlign='center';
+  // Tap hint — always at bottom center, below the action
+  const hints=['👆 Tap to climb!','☁️ Tap for rain!','☀️ Tap for sun!','👆 Tap to climb!'];
+  if(spiderState==='waiting'||spiderState==='done'){
+    const pulse=0.6+Math.sin(spiderWiggle*1.5)*0.3;
+    ctx.globalAlpha=spiderState==='done'?0:pulse;
+    ctx.font=`bold ${S*0.04}px sans-serif`;ctx.textAlign='center';
     ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;
-    ctx.fillText('👆 Tap to climb!',spiderSpoutX,hintY);
-    ctx.shadowBlur=0;ctx.textAlign='left';
-    ctx.globalAlpha=1;
-  }
-  if(spiderPage===1&&spiderState==='waiting'){
-    const pulse=0.5+Math.sin(spiderWiggle*1.5)*0.3;
-    ctx.globalAlpha=pulse;
-    ctx.font=`bold ${S*0.025}px sans-serif`;ctx.textAlign='center';
-    ctx.fillStyle='#fff';
-    ctx.fillText('☁️ Tap clouds for rain!',W*0.35,H*0.2);
-    ctx.textAlign='left';ctx.globalAlpha=1;
-  }
-  if(spiderPage===2&&spiderState==='waiting'){
-    const pulse=0.5+Math.sin(spiderWiggle*1.5)*0.3;
-    ctx.globalAlpha=pulse;
-    ctx.font=`bold ${S*0.025}px sans-serif`;ctx.textAlign='center';
-    ctx.fillStyle='#fff';
-    ctx.fillText('☀️ Tap the sun!',W*0.22,H*0.35);
+    ctx.fillText(hints[spiderPage],W*0.35,H*0.75);
+    ctx.shadowBlur=0;
     ctx.textAlign='left';ctx.globalAlpha=1;
   }
 
