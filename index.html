@@ -2537,7 +2537,7 @@ function updatePaintButtons(){
     buttonsArea.appendChild(btn);
   });
   addBtn(paintRainbow?'btn-go':'btn-menu','🌈','Rainbow',()=>{initAudio();paintRainbow=!paintRainbow;playPop();updatePaintButtons()});
-  addBtn('btn-again','🗑️','Clear',()=>{initAudio();paintSplats=[];playPop();updatePaintButtons()});
+  addBtn('btn-menu','🗑️','Clear',()=>{initAudio();paintSplats=[];playPop();updatePaintButtons()});
 }
 
 let paintDragging=false;
@@ -2891,7 +2891,7 @@ function startMusicGame(){
 function updateMusicButtons(){
   buttonsArea.innerHTML='';
   addBtn('btn-go','🎵','Song',()=>{initAudio();musicMode='song';musicSongIdx=0;musicSongPlaying=true;musicSongTimer=0;instruction.textContent='Follow along! 🎶'});
-  addBtn('btn-again','🎹','Free Play',()=>{initAudio();musicMode='free';musicSongPlaying=false;instruction.textContent='Tap the bars! 🎵'});
+  addBtn('btn-go','🎹','Free Play',()=>{initAudio();musicMode='free';musicSongPlaying=false;instruction.textContent='Tap the bars! 🎵'});
 
 }
 function handleMusicTap(tx,ty){
