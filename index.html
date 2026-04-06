@@ -1311,9 +1311,13 @@ function drawBurgerGame(){
 }
 
 function drawBunBottom(x,y){
+  // Flat bottom bun — wide, low profile
   ctx.fillStyle='#d7a86e';
-  ctx.beginPath();ctx.moveTo(x-75,y);ctx.lineTo(x-68,y-28);ctx.quadraticCurveTo(x,y-38,x+68,y-28);ctx.lineTo(x+75,y);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#c49556';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x-75,y);ctx.lineTo(x-72,y-14);ctx.quadraticCurveTo(x,y-20,x+72,y-14);ctx.lineTo(x+75,y);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#c49556';ctx.lineWidth=2;ctx.stroke();
+  // Subtle top highlight
+  ctx.fillStyle='rgba(255,255,255,0.1)';
+  ctx.beginPath();ctx.moveTo(x-60,y-12);ctx.quadraticCurveTo(x,y-18,x+60,y-12);ctx.quadraticCurveTo(x,y-14,x-60,y-12);ctx.fill();
 }
 function drawBunTop(x,y){
   ctx.fillStyle='#d7a86e';
@@ -1339,11 +1343,21 @@ function drawBurgerLayer(x,y,item){
     ctx.lineTo(x+hw+2,y+8);ctx.lineTo(x+hw-5,y);ctx.lineTo(x+hw-15,y+5);ctx.lineTo(x+hw-25,y);
     ctx.closePath();ctx.fill();ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
   }else if(item.shape==='lettuce'){
-    ctx.beginPath();ctx.moveTo(x-hw-3,y);
-    // Wavy top
-    for(let i=0;i<=8;i++){const lx=x-hw+i*(hw*2/8);ctx.quadraticCurveTo(lx+hw/8,y-item.h-(i%2?6:0),lx+hw*2/8,y-item.h+2)}
-    ctx.lineTo(x+hw+3,y);ctx.closePath();ctx.fill();
-    ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
+    // Ruffled lettuce leaf
+    ctx.beginPath();ctx.moveTo(x-hw-5,y);
+    for(let i=0;i<=10;i++){const lx=x-hw+i*(hw*2/10);
+      ctx.quadraticCurveTo(lx+hw/10,y-item.h-(i%2?8:-2),lx+hw*2/10,y-item.h+(i%3?2:0))}
+    ctx.lineTo(x+hw+5,y);ctx.closePath();ctx.fill();
+    // Lighter inner leaf
+    ctx.fillStyle='#81c784';ctx.beginPath();ctx.moveTo(x-hw+8,y);
+    for(let i=0;i<=8;i++){const lx=x-hw+8+i*((hw*2-16)/8);
+      ctx.quadraticCurveTo(lx+hw/8,y-item.h+2-(i%2?5:0),lx+(hw*2-16)/8,y-item.h+4)}
+    ctx.lineTo(x+hw-8,y);ctx.closePath();ctx.fill();
+    // Leaf veins
+    ctx.strokeStyle='rgba(56,142,60,0.25)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-item.h+3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y-item.h*0.4);ctx.lineTo(x-25,y-item.h+2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y-item.h*0.4);ctx.lineTo(x+25,y-item.h+2);ctx.stroke();
   }else if(item.shape==='tomato'){
     drawRoundRect(x-hw,y-item.h,hw*2,item.h,3);ctx.fill();
     ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
@@ -1357,14 +1371,20 @@ function drawBurgerLayer(x,y,item){
     ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1.5;
     for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(x-30+i*20,y-item.h/2,6,0,Math.PI*2);ctx.stroke()}
   }else if(item.shape==='bacon'){
-    ctx.beginPath();ctx.moveTo(x-hw,y);
-    // Wavy bacon strip
-    for(let i=0;i<=6;i++){const bx=x-hw+i*(hw*2/6);ctx.quadraticCurveTo(bx+hw/6,y-item.h-(i%2?5:-2),bx+hw*2/6,y-item.h+1)}
-    ctx.lineTo(x+hw,y);ctx.closePath();ctx.fill();
-    ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
-    // Fat streaks
-    ctx.strokeStyle='rgba(255,200,150,0.5)';ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(x-30,y-2);ctx.lineTo(x-10,y-item.h+2);ctx.stroke();
+    // Two wavy bacon strips side by side
+    for(let strip=0;strip<2;strip++){
+      const sx=x-hw+strip*hw+2,sw=hw-4,sy=y;
+      ctx.fillStyle=strip===0?'#c62828':'#d84315';
+      ctx.beginPath();ctx.moveTo(sx,sy);
+      for(let i=0;i<=5;i++){const bx=sx+i*(sw/5);ctx.quadraticCurveTo(bx+sw/10,sy-item.h-(i%2?5:-3),bx+sw/5,sy-item.h+1)}
+      ctx.lineTo(sx+sw,sy);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#8e0000';ctx.lineWidth=1;ctx.stroke();
+      // Fat marbling streaks
+      ctx.strokeStyle='rgba(255,200,180,0.55)';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(sx+sw*0.2,sy-1);ctx.quadraticCurveTo(sx+sw*0.35,sy-item.h*0.6,sx+sw*0.5,sy-item.h+2);ctx.stroke();
+      ctx.strokeStyle='rgba(255,220,200,0.4)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(sx+sw*0.6,sy-2);ctx.quadraticCurveTo(sx+sw*0.75,sy-item.h*0.5,sx+sw*0.85,sy-item.h+3);ctx.stroke();
+    }
     ctx.beginPath();ctx.moveTo(x+10,y-2);ctx.lineTo(x+30,y-item.h+2);ctx.stroke();
   }else if(item.shape==='bread'){
     // Mid-bun like a Big Mac
