@@ -303,6 +303,7 @@ function showMenu(){
     {emoji:'🙈',label:'Seek!',bg:'linear-gradient(180deg,#a5d6a7,#388e3c)',fn:startHideSeekGame},
     {emoji:'🕷️',label:'Spider!',bg:'linear-gradient(180deg,#b0bec5,#546e7a)',fn:startSpiderGame},
     {emoji:'🎣',label:'Fish!',bg:'linear-gradient(180deg,#64b5f6,#0d47a1)',fn:startFishGame},
+    {emoji:'🚦',label:'Traffic!',bg:'linear-gradient(180deg,#66bb6a,#424242)',fn:startTrafficGame},
   ];
   games.forEach(g=>{
     const card=document.createElement('div');
@@ -5535,6 +5536,189 @@ function drawFishGame(){
   ctx.fillText(title,W/2,S*0.055);ctx.shadowBlur=0;ctx.textAlign='left';
 }
 
+// === TRAFFIC LIGHT GAME ===
+let trafLight='red',trafTimer=0,trafScore=0,trafPhase;
+let trafCars=[],trafPeds=[],trafSpawnT=0,trafCrossing=false;
+
+function startTrafficGame(){
+  currentMode='traffic';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
+  trafLight='red';trafTimer=0;trafScore=0;trafPhase='playing';
+  trafCars=[];trafPeds=[];trafSpawnT=0;trafCrossing=false;
+  updateTrafficButtons();
+}
+function updateTrafficButtons(){
+  buttonsArea.innerHTML='';instruction.textContent='';
+}
+function handleTrafficTap(tx,ty){
+  initAudio();
+  if(trafPhase!=='playing')return;
+  const S=Math.min(W,H);
+  // Tap the traffic light to toggle
+  const lx=W/2,ly=H*(H>W*1.5?0.18:0.15);
+  const lightR=S*0.05;
+  if(Math.abs(tx-lx)<S*0.08&&Math.abs(ty-ly)<S*0.15){
+    trafLight=trafLight==='red'?'green':'red';
+    playTone(trafLight==='green'?600:300,0.12,'sine',0.1);
+    if(navigator.vibrate)navigator.vibrate(20);
+  }
+}
+function updateTrafficGame(dt){
+  updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);
+  trafTimer+=dt;trafSpawnT+=dt;
+  const S=Math.min(W,H);
+  const roadY=H*0.55,roadH=H*0.18;
+  const crossX=W/2;
+  const stopLine=crossX-S*0.12;
+  // Spawn cars from left
+  if(trafSpawnT>1.2+Math.random()*0.8){
+    trafSpawnT=0;
+    if(trafCars.length<5){
+      const colors=['#e53935','#1e88e5','#43a047','#ff8f00','#8e24aa','#fff176'];
+      trafCars.push({x:-S*0.12,y:roadY+roadH*0.25+Math.random()*roadH*0.4,
+        speed:60+Math.random()*50,color:colors[Math.floor(Math.random()*colors.length)],
+        w:S*0.12,h:S*0.055});
+    }
+  }
+  // Spawn pedestrians from bottom wanting to cross
+  if(Math.random()<0.008&&trafPeds.length<3&&trafPhase==='playing'){
+    const pEmojis=['\uD83D\uDEB6','\uD83D\uDC66','\uD83D\uDC67','\uD83D\uDC75','\uD83D\uDC74','\uD83D\uDC36','\uD83D\uDC31'];
+    trafPeds.push({x:crossX-S*0.03+Math.random()*S*0.06,y:H,
+      emoji:pEmojis[Math.floor(Math.random()*pEmojis.length)],
+      speed:50+Math.random()*30,waiting:false,crossed:false});
+  }
+  // Update cars
+  trafCars.forEach(c=>{
+    if(trafLight==='red'){
+      // Stop before the crosswalk
+      if(c.x+c.w>stopLine&&c.x<crossX+S*0.12){
+        // Already past stop line? keep going slowly
+        if(c.x>stopLine) c.x+=c.speed*0.15*dt;
+        // Approaching — brake
+        else{
+          const dist=stopLine-(c.x+c.w);
+          if(dist<S*0.06)c.x+=c.speed*Math.max(0.05,dist/(S*0.06))*dt;
+          else c.x+=c.speed*dt;
+        }
+      }else c.x+=c.speed*dt;
+    }else{
+      c.x+=c.speed*dt;
+    }
+  });
+  // Remove off-screen cars
+  for(let i=trafCars.length-1;i>=0;i--) if(trafCars[i].x>W+50)trafCars.splice(i,1);
+  // Update pedestrians
+  trafPeds.forEach(p=>{
+    if(p.crossed)return;
+    if(trafLight==='red'){
+      // Cross when red (cars stopped)
+      p.y-=p.speed*dt;
+      if(p.y<roadY-S*0.05){
+        p.crossed=true;trafScore++;
+        spawnFloatingEmoji(p.x,p.y,'\u2705');
+        playTone(500+trafScore*60,0.1,'sine',0.08);
+        if(navigator.vibrate)navigator.vibrate(15);
+        if(trafScore>=8){
+          trafPhase='done';trafTimer=0;playTaDa();spawnConfetti();spawnConfetti();
+          if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
+          addBtn('btn-again','\uD83D\uDEA6','Again!',()=>{initAudio();startTrafficGame()});
+        }
+      }
+    }else{
+      // Green = cars moving, pedestrians wait at bottom of road
+      if(p.y>roadY+roadH+S*0.02) p.y-=p.speed*dt; // walk up to road edge
+      // else wait
+    }
+  });
+  // Remove crossed peds after a delay
+  for(let i=trafPeds.length-1;i>=0;i--) if(trafPeds[i].crossed&&trafPeds[i].y<roadY-S*0.15)trafPeds.splice(i,1);
+}
+function drawTrafficGame(){
+  ctx.globalAlpha=1;
+  const S=Math.min(W,H);
+  const t=trafTimer;
+  const roadY=H*0.55,roadH=H*0.18;
+  const crossX=W/2;
+  // Sky
+  const sky=ctx.createLinearGradient(0,0,0,roadY);
+  sky.addColorStop(0,'#87ceeb');sky.addColorStop(1,'#c8e6c9');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,roadY);
+  // Grass above road
+  ctx.fillStyle='#66bb6a';ctx.fillRect(0,roadY-S*0.02,W,S*0.02);
+  // Road
+  ctx.fillStyle='#616161';ctx.fillRect(0,roadY,W,roadH);
+  // Road lines (dashed center)
+  ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.setLineDash([20,15]);
+  ctx.beginPath();ctx.moveTo(0,roadY+roadH/2);ctx.lineTo(W,roadY+roadH/2);ctx.stroke();
+  ctx.setLineDash([]);
+  // Crosswalk stripes
+  ctx.fillStyle='#fff';
+  const cw=S*0.24,cx=crossX-cw/2;
+  for(let i=0;i<6;i++){
+    ctx.fillRect(cx+i*cw/6+4,roadY,cw/6-8,roadH);
+  }
+  // Grass below road
+  ctx.fillStyle='#66bb6a';ctx.fillRect(0,roadY+roadH,W,H-roadY-roadH);
+  // Sidewalk below
+  ctx.fillStyle='#bdbdbd';ctx.fillRect(0,roadY+roadH,W,S*0.03);
+  // Simple buildings in background
+  [[W*0.08,roadY,S*0.1,S*0.15,'#ef9a9a'],[W*0.25,roadY,S*0.08,S*0.1,'#90caf9'],
+   [W*0.7,roadY,S*0.12,S*0.18,'#fff9c4'],[W*0.88,roadY,S*0.07,S*0.12,'#ce93d8']].forEach(function(b){
+    ctx.fillStyle=b[4];ctx.fillRect(b[0]-b[2]/2,b[1]-b[3],b[2],b[3]);
+    ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.strokeRect(b[0]-b[2]/2,b[1]-b[3],b[2],b[3]);
+  });
+  // Cars
+  trafCars.forEach(c=>{
+    ctx.fillStyle='rgba(0,0,0,0.12)';ctx.fillRect(c.x+3,c.y+c.h-2,c.w,6);
+    ctx.fillStyle=c.color;drawRoundRect(c.x,c.y,c.w,c.h,4);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.15)';drawRoundRect(c.x,c.y,c.w,c.h,4);ctx.stroke();
+    // Windshield
+    ctx.fillStyle='rgba(200,230,255,0.7)';
+    ctx.fillRect(c.x+c.w*0.6,c.y+2,c.w*0.25,c.h-4);
+    // Wheels
+    ctx.fillStyle='#333';
+    ctx.beginPath();ctx.arc(c.x+c.w*0.2,c.y+c.h,c.h*0.22,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(c.x+c.w*0.8,c.y+c.h,c.h*0.22,0,Math.PI*2);ctx.fill();
+  });
+  // Pedestrians
+  trafPeds.forEach(p=>{
+    if(p.crossed&&p.y<roadY-S*0.1)return;
+    ctx.font=`${S*0.07}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#000';ctx.fillText(p.emoji,p.x,p.y);
+  });
+  // Traffic light pole + housing
+  const lx=W/2,ly=H*(H>W*1.5?0.18:0.15);
+  const lw=S*0.07,lh=S*0.18;
+  // Pole
+  ctx.fillStyle='#616161';ctx.fillRect(lx-S*0.012,ly+lh/2,S*0.024,roadY-ly-lh/2);
+  // Housing
+  ctx.fillStyle='#424242';drawRoundRect(lx-lw/2,ly-lh/2,lw,lh,S*0.015);ctx.fill();
+  ctx.strokeStyle='#333';ctx.lineWidth=2;drawRoundRect(lx-lw/2,ly-lh/2,lw,lh,S*0.015);ctx.stroke();
+  // Red light
+  const rLightY=ly-lh*0.28,gLightY=ly+lh*0.28,lightR=S*0.022;
+  ctx.fillStyle=trafLight==='red'?'#f44336':'#5a2020';
+  ctx.beginPath();ctx.arc(lx,rLightY,lightR,0,Math.PI*2);ctx.fill();
+  if(trafLight==='red'){ctx.shadowColor='#f44336';ctx.shadowBlur=20;ctx.beginPath();ctx.arc(lx,rLightY,lightR,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+  // Yellow light (always dim)
+  ctx.fillStyle='#5a4a20';
+  ctx.beginPath();ctx.arc(lx,ly,lightR,0,Math.PI*2);ctx.fill();
+  // Green light
+  ctx.fillStyle=trafLight==='green'?'#4caf50':'#1a3a1a';
+  ctx.beginPath();ctx.arc(lx,gLightY,lightR,0,Math.PI*2);ctx.fill();
+  if(trafLight==='green'){ctx.shadowColor='#4caf50';ctx.shadowBlur=20;ctx.beginPath();ctx.arc(lx,gLightY,lightR,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+  drawParticles(0);drawConfetti();drawFloatingEmojis();
+  // Score
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const sy=S*0.05;
+  ctx.font=`bold ${S*0.055}px sans-serif`;
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillText('\uD83D\uDEB6 '+trafScore+' / 8',W/2+1,sy+1);
+  ctx.fillStyle='#5d4037';ctx.fillText('\uD83D\uDEB6 '+trafScore+' / 8',W/2,sy);
+  const title=trafPhase==='done'?'Great job! \uD83C\uDF1F':'Traffic! \uD83D\uDEA6';
+  ctx.font=`bold ${S*0.065}px sans-serif`;
+  ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillText(title,W/2+2,H*0.98+2);
+  ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
+  ctx.fillText(title,W/2,H*0.98);ctx.shadowBlur=0;ctx.textAlign='left';
+}
+
 // Handle canvas taps for match game
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
@@ -5552,6 +5736,7 @@ canvas.addEventListener('click',e=>{
   else if(currentMode==='spider')handleSpiderTap(e.clientX,e.clientY);
   else if(currentMode==='blend')handleBlendTap(e.clientX,e.clientY);
   else if(currentMode==='fish'){initAudio();handleFishMove(e.clientX,e.clientY);}
+  else if(currentMode==='traffic')handleTrafficTap(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
@@ -5569,6 +5754,7 @@ canvas.addEventListener('touchstart',e=>{
   else if(currentMode==='spider'){e.preventDefault();handleSpiderTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='blend'){e.preventDefault();handleBlendTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='fish'){e.preventDefault();initAudio();handleFishMove(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='traffic'){e.preventDefault();handleTrafficTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='chop'){e.preventDefault();handleChopDragStart(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='skewer'){e.preventDefault();handleSkewStart(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
@@ -6116,6 +6302,7 @@ function gameLoop(ts){
   else if(currentMode==='chop'){updateChopGame(dt);drawChopGame()}
   else if(currentMode==='skewer'){updateSkewGame(dt);drawSkewGame()}
   else if(currentMode==='fish'){updateFishGame(dt);drawFishGame()}
+  else if(currentMode==='traffic'){updateTrafficGame(dt);drawTrafficGame()}
 
   requestAnimationFrame(gameLoop);
 }
