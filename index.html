@@ -4238,7 +4238,7 @@ let blendTimer=0,blendBladeAngle=0,blendVibX=0,blendVibY=0;
 let blendJuiceColor=[200,200,200],blendJuiceFill=0,blendWaveT=0;
 let blendParticlesInner=[];
 let blendHumPlaying=false,blendHumTimer=0;
-let blendCups=[],blendPourTarget=-1,blendPourLevel=0,blendPourStreamT=0;
+let blendCups=[],blendPourTarget=-1,blendPourLevel=0,blendPourStreamT=0,blendTiltAngle=0;
 
 function startBlendGame(){
   currentMode='blend';particles=[];confetti=[];
@@ -4246,7 +4246,7 @@ function startBlendGame(){
   blendBladeAngle=0;blendVibX=0;blendVibY=0;
   blendJuiceColor=[200,200,200];blendJuiceFill=0;blendWaveT=0;
   blendParticlesInner=[];blendHumPlaying=false;blendHumTimer=0;
-  blendCups=[];blendPourTarget=-1;blendPourLevel=0;blendPourStreamT=0;
+  blendCups=[];blendPourTarget=-1;blendPourLevel=0;blendPourStreamT=0;blendTiltAngle=0;
   instruction.textContent='';
   updateBlendButtons();
 }
@@ -4408,6 +4408,15 @@ function updateBlendGame(dt){
 
   if(blendPhase==='pouring'){
     blendTimer+=dt;blendWaveT+=dt*3;
+    // Tilt jar toward active cup
+    let tiltTarget=0;
+    if(blendPourTarget>=0){
+      const cupCX=blendCups[blendPourTarget].x+blendCups[blendPourTarget].w/2;
+      const diff=cupCX-W/2;
+      const sign=diff>=0?1:-1;
+      tiltTarget=sign*Math.max(0.15,Math.min(0.25,Math.abs(diff)/(Math.min(W,H)*0.25)*0.25));
+    }
+    blendTiltAngle+=(tiltTarget-blendTiltAngle)*Math.min(1,dt*5);
     if(blendPourTarget>=0&&blendPourLevel>0){
       const cup=blendCups[blendPourTarget];
       const maxPC=1/blendCups.length;
@@ -4435,6 +4444,7 @@ function updateBlendGame(dt){
 
   if(blendPhase==='done'){
     blendTimer+=dt;blendWaveT+=dt*3;
+    blendTiltAngle*=0.9;
     if(blendTimer<2&&Math.random()<0.1)spawnConfetti();
     if(blendTimer>=2)startBlendGame();
   }
@@ -4488,6 +4498,13 @@ function drawBlendGame(){
   ctx.beginPath();ctx.arc(cx,jarY+jarH+baseH*0.8,S*0.018,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#ef5350';
   ctx.beginPath();ctx.arc(cx-S*0.004,jarY+jarH+baseH*0.76,S*0.006,0,Math.PI*2);ctx.fill();
+
+  // Tilt jar for pouring (pivot at jar bottom center)
+  const pivotX=cx,pivotY=jarY+jarH;
+  ctx.save();
+  ctx.translate(pivotX,pivotY);
+  ctx.rotate(blendTiltAngle);
+  ctx.translate(-pivotX,-pivotY);
 
   // Glass jar outline + shine (drawn before contents so nothing overlays fruits)
   blendJarPath(cx,topW,botW,jarY,jarH);
@@ -4595,6 +4612,8 @@ function drawBlendGame(){
     ctx.fillRect(cx-S*0.008,jarY-S*0.05,S*0.006,S*0.02);
   }
 
+  ctx.restore(); // end jar tilt
+
   // Cups (pouring and done phases)
   if(blendPhase==='pouring'||blendPhase==='done'){
     const jc=blendJuiceColor;
@@ -4640,27 +4659,24 @@ function drawBlendGame(){
     });
   }
 
-  // Pour stream (arcs from rim like tilting a pitcher)
+  // Pour stream (from tilted rim to cup)
   if(blendPhase==='pouring'&&blendPourTarget>=0&&blendPourLevel>0){
     const cup=blendCups[blendPourTarget];
     const jc=blendJuiceColor;
     const cupCX=cup.x+cup.w/2;
     const pourSide=cupCX>=cx?1:-1;
-    const sX=cx+pourSide*topW*0.44,sY=jarY+S*0.005;
+    // Rim position rotated by tilt
+    const rimDx=pourSide*topW*0.44,rimDy=-jarH;
+    const cosT=Math.cos(blendTiltAngle),sinT=Math.sin(blendTiltAngle);
+    const sX=pivotX+rimDx*cosT-rimDy*sinT;
+    const sY=pivotY+rimDx*sinT+rimDy*cosT;
     const eX=cupCX,eY=cup.y;
     const wobble=Math.sin(blendPourStreamT)*S*0.004;
     ctx.strokeStyle=`rgba(${jc[0]},${jc[1]},${jc[2]},0.9)`;
     ctx.lineWidth=Math.max(4,S*0.014);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(sX,sY);
-    ctx.quadraticCurveTo(sX+(eX-sX)*0.25+wobble,sY+S*0.01,eX,eY);
+    ctx.quadraticCurveTo(sX+(eX-sX)*0.3+wobble,(sY+eY)/2,eX,eY);
     ctx.stroke();
-    // Thinner drip trail
-    ctx.lineWidth=Math.max(2,S*0.006);
-    ctx.globalAlpha=0.5;
-    ctx.beginPath();ctx.moveTo(sX,sY);
-    ctx.quadraticCurveTo(sX+(eX-sX)*0.25-wobble,sY+S*0.02,eX+S*0.005,eY);
-    ctx.stroke();
-    ctx.globalAlpha=1;
     if(Math.random()<0.3)spawnParticles(eX,eY,2,[`rgb(${jc[0]},${jc[1]},${jc[2]})`],{spread:8,vyRange:3,maxSize:3});
   }
 
