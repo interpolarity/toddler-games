@@ -3047,7 +3047,7 @@ function handleMazeMove(tx,ty){
   const dx=tx-mazeBall.x,dy=ty-mazeBall.y;
   const dist=Math.sqrt(dx*dx+dy*dy);
   if(dist<2)return;
-  const speed=4,br=W*0.03;
+  const speed=4,br=W*0.04;
   const steps=Math.min(Math.ceil(dist/speed),60);
   const sx=dx/steps,sy=dy/steps;
   for(let i=0;i<steps;i++){
