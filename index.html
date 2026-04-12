@@ -5032,13 +5032,19 @@ function startSkewGame(){
   });
   updateSkewButtons();
 }
+function skewFinish(){
+  skewPhase='done';skewTimer=0;playTaDa();spawnConfetti();spawnConfetti();
+  if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
+  updateSkewButtons();
+}
 function updateSkewButtons(){
   buttonsArea.innerHTML='';instruction.textContent='';
+  if(skewPhase==='arrange')addBtn('btn-go','\u2705','Done!',()=>{initAudio();skewFinish()});
   if(skewPhase==='done')addBtn('btn-again','\uD83C\uDF61','Again!',()=>{initAudio();startSkewGame()});
 }
 function handleSkewStart(x,y){
   initAudio();
-  if(skewPhase!=='playing')return;
+  if(skewPhase!=='playing'&&skewPhase!=='arrange')return;
   for(let i=0;i<skewItems.length;i++){
     const dx=skewItems[i].x-x,dy=skewItems[i].y-y;
     if(dx*dx+dy*dy<skewItems[i].r*skewItems[i].r*2.8){
@@ -5055,9 +5061,9 @@ function skewImpaleItem(item){
   spawnParticles(item.x,item.y,14,[item.color,item.rim,'#fff'],{vyRange:8,spread:30,maxSize:6});
   playTone(300+skewScore*70,0.12,'sine',0.1);playTone(500+skewScore*35,0.08,'sine',0.08,0.1);
   if(navigator.vibrate)navigator.vibrate(30);
-  if(skewScore>=SKEW_TARGET){
-    skewPhase='done';playTaDa();spawnConfetti();spawnConfetti();
-    if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
+  if(skewScore>=SKEW_TARGET&&skewPhase==='playing'){
+    skewPhase='arrange';
+    playTone(600,0.15,'sine',0.1);playTone(800,0.1,'sine',0.08,0.12);
     updateSkewButtons();
   }
 }
