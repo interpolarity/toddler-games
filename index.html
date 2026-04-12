@@ -5143,7 +5143,7 @@ function drawSkewFoodAt(x,y,r,emoji,color,rim,scale,charLvl){
   charLvl=charLvl||0;
   ctx.save();ctx.translate(x,y);
   if(emoji){
-    if(charLvl>0){ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,r*scale*0.42,0,Math.PI*2);ctx.fill();}
+    if(skewPhase==='cooking'){ctx.fillStyle='#3a1500';ctx.beginPath();ctx.arc(0,0,r*scale*0.42,0,Math.PI*2);ctx.fill();}
     ctx.font=`${r*scale}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(emoji,0,0);
   }else{
