@@ -4849,8 +4849,8 @@ function chopDoCut(angle){
     chopHalves.push({
       x:chopFoodX+perpX*side*chopFoodR*0.1,y:chopFoodY+perpY*side*chopFoodR*0.1,
       vx:perpX*side*spd+(Math.random()-0.5)*30,vy:perpY*side*spd-80+Math.random()*40,
-      rot:0,rotV:side*(1.5+Math.random()*3),r:chopFoodR,life:1,
-      baseAngle:angle+Math.PI/2,side:side,color:chopFood.color,inside:chopFood.inside
+      rot:0,rotV:side*(0.8+Math.random()*1.5),r:chopFoodR,life:1,
+      cutAngle:angle,side:side,emoji:chopFood.emoji,inside:chopFood.inside,color:chopFood.color
     });
   });
   spawnParticles(chopFoodX,chopFoodY,18,[chopFood.color,chopFood.inside,'#fff'],{vyRange:11,spread:45,maxSize:7});
@@ -4904,43 +4904,34 @@ function drawChopGame(){
   ctx.font=`bold ${S*0.055}px sans-serif`;
   ctx.fillStyle='rgba(100,55,15,0.45)';ctx.fillText('\uD83D\uDD2A '+chopScore,W/2+1,by+S*0.07+1);
   ctx.fillStyle='rgba(100,55,15,0.7)';ctx.fillText('\uD83D\uDD2A '+chopScore,W/2,by+S*0.07);
-  // Halves flying — colored D-shaped semicircles
+  // Halves flying — emoji clipped to each half along the cut line
   chopHalves.forEach(h=>{
     ctx.save();ctx.globalAlpha=Math.min(1,h.life);
-    ctx.translate(h.x,h.y);ctx.rotate(h.baseAngle+h.rot);
-    // Outer color semicircle
+    ctx.translate(h.x,h.y);ctx.rotate(h.rot);
+    // Clip to correct half and fill inside color + emoji
+    ctx.save();
+    ctx.rotate(h.cutAngle);
     ctx.beginPath();
-    if(h.side===1){ctx.arc(0,0,h.r,-Math.PI/2,Math.PI/2);}
-    else{ctx.arc(0,0,h.r,Math.PI/2,3*Math.PI/2);}
-    ctx.closePath();
-    ctx.fillStyle=h.color;ctx.fill();
-    // Inside (cross-section) face strip at the flat edge
-    ctx.fillStyle=h.inside;
-    if(h.side===1){ctx.fillRect(0,-h.r,h.r*0.2,h.r*2);}
-    else{ctx.fillRect(-h.r*0.2,-h.r,h.r*0.2,h.r*2);}
-    // Thin outline
-    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=2;
-    ctx.beginPath();
-    if(h.side===1){ctx.arc(0,0,h.r,-Math.PI/2,Math.PI/2);}
-    else{ctx.arc(0,0,h.r,Math.PI/2,3*Math.PI/2);}
-    ctx.closePath();ctx.stroke();
+    if(h.side===1){ctx.rect(-h.r*2,0,h.r*4,h.r*2);}
+    else{ctx.rect(-h.r*2,-h.r*2,h.r*4,h.r*2);}
+    ctx.clip();
+    ctx.rotate(-h.cutAngle);
+    ctx.fillStyle=h.inside;ctx.beginPath();ctx.arc(0,0,h.r,0,Math.PI*2);ctx.fill();
+    ctx.font=`${h.r*1.9}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(h.emoji,0,0);
+    ctx.restore();
+    // Cut face — thin bright strip at the flat edge
+    ctx.save();ctx.rotate(h.cutAngle);
+    ctx.fillStyle=h.inside;ctx.fillRect(-h.r,-h.r*0.1,h.r*2,h.r*0.2);
+    ctx.fillStyle='rgba(255,255,255,0.55)';ctx.fillRect(-h.r,-h.r*0.025,h.r*2,h.r*0.05);
+    ctx.restore();
     ctx.restore();
   });
   ctx.globalAlpha=1;
-  // Food on board — drawn circle so halves match visually
+  // Food on board
   if(chopFood&&chopPhase==='waiting'){
     ctx.save();ctx.translate(chopFoodX,chopFoodY);ctx.rotate(chopWobble*0.1);
-    // Drop shadow
-    ctx.fillStyle='rgba(0,0,0,0.1)';ctx.beginPath();ctx.arc(0,chopFoodR*0.82,chopFoodR*0.62,0,Math.PI*2);ctx.fill();
-    // Outer body
-    ctx.fillStyle=chopFood.color;ctx.beginPath();ctx.arc(0,0,chopFoodR,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,chopFoodR,0,Math.PI*2);ctx.stroke();
-    // Inside-color inner ring (previews the cross-section)
-    ctx.globalAlpha=0.55;ctx.fillStyle=chopFood.inside;ctx.beginPath();ctx.arc(0,0,chopFoodR*0.52,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-    // Shine
-    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(-chopFoodR*0.32,-chopFoodR*0.32,chopFoodR*0.3,0,Math.PI*2);ctx.fill();
-    // Small emoji overlay for recognition
-    ctx.font=`${chopFoodR*1.05}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`${chopFoodR*1.9}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(chopFood.emoji,0,0);
     // Dotted cut hint — pulsing dashed line across the food
     const hintAlpha=0.5+0.3*Math.sin(chopHintT*3.5);
