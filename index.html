@@ -326,6 +326,7 @@ function showFoodMenu(){
     {emoji:'🧺',label:'Catch!',bg:'linear-gradient(180deg,#81c784,#43a047)',fn:startCatchGame},
     {emoji:'🧃',label:'Blend!',bg:'linear-gradient(180deg,#ce93d8,#7b1fa2)',fn:startBlendGame},
     {emoji:'🔪',label:'Chop!',bg:'linear-gradient(180deg,#ffcc80,#e65100)',color:'#fff',fn:startChopGame},
+    {emoji:'🍡',label:'Skewer!',bg:'linear-gradient(180deg,#f48fb1,#c2185b)',color:'#fff',fn:startSkewGame},
   ];
   foodGames.forEach(g=>{
     const card=document.createElement('div');
@@ -4969,6 +4970,142 @@ function drawChopGame(){
   ctx.fillText(title,W/2,S*0.065);ctx.shadowBlur=0;ctx.textAlign='left';
 }
 
+// =============================================
+// SKEWER GAME
+// =============================================
+const SKEWER_FOODS=[
+  {color:'#f48fb1',rim:'#c2185b',label:'Dango'},
+  {color:'#f9fbe7',rim:'#bdbdbd',label:'Dango'},
+  {color:'#a5d6a7',rim:'#2e7d32',label:'Dango'},
+  {color:'#ef9a9a',rim:'#b71c1c',label:'Meat'},
+  {color:'#ffcc80',rim:'#e65100',label:'Onion'},
+  {color:'#ef5350',rim:'#b71c1c',label:'Tomato'},
+  {color:'#aed581',rim:'#558b2f',label:'Pepper'},
+  {color:'#bcaaa4',rim:'#5d4037',label:'Mushroom'},
+];
+const SKEW_TARGET=6,SKEW_ANGLE=-0.15;
+let skewPhase,skewTimer,skewScore;
+let skewTipX,skewTipY,skewDragging;
+let skewItems,skewImpaled;
+
+function startSkewGame(){
+  currentMode='skewer';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
+  skewPhase='playing';skewTimer=0;skewScore=0;skewDragging=false;skewImpaled=[];
+  const S=Math.min(W,H);
+  skewTipX=W*0.65;skewTipY=H*0.5;
+  const foods=[...SKEWER_FOODS].sort(()=>Math.random()-0.5).slice(0,SKEW_TARGET);
+  const pos=[[0.22,0.32],[0.5,0.27],[0.78,0.32],[0.22,0.58],[0.5,0.62],[0.78,0.58]];
+  skewItems=foods.map((f,i)=>{
+    const bx=W*pos[i][0],by=H*pos[i][1];
+    return{x:bx,y:by,baseY:by,bobT:Math.random()*Math.PI*2,
+      bobAmp:S*0.022,bobSpeed:0.9+Math.random()*0.7,
+      r:S*0.063,color:f.color,rim:f.rim,label:f.label};
+  });
+  updateSkewButtons();
+}
+function updateSkewButtons(){
+  buttonsArea.innerHTML='';instruction.textContent='';
+  if(skewPhase==='done')addBtn('btn-again','\uD83C\uDF61','Again!',()=>{initAudio();startSkewGame()});
+}
+function handleSkewStart(x,y){initAudio();skewDragging=true;skewTipX=x;skewTipY=y;}
+function handleSkewMove(x,y){skewTipX=x;skewTipY=y;}
+function handleSkewEnd(){skewDragging=false;}
+
+function updateSkewGame(dt){
+  updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);
+  skewTimer+=dt;
+  skewItems.forEach(item=>{item.bobT+=item.bobSpeed*dt;item.y=item.baseY+Math.sin(item.bobT)*item.bobAmp;});
+  skewImpaled.forEach(imp=>{
+    imp.slideT=Math.min(1,(imp.slideT||0)+dt*5);
+    imp.dist=imp.targetDist*(1-Math.pow(1-imp.slideT,3));
+  });
+  if(skewPhase==='playing'){
+    for(let i=skewItems.length-1;i>=0;i--){
+      const item=skewItems[i];
+      const dx=item.x-skewTipX,dy=item.y-skewTipY;
+      if(dx*dx+dy*dy<item.r*item.r){
+        skewItems.splice(i,1);
+        const prevDist=skewImpaled.length>0?skewImpaled[skewImpaled.length-1].targetDist:0;
+        skewImpaled.push({r:item.r,color:item.color,rim:item.rim,dist:0,targetDist:prevDist+item.r*2.15,slideT:0});
+        skewScore++;
+        spawnParticles(skewTipX,skewTipY,12,[item.color,item.rim,'#fff'],{vyRange:7,spread:28,maxSize:5});
+        playTone(300+skewScore*70,0.12,'sine',0.1);playTone(500+skewScore*35,0.08,'sine',0.08,0.1);
+        if(navigator.vibrate)navigator.vibrate(30);
+        if(skewScore>=SKEW_TARGET){
+          skewPhase='done';playTaDa();spawnConfetti();spawnConfetti();
+          if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
+          updateSkewButtons();
+        }
+      }
+    }
+  }
+  if(skewPhase==='done'){if(skewTimer<4&&Math.random()<0.07)spawnConfetti();}
+}
+
+function drawSkewGame(){
+  ctx.globalAlpha=1;
+  const S=Math.min(W,H);
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#fff8e1');bg.addColorStop(1,'#ffe0b2');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const L=S*0.62,ca=Math.cos(SKEW_ANGLE),sa=Math.sin(SKEW_ANGLE);
+  const hx=skewTipX-ca*L,hy=skewTipY-sa*L;
+  // Floating food items
+  skewItems.forEach(item=>{
+    ctx.save();ctx.translate(item.x,item.y);
+    // Drop shadow
+    ctx.fillStyle='rgba(0,0,0,0.09)';ctx.beginPath();ctx.arc(0,item.r*0.75,item.r*0.55,0,Math.PI*2);ctx.fill();
+    // Body
+    ctx.fillStyle=item.color;ctx.beginPath();ctx.arc(0,0,item.r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=item.rim;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,item.r,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.45)';ctx.beginPath();ctx.arc(-item.r*0.3,-item.r*0.3,item.r*0.28,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+  // Impaled items (drawn before the stick so stick appears to pass through)
+  skewImpaled.forEach(imp=>{
+    const ix=skewTipX-ca*imp.dist,iy=skewTipY-sa*imp.dist;
+    ctx.save();ctx.translate(ix,iy);
+    ctx.fillStyle=imp.color;ctx.beginPath();ctx.arc(0,0,imp.r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=imp.rim;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,imp.r,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.35)';ctx.beginPath();ctx.arc(-imp.r*0.3,-imp.r*0.3,imp.r*0.25,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.22)';ctx.beginPath();ctx.arc(0,0,imp.r*0.13,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+  // Bamboo stick
+  ctx.save();ctx.lineCap='round';
+  ctx.strokeStyle='#8d6e38';ctx.lineWidth=9;
+  ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(skewTipX,skewTipY);ctx.stroke();
+  ctx.strokeStyle='#c9a84c';ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(skewTipX,skewTipY);ctx.stroke();
+  // Bamboo nodes
+  ctx.strokeStyle='#7a5c2e';ctx.lineWidth=2.5;
+  for(let i=1;i<5;i++){
+    const t=i/5,nx=hx+(skewTipX-hx)*t,ny=hy+(skewTipY-hy)*t,pw=7;
+    ctx.beginPath();ctx.moveTo(nx+sa*pw,ny-ca*pw);ctx.lineTo(nx-sa*pw,ny+ca*pw);ctx.stroke();
+  }
+  // Handle grip
+  ctx.strokeStyle='#5d3a1a';ctx.lineWidth=13;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx+ca*L*0.13,hy+sa*L*0.13);ctx.stroke();
+  ctx.restore();
+  // Metal tip
+  ctx.save();ctx.translate(skewTipX,skewTipY);ctx.rotate(SKEW_ANGLE);
+  ctx.fillStyle='#cfd8dc';ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-1,-3.5);ctx.lineTo(-1,3.5);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#90a4ae';ctx.lineWidth=1;ctx.stroke();
+  ctx.restore();
+  // Score
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const sy=H*(H>W*1.5?0.09:0.08);
+  ctx.font=`bold ${S*0.058}px sans-serif`;
+  ctx.fillStyle='rgba(100,55,15,0.4)';ctx.fillText('\uD83C\uDF61 '+skewScore+' / '+SKEW_TARGET,W/2+1,sy+1);
+  ctx.fillStyle='#5d4037';ctx.fillText('\uD83C\uDF61 '+skewScore+' / '+SKEW_TARGET,W/2,sy);
+  drawParticles(0);drawConfetti();drawFloatingEmojis();
+  const title=skewPhase==='done'?'Yummy! \uD83C\uDF1F':'Skewer! \uD83C\uDF61';
+  ctx.font=`bold ${S*0.07}px sans-serif`;ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillText(title,W/2+2,S*0.065+2);
+  ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
+  ctx.fillText(title,W/2,S*0.065);ctx.shadowBlur=0;ctx.textAlign='left';
+}
+
 // Handle canvas taps for match game
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
@@ -4985,6 +5122,7 @@ canvas.addEventListener('click',e=>{
   else if(currentMode==='hideseek')handleHideSeekTap(e.clientX,e.clientY);
   else if(currentMode==='spider')handleSpiderTap(e.clientX,e.clientY);
   else if(currentMode==='blend')handleBlendTap(e.clientX,e.clientY);
+  else if(currentMode==='skewer')handleSkewStart(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
@@ -5002,6 +5140,7 @@ canvas.addEventListener('touchstart',e=>{
   else if(currentMode==='spider'){e.preventDefault();handleSpiderTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='blend'){e.preventDefault();handleBlendTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='chop'){e.preventDefault();handleChopDragStart(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='skewer'){e.preventDefault();handleSkewStart(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
 canvas.addEventListener('mousedown',e=>{if(currentMode==='chop')handleChopDragStart(e.clientX,e.clientY)});
 canvas.addEventListener('mousemove',e=>{
@@ -5011,8 +5150,9 @@ canvas.addEventListener('mousemove',e=>{
   if(currentMode==='maze')handleMazeMove(e.clientX,e.clientY);
   if(currentMode==='build')handleBuildMove(e.clientX,e.clientY);
   if(currentMode==='chop')handleChopDragMove(e.clientX,e.clientY);
+  if(currentMode==='skewer')handleSkewMove(e.clientX,e.clientY);
 });
-canvas.addEventListener('mouseup',e=>{handlePaintEnd();handleCatchEnd();handleTraceEnd();handleMazeEnd();handleBuildEnd();handleChopDragEnd(e.clientX,e.clientY)});
+canvas.addEventListener('mouseup',e=>{handlePaintEnd();handleCatchEnd();handleTraceEnd();handleMazeEnd();handleBuildEnd();handleChopDragEnd(e.clientX,e.clientY);handleSkewEnd()});
 canvas.addEventListener('touchmove',e=>{
   if(currentMode==='paint'){e.preventDefault();handlePaintMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='catch'){e.preventDefault();handleCatchMove(e.touches[0].clientX)}
@@ -5020,9 +5160,10 @@ canvas.addEventListener('touchmove',e=>{
   else if(currentMode==='maze'){e.preventDefault();handleMazeMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='build'){e.preventDefault();handleBuildMove(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='chop'){e.preventDefault();handleChopDragMove(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='skewer'){e.preventDefault();handleSkewMove(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
 canvas.addEventListener('touchend',e=>{
-  handlePaintEnd();handleCatchEnd();handleTraceEnd();handleMazeEnd();handleBuildEnd();
+  handlePaintEnd();handleCatchEnd();handleTraceEnd();handleMazeEnd();handleBuildEnd();handleSkewEnd();
   if(currentMode==='chop'){const t=e.changedTouches[0];handleChopDragEnd(t.clientX,t.clientY)}
 });
 // Block ALL browser gestures (pull-to-refresh, swipe navigation, minimize)
@@ -5538,6 +5679,7 @@ function gameLoop(ts){
   else if(currentMode==='spider'){updateSpiderGame(dt);drawSpiderGame()}
   else if(currentMode==='blend'){updateBlendGame(dt);drawBlendGame()}
   else if(currentMode==='chop'){updateChopGame(dt);drawChopGame()}
+  else if(currentMode==='skewer'){updateSkewGame(dt);drawSkewGame()}
 
   requestAnimationFrame(gameLoop);
 }
