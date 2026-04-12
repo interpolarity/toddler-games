@@ -4640,19 +4640,28 @@ function drawBlendGame(){
     });
   }
 
-  // Pour stream (from base spout down to cup)
+  // Pour stream (arcs from rim like tilting a pitcher)
   if(blendPhase==='pouring'&&blendPourTarget>=0&&blendPourLevel>0){
     const cup=blendCups[blendPourTarget];
     const jc=blendJuiceColor;
-    const sX=cx,sY=jarY+jarH+baseH*0.3;
-    const eX=cup.x+cup.w/2,eY=cup.y;
-    const wobble=Math.sin(blendPourStreamT)*S*0.006;
+    const cupCX=cup.x+cup.w/2;
+    const pourSide=cupCX>=cx?1:-1;
+    const sX=cx+pourSide*topW*0.44,sY=jarY+S*0.005;
+    const eX=cupCX,eY=cup.y;
+    const wobble=Math.sin(blendPourStreamT)*S*0.004;
     ctx.strokeStyle=`rgba(${jc[0]},${jc[1]},${jc[2]},0.9)`;
-    ctx.lineWidth=Math.max(3,S*0.012);ctx.lineCap='round';
+    ctx.lineWidth=Math.max(4,S*0.014);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(sX,sY);
-    ctx.quadraticCurveTo(sX+wobble,(sY+eY*2)/3,eX,eY);
+    ctx.quadraticCurveTo(sX+(eX-sX)*0.25+wobble,sY+S*0.01,eX,eY);
     ctx.stroke();
-    if(Math.random()<0.3)spawnParticles(eX,eY,2,[`rgb(${jc[0]},${jc[1]},${jc[2]})`],{spread:6,vyRange:3,maxSize:3});
+    // Thinner drip trail
+    ctx.lineWidth=Math.max(2,S*0.006);
+    ctx.globalAlpha=0.5;
+    ctx.beginPath();ctx.moveTo(sX,sY);
+    ctx.quadraticCurveTo(sX+(eX-sX)*0.25-wobble,sY+S*0.02,eX+S*0.005,eY);
+    ctx.stroke();
+    ctx.globalAlpha=1;
+    if(Math.random()<0.3)spawnParticles(eX,eY,2,[`rgb(${jc[0]},${jc[1]},${jc[2]})`],{spread:8,vyRange:3,maxSize:3});
   }
 
   // Title text
