@@ -4446,8 +4446,7 @@ function updateBlendGame(dt){
   if(blendPhase==='done'){
     blendTimer+=dt;blendWaveT+=dt*3;
     blendTiltAngle*=0.9;
-    if(blendTimer<2&&Math.random()<0.1)spawnConfetti();
-    if(blendTimer>=2)startBlendGame();
+    if(blendTimer<3&&Math.random()<0.1)spawnConfetti();
   }
 }
 
