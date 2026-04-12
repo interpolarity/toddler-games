@@ -289,15 +289,11 @@ function showMenu(){
   menuGrid.innerHTML='<div class="menu-title"><h1>Toddler Games!</h1><p>Pick a game!</p></div>';
   const games=[
     {emoji:'🚜',label:'Dig!',bg:'linear-gradient(180deg,#ffca28,#f9a825)',fn:startDigGame},
-    {emoji:'🍔',label:'Burger!',bg:'linear-gradient(180deg,#ffe0b2,#d7a86e)',color:'#5d4037',fn:startBurgerGame},
-    {emoji:'🍦',label:'Ice Cream!',bg:'linear-gradient(180deg,#f8bbd0,#f48fb1)',fn:startIceCreamGame},
-    {emoji:'🥞',label:'Pancake!',bg:'linear-gradient(180deg,#ffe0b2,#d7a86e)',color:'#5d4037',fn:startPancakeGame},
-    {emoji:'🍕',label:'Pizza!',bg:'linear-gradient(180deg,#ff8a65,#e64a19)',fn:startPizzaGame},
+    {emoji:'🍽️',label:'Food!',bg:'linear-gradient(180deg,#ffb74d,#e65100)',color:'#fff',fn:showFoodMenu,submenu:true},
     {emoji:'🃏',label:'Match!',bg:'linear-gradient(180deg,#66bb6a,#388e3c)',fn:startMatchGame},
     {emoji:'💥',label:'Smash!',bg:'linear-gradient(180deg,#ff7043,#d84315)',fn:startWreckGame},
     {emoji:'🎨',label:'Splash!',bg:'linear-gradient(180deg,#ce93d8,#8e24aa)',fn:startPaintGame},
     {emoji:'🫧',label:'Bubbles!',bg:'linear-gradient(180deg,#64b5f6,#1976d2)',fn:startBalloonGame},
-    {emoji:'🧺',label:'Catch!',bg:'linear-gradient(180deg,#81c784,#43a047)',fn:startCatchGame},
     {emoji:'✏️',label:'Trace!',bg:'linear-gradient(180deg,#fff176,#f9a825)',color:'#5d4037',fn:startTraceGame},
     {emoji:'🎹',label:'Music!',bg:'linear-gradient(180deg,#ce93d8,#6a1b9a)',fn:startMusicGame},
     {emoji:'🏁',label:'Maze!',bg:'linear-gradient(180deg,#a5d6a7,#2e7d32)',fn:startMazeGame},
@@ -306,10 +302,32 @@ function showMenu(){
     {emoji:'🚂',label:'Train!',bg:'linear-gradient(180deg,#78909c,#37474f)',fn:startTrainGame},
     {emoji:'🙈',label:'Seek!',bg:'linear-gradient(180deg,#a5d6a7,#388e3c)',fn:startHideSeekGame},
     {emoji:'🕷️',label:'Spider!',bg:'linear-gradient(180deg,#b0bec5,#546e7a)',fn:startSpiderGame},
+  ];
+  games.forEach(g=>{
+    const card=document.createElement('div');
+    card.className='menu-card';card.style.background=g.bg;
+    if(g.color)card.style.color=g.color;
+    card.innerHTML=`<span class="card-emoji">${g.emoji}</span><span class="card-label">${g.label}</span>`;
+    const handler=e=>{e.preventDefault();initAudio();playPop();if(g.submenu){g.fn();}else{hideMenu();g.fn();}};
+    card.addEventListener('click',handler);card.addEventListener('touchstart',handler,{passive:false});
+    menuGrid.appendChild(card);
+  });
+}
+function showFoodMenu(){
+  currentMode='menu';
+  menuBtnFixed.style.display='none';
+  menuGrid.classList.add('active');
+  menuGrid.innerHTML='<div class="menu-title"><h1>🍽️ Food Games!</h1><p>Cook something yummy!</p></div>';
+  const foodGames=[
+    {emoji:'🍔',label:'Burger!',bg:'linear-gradient(180deg,#ffe0b2,#d7a86e)',color:'#5d4037',fn:startBurgerGame},
+    {emoji:'🍦',label:'Ice Cream!',bg:'linear-gradient(180deg,#f8bbd0,#f48fb1)',fn:startIceCreamGame},
+    {emoji:'🥞',label:'Pancake!',bg:'linear-gradient(180deg,#ffe0b2,#d7a86e)',color:'#5d4037',fn:startPancakeGame},
+    {emoji:'🍕',label:'Pizza!',bg:'linear-gradient(180deg,#ff8a65,#e64a19)',fn:startPizzaGame},
+    {emoji:'🧺',label:'Catch!',bg:'linear-gradient(180deg,#81c784,#43a047)',fn:startCatchGame},
     {emoji:'🧃',label:'Blend!',bg:'linear-gradient(180deg,#ce93d8,#7b1fa2)',fn:startBlendGame},
     {emoji:'🔪',label:'Chop!',bg:'linear-gradient(180deg,#ffcc80,#e65100)',color:'#fff',fn:startChopGame},
   ];
-  games.forEach(g=>{
+  foodGames.forEach(g=>{
     const card=document.createElement('div');
     card.className='menu-card';card.style.background=g.bg;
     if(g.color)card.style.color=g.color;
@@ -318,6 +336,12 @@ function showMenu(){
     card.addEventListener('click',handler);card.addEventListener('touchstart',handler,{passive:false});
     menuGrid.appendChild(card);
   });
+  const backCard=document.createElement('div');
+  backCard.className='menu-card';backCard.style.background='linear-gradient(180deg,#b0bec5,#78909c)';
+  backCard.innerHTML='<span class="card-emoji">\u2B05\uFE0F</span><span class="card-label">Back!</span>';
+  const backHandler=e=>{e.preventDefault();initAudio();playPop();showMenu()};
+  backCard.addEventListener('click',backHandler);backCard.addEventListener('touchstart',backHandler,{passive:false});
+  menuGrid.appendChild(backCard);
 }
 function hideMenu(){
   menuGrid.classList.remove('active');menuGrid.innerHTML='';
@@ -4764,7 +4788,7 @@ const CHOP_FOODS=[
   {emoji:'🥭',label:'Mango',color:'#f57f17',inside:'#fff8e1'},
 ];
 let chopFood=null,chopPhase='waiting',chopTimer=0,chopScore=0;
-let chopHalves=[],chopCutAngle=0,chopCutFlash=0;
+let chopHalves=[],chopCutAngle=0,chopCutFlash=0,chopHintT=0;
 let chopDragging=false,chopDragSX=0,chopDragSY=0,chopDragEX=0,chopDragEY=0;
 let chopFoodX=0,chopFoodY=0,chopFoodR=0;
 let chopWobble=0,chopWobbleV=0,chopQueue=[];
@@ -4772,7 +4796,7 @@ let chopWobble=0,chopWobbleV=0,chopQueue=[];
 function startChopGame(){
   currentMode='chop';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
   chopScore=0;chopPhase='waiting';chopTimer=0;chopHalves=[];
-  chopCutFlash=0;chopDragging=false;chopWobble=0;chopWobbleV=0;chopQueue=[];
+  chopCutFlash=0;chopDragging=false;chopWobble=0;chopWobbleV=0;chopQueue=[];chopHintT=0;
   chopNextFood();updateChopButtons();
 }
 function chopNextFood(){
@@ -4780,7 +4804,7 @@ function chopNextFood(){
   chopFood=chopQueue.pop();
   const S=Math.min(W,H);
   chopFoodX=W/2;chopFoodY=H*(H>W*1.5?0.40:0.46);chopFoodR=S*0.13;
-  chopPhase='waiting';chopTimer=0;chopWobble=0.22;chopWobbleV=0;
+  chopPhase='waiting';chopTimer=0;chopWobble=0.22;chopWobbleV=0;chopHintT=0;
   sayWord(chopFood.label);
   playTone(440,0.1,'sine',0.08);playTone(550,0.07,'sine',0.06,0.1);
   if(navigator.vibrate)navigator.vibrate(20);
@@ -4819,11 +4843,12 @@ function chopDoCut(angle){
   if(navigator.vibrate)navigator.vibrate([30,10,20]);
   const perpX=-Math.sin(angle),perpY=Math.cos(angle);
   [-1,1].forEach(side=>{
-    const spd=85+Math.random()*35;
+    const spd=90+Math.random()*40;
     chopHalves.push({
-      x:chopFoodX+perpX*side*chopFoodR*0.15,y:chopFoodY+perpY*side*chopFoodR*0.15,
-      vx:perpX*side*spd+(Math.random()-0.5)*35,vy:perpY*side*spd-90+Math.random()*50,
-      rot:0,rotV:side*(2+Math.random()*4),r:chopFoodR*0.62,life:1,emoji:chopFood.emoji
+      x:chopFoodX+perpX*side*chopFoodR*0.1,y:chopFoodY+perpY*side*chopFoodR*0.1,
+      vx:perpX*side*spd+(Math.random()-0.5)*30,vy:perpY*side*spd-80+Math.random()*40,
+      rot:0,rotV:side*(1.5+Math.random()*3),r:chopFoodR,life:1,
+      baseAngle:angle,side:side,color:chopFood.color,inside:chopFood.inside
     });
   });
   spawnParticles(chopFoodX,chopFoodY,18,[chopFood.color,chopFood.inside,'#fff'],{vyRange:11,spread:45,maxSize:7});
@@ -4832,6 +4857,7 @@ function updateChopGame(dt){
   updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);
   chopCutFlash=Math.max(0,chopCutFlash-dt*4);
   if(chopPhase==='waiting'){
+    chopHintT+=dt;
     chopWobbleV-=chopWobble*18*dt;chopWobbleV*=0.84;chopWobble+=chopWobbleV;
   }
   if(chopPhase==='cutting'){
@@ -4876,28 +4902,51 @@ function drawChopGame(){
   ctx.font=`bold ${S*0.055}px sans-serif`;
   ctx.fillStyle='rgba(100,55,15,0.45)';ctx.fillText('\uD83D\uDD2A '+chopScore,W/2+1,by+S*0.07+1);
   ctx.fillStyle='rgba(100,55,15,0.7)';ctx.fillText('\uD83D\uDD2A '+chopScore,W/2,by+S*0.07);
-  // Halves flying
+  // Halves flying — colored D-shaped semicircles
   chopHalves.forEach(h=>{
     ctx.save();ctx.globalAlpha=Math.min(1,h.life);
-    ctx.translate(h.x,h.y);ctx.rotate(h.rot);
-    ctx.font=`${h.r*1.85}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(h.emoji,0,0);ctx.restore();
+    ctx.translate(h.x,h.y);ctx.rotate(h.baseAngle+h.rot);
+    // Outer color semicircle
+    ctx.beginPath();
+    if(h.side===1){ctx.arc(0,0,h.r,-Math.PI/2,Math.PI/2);}
+    else{ctx.arc(0,0,h.r,Math.PI/2,3*Math.PI/2);}
+    ctx.closePath();
+    ctx.fillStyle=h.color;ctx.fill();
+    // Inside (cross-section) face strip at the flat edge
+    ctx.fillStyle=h.inside;
+    if(h.side===1){ctx.fillRect(0,-h.r,h.r*0.2,h.r*2);}
+    else{ctx.fillRect(-h.r*0.2,-h.r,h.r*0.2,h.r*2);}
+    // Thin outline
+    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=2;
+    ctx.beginPath();
+    if(h.side===1){ctx.arc(0,0,h.r,-Math.PI/2,Math.PI/2);}
+    else{ctx.arc(0,0,h.r,Math.PI/2,3*Math.PI/2);}
+    ctx.closePath();ctx.stroke();
+    ctx.restore();
   });
   ctx.globalAlpha=1;
   // Food on board
   if(chopFood&&chopPhase==='waiting'){
     ctx.save();ctx.translate(chopFoodX,chopFoodY);ctx.rotate(chopWobble*0.1);
     ctx.font=`${chopFoodR*1.9}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(chopFood.emoji,0,0);ctx.restore();
+    ctx.fillText(chopFood.emoji,0,0);
+    // Dotted cut hint — pulsing dashed line across the food
+    const hintAlpha=0.38+0.28*Math.sin(chopHintT*3.5);
+    ctx.strokeStyle=`rgba(255,255,255,${hintAlpha})`;ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.setLineDash([8,7]);
+    ctx.beginPath();ctx.moveTo(-chopFoodR*1.2,0);ctx.lineTo(chopFoodR*1.2,0);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   }
-  // Swipe trail
+  // Swipe trail — dashed line
   if(chopDragging&&chopPhase==='waiting'){
     const dx=chopDragEX-chopDragSX,dy=chopDragEY-chopDragSY;
     if(dx*dx+dy*dy>100){
-      ctx.save();ctx.strokeStyle='rgba(255,255,255,0.88)';ctx.lineWidth=3;ctx.lineCap='round';
-      ctx.shadowColor='rgba(255,255,255,0.7)';ctx.shadowBlur=10;
+      ctx.save();ctx.strokeStyle='rgba(255,255,255,0.92)';ctx.lineWidth=4;ctx.lineCap='round';
+      ctx.setLineDash([10,6]);
+      ctx.shadowColor='rgba(255,255,255,0.7)';ctx.shadowBlur=12;
       ctx.beginPath();ctx.moveTo(chopDragSX,chopDragSY);ctx.lineTo(chopDragEX,chopDragEY);ctx.stroke();
-      ctx.shadowBlur=0;ctx.restore();
+      ctx.setLineDash([]);ctx.shadowBlur=0;ctx.restore();
     }
   }
   // Cut flash
