@@ -5150,7 +5150,16 @@ function handleSkewMove(x,y){
   const item=skewItems[skewDragIdx];
   if(item.impaled){
     item.x=skewCX;
-    item.y=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,y));
+    const oldY=item.y;
+    let ty=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,y));
+    // Can't drag past neighbors — items are physical and block each other
+    for(let i=0;i<skewItems.length;i++){
+      if(i===skewDragIdx||!skewItems[i].impaled)continue;
+      const o=skewItems[i],gap=item.r+o.r;
+      if(o.y<oldY)ty=Math.max(ty,o.y+gap);
+      else ty=Math.min(ty,o.y-gap);
+    }
+    item.y=ty;
     skewResolveCollisions();
   }else{
     item.x=x;item.y=y;
