@@ -5007,12 +5007,12 @@ const SKEW_TARGET=5;
 let skewMode;
 let skewPhase,skewTimer,skewScore;
 let skewCX,skewTopY,skewTipY;
-let skewItems=[],skewDragIdx=-1;
+let skewItems=[],skewDragIdx=-1,skewImpaleSeq=0;
 
 function startSkewGame(){
   currentMode='skewer';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
-  skewPhase='playing';skewTimer=0;skewScore=0;skewDragIdx=-1;
-  skewMode=Math.random()<0.5?'dango':'kebab';
+  skewPhase='playing';skewTimer=0;skewScore=0;skewDragIdx=-1;skewImpaleSeq=0;
+  skewMode=skewMode==='dango'?'kebab':'dango';
   const S=Math.min(W,H);
   skewCX=W/2;
   skewTopY=H*(H>W*1.5?0.22:0.18);
@@ -5048,6 +5048,7 @@ function handleSkewStart(x,y){
 }
 function skewImpaleItem(item){
   item.impaled=true;
+  item.impaleSeq=skewImpaleSeq++;
   item.x=skewCX;
   item.y=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,item.y));
   skewScore++;
@@ -5172,10 +5173,11 @@ function drawSkewGame(){
   ctx.fillStyle='#1a1a1a';ctx.fillRect(-8,-2,16,6);
   ctx.fillStyle='#333';ctx.fillRect(-6,0,12,3);
   ctx.restore();
-  // Impaled items on stick (non-dragged)
+  // Impaled items on stick (non-dragged), last impaled drawn on top
   const dragItem=skewDragIdx>=0?skewItems[skewDragIdx]:null;
-  skewItems.forEach(item=>{
-    if(!item.impaled||item===dragItem)return;
+  const onStick=skewItems.filter(it=>it.impaled&&it!==dragItem);
+  onStick.sort((a,b)=>(a.impaleSeq||0)-(b.impaleSeq||0));
+  onStick.forEach(item=>{
     drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2);
   });
   // Floating free items (non-dragged)
