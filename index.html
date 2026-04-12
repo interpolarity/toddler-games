@@ -5143,6 +5143,7 @@ function drawSkewFoodAt(x,y,r,emoji,color,rim,scale,charLvl){
   charLvl=charLvl||0;
   ctx.save();ctx.translate(x,y);
   if(emoji){
+    ctx.fillStyle='#000';
     ctx.font=`${r*scale}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(emoji,0,0);
   }else{
