@@ -5139,16 +5139,35 @@ function updateSkewGame(dt){
   if(skewPhase==='done'){if(skewTimer<4&&Math.random()<0.07)spawnConfetti();}
 }
 
-function drawSkewFoodAt(x,y,r,emoji,color,rim,scale){
+function drawSkewFoodAt(x,y,r,emoji,color,rim,scale,charLvl){
+  charLvl=charLvl||0;
   ctx.save();ctx.translate(x,y);
   if(emoji){
     ctx.font=`${r*scale}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(emoji,0,0);
+    if(charLvl>0){
+      ctx.strokeStyle=`rgba(30,10,0,${charLvl*0.6})`;
+      ctx.lineWidth=r*0.09;ctx.lineCap='round';
+      for(let j=0;j<4;j++){
+        const gy=-r*0.45+r*0.3*j;
+        ctx.beginPath();ctx.moveTo(-r*0.55,gy);ctx.lineTo(r*0.55,gy);ctx.stroke();
+      }
+    }
   }else{
     const sr=r*(scale*0.5);
     ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,sr,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle=rim;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,sr,0,Math.PI*2);ctx.stroke();
     ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(-sr*0.3,-sr*0.3,sr*0.28,0,Math.PI*2);ctx.fill();
+    if(charLvl>0){
+      ctx.fillStyle=`rgba(40,18,0,${charLvl*0.5})`;
+      ctx.beginPath();ctx.arc(0,0,sr,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=`rgba(20,8,0,${charLvl*0.55})`;
+      ctx.lineWidth=sr*0.1;ctx.lineCap='round';
+      for(let j=0;j<3;j++){
+        const gy=-sr*0.4+sr*0.4*j;
+        ctx.beginPath();ctx.moveTo(-sr*0.65,gy);ctx.lineTo(sr*0.65,gy);ctx.stroke();
+      }
+    }
   }
   ctx.restore();
 }
@@ -5177,20 +5196,21 @@ function drawSkewGame(){
     eg.addColorStop(0.6,`rgba(200,40,0,${0.4*cookT})`);
     eg.addColorStop(1,'rgba(80,10,0,0)');
     ctx.fillStyle=eg;ctx.fillRect(0,fireBase-S*0.08,W,H-fireBase+S*0.08);
-    // Tall flames from bottom, reaching the food
-    for(let i=0;i<22;i++){
-      const fx=W*0.1+W*0.8*(i/21);
-      const flk=0.35+0.65*Math.sin(t*10+i*1.9);
-      const maxH=fireBase-skewTopY;
-      const fh=maxH*(0.25+0.55*cookT)*(0.4+0.6*flk);
-      // Outer red/orange
-      ctx.fillStyle=`rgba(255,${Math.floor(60+80*Math.sin(t*8+i*1.3))},0,${0.4*flk*cookT})`;
-      ctx.beginPath();ctx.moveTo(fx-S*0.028,fireBase);
-      ctx.quadraticCurveTo(fx+Math.sin(t*9+i*2.7)*S*0.015,fireBase-fh,fx+S*0.028,fireBase);ctx.fill();
-      // Inner yellow
-      ctx.fillStyle=`rgba(255,220,30,${0.22*flk*cookT})`;
-      ctx.beginPath();ctx.moveTo(fx-S*0.012,fireBase);
-      ctx.quadraticCurveTo(fx+Math.sin(t*13+i*2)*S*0.008,fireBase-fh*0.55,fx+S*0.012,fireBase);ctx.fill();
+    // Stacked-blob flames from bottom reaching the food
+    const maxH=fireBase-skewTopY;
+    for(let i=0;i<14;i++){
+      const fx=W*0.12+W*0.76*(i/13);
+      const fh=maxH*(0.2+0.5*cookT)*(0.5+0.5*Math.sin(t*7+i*1.7));
+      const fw=S*0.03*(0.6+0.4*Math.sin(t*9+i*2.3));
+      for(let s=0;s<6;s++){
+        const frac=s/6;
+        const fy=fireBase-fh*frac;
+        const blobR=fw*(1-frac*0.7)*(0.5+0.5*Math.sin(t*11+i*2.1+frac*4));
+        const wobX=Math.sin(t*8+i*1.5+frac*5)*fw*0.4*frac;
+        const g=Math.floor(210*(1-frac*0.65));
+        ctx.fillStyle=`rgba(255,${g},${Math.floor(30*(1-frac))},${(1-frac*0.5)*0.5*cookT})`;
+        ctx.beginPath();ctx.arc(fx+wobX,fy,Math.max(1,blobR),0,Math.PI*2);ctx.fill();
+      }
     }
   }
   // Drop zone glow when dragging a free item
@@ -5224,11 +5244,9 @@ function drawSkewGame(){
   const dragItem=skewDragIdx>=0?skewItems[skewDragIdx]:null;
   const onStick=skewItems.filter(it=>it.impaled&&it!==dragItem);
   onStick.sort((a,b)=>(a.impaleSeq||0)-(b.impaleSeq||0));
-  if(cookT>0)ctx.globalAlpha=1-cookT*0.45;
   onStick.forEach(item=>{
-    drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2);
+    drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2,cookT);
   });
-  ctx.globalAlpha=1;
   // Floating free items (non-dragged)
   skewItems.forEach(item=>{
     if(item.impaled||item===dragItem)return;
