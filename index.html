@@ -302,6 +302,7 @@ function showMenu(){
     {emoji:'🚂',label:'Train!',bg:'linear-gradient(180deg,#78909c,#37474f)',fn:startTrainGame},
     {emoji:'🙈',label:'Seek!',bg:'linear-gradient(180deg,#a5d6a7,#388e3c)',fn:startHideSeekGame},
     {emoji:'🕷️',label:'Spider!',bg:'linear-gradient(180deg,#b0bec5,#546e7a)',fn:startSpiderGame},
+    {emoji:'🎣',label:'Fish!',bg:'linear-gradient(180deg,#64b5f6,#0d47a1)',fn:startFishGame},
   ];
   games.forEach(g=>{
     const card=document.createElement('div');
@@ -5335,6 +5336,147 @@ function drawSkewGame(){
   ctx.fillText(title,W/2,S*0.065);ctx.shadowBlur=0;ctx.textAlign='left';
 }
 
+// === FISHING GAME ===
+const FISH_TYPES=[
+  {emoji:'\uD83D\uDC1F',label:'Fish',color:'#42a5f5'},
+  {emoji:'\uD83D\uDC20',label:'Tropical Fish',color:'#ff9800'},
+  {emoji:'\uD83D\uDC21',label:'Blowfish',color:'#ffeb3b'},
+  {emoji:'\uD83E\uDD88',label:'Shark',color:'#78909c'},
+  {emoji:'\uD83D\uDC19',label:'Octopus',color:'#e91e63'},
+  {emoji:'\uD83E\uDD80',label:'Crab',color:'#f44336'},
+  {emoji:'\uD83D\uDC22',label:'Turtle',color:'#4caf50'},
+  {emoji:'\u2B50',label:'Starfish',color:'#ffd54f'},
+  {emoji:'\uD83D\uDC5F',label:'Boot',color:'#795548'},
+];
+const FISH_TARGET=5;
+let fishPhase,fishTimer,fishScore,fishItems=[],fishSpawnT=0;
+
+function startFishGame(){
+  currentMode='fish';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
+  fishPhase='playing';fishTimer=0;fishScore=0;fishSpawnT=0;fishItems=[];
+  for(let i=0;i<4;i++)spawnFish();
+  updateFishButtons();
+}
+function spawnFish(){
+  if(fishItems.length>=6)return;
+  const S=Math.min(W,H);
+  const f=FISH_TYPES[Math.floor(Math.random()*FISH_TYPES.length)];
+  const goRight=Math.random()>0.5;
+  fishItems.push({
+    x:goRight?-S*0.12:W+S*0.12,
+    y:H*0.28+Math.random()*H*0.52,
+    vx:(50+Math.random()*70)*(goRight?1:-1),
+    emoji:f.emoji,label:f.label,color:f.color,
+    r:S*0.07,bobT:Math.random()*Math.PI*2,
+    caught:false,reelT:0,startX:0,startY:0,
+  });
+}
+function updateFishButtons(){
+  buttonsArea.innerHTML='';instruction.textContent='';
+  if(fishPhase==='done')addBtn('btn-again','\uD83D\uDC1F','Again!',()=>{initAudio();startFishGame()});
+}
+function handleFishTap(tx,ty){
+  if(fishPhase!=='playing')return;
+  for(let i=fishItems.length-1;i>=0;i--){
+    const f=fishItems[i];
+    if(f.caught)continue;
+    const dx=f.x-tx,dy=f.y-ty;
+    if(dx*dx+dy*dy<f.r*f.r*3.5){
+      f.caught=true;f.reelT=0;f.startX=f.x;f.startY=f.y;
+      spawnParticles(f.x,f.y,12,[f.color,'#fff','#90caf9'],{vyRange:8,spread:30,maxSize:6});
+      playTone(500+fishScore*80,0.12,'sine',0.1);playTone(700+fishScore*40,0.08,'sine',0.08,0.1);
+      if(navigator.vibrate)navigator.vibrate(30);
+      sayWord(f.label);spawnFloatingEmoji(f.x,f.y,'\uD83C\uDFA3');
+      return;
+    }
+  }
+}
+function updateFishGame(dt){
+  updateParticles(dt);updateConfetti();updateFloatingEmojis(dt);
+  fishTimer+=dt;fishSpawnT+=dt;
+  if(fishSpawnT>1.2&&fishPhase==='playing'){
+    fishSpawnT=0;
+    if(fishItems.filter(f=>!f.caught).length<4)spawnFish();
+  }
+  for(let i=fishItems.length-1;i>=0;i--){
+    const f=fishItems[i];
+    if(f.caught){
+      f.reelT+=dt*1.8;
+      const t=Math.min(1,f.reelT);
+      const ease=1-Math.pow(1-t,3);
+      f.x=f.startX+(W/2-f.startX)*ease;
+      f.y=f.startY+(H*0.06-f.startY)*ease;
+      if(t>=1){
+        fishItems.splice(i,1);fishScore++;
+        playTone(800,0.1,'sine',0.08);
+        spawnParticles(W/2,H*0.06,10,['#42a5f5','#fff','#90caf9'],{vyRange:6,spread:20,maxSize:5});
+        if(fishScore>=FISH_TARGET){
+          fishPhase='done';fishTimer=0;playTaDa();spawnConfetti();spawnConfetti();
+          if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
+          updateFishButtons();
+        }
+      }
+    }else{
+      f.x+=f.vx*dt;f.bobT+=2.5*dt;f.y+=Math.sin(f.bobT)*0.4;
+      if((f.vx>0&&f.x>W+90)||(f.vx<0&&f.x<-90))fishItems.splice(i,1);
+    }
+  }
+  if(fishPhase==='done'){if(fishTimer<4&&Math.random()<0.07)spawnConfetti();}
+}
+function drawFishGame(){
+  ctx.globalAlpha=1;
+  const S=Math.min(W,H);
+  const t=fishTimer;
+  // Pond background
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#e3f2fd');bg.addColorStop(0.3,'#64b5f6');bg.addColorStop(1,'#0d47a1');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // Wave lines
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=2;
+  for(let w=0;w<6;w++){
+    ctx.beginPath();const wy=H*0.18+H*0.13*w;
+    for(let x=0;x<=W;x+=8){const yy=wy+Math.sin(t*1.5+x*0.02+w*1.2)*5;if(x===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}
+    ctx.stroke();
+  }
+  // Lily pads
+  ctx.fillStyle='rgba(76,175,80,0.25)';
+  [[W*0.12,H*0.2],[W*0.85,H*0.32],[W*0.2,H*0.72],[W*0.88,H*0.78]].forEach(function(p){
+    ctx.beginPath();ctx.ellipse(p[0],p[1],S*0.04,S*0.025,Math.sin(t*0.3+p[0])*0.2,0,Math.PI*2);ctx.fill();
+  });
+  // Bucket at top
+  const bx=W/2,by=H*0.07;
+  ctx.fillStyle='#6d4c41';
+  ctx.beginPath();ctx.moveTo(bx-S*0.065,by-S*0.025);ctx.lineTo(bx-S*0.05,by+S*0.04);
+  ctx.lineTo(bx+S*0.05,by+S*0.04);ctx.lineTo(bx+S*0.065,by-S*0.025);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#4e342e';ctx.lineWidth=2;ctx.stroke();
+  ctx.strokeStyle='#8d6e63';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(bx,by-S*0.035,S*0.035,Math.PI*0.15,Math.PI*0.85);ctx.stroke();
+  if(fishScore>0){ctx.font=`${S*0.035}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('\uD83D\uDC1F'.repeat(Math.min(fishScore,5)),bx,by+S*0.01);}
+  // Fish
+  fishItems.forEach(f=>{
+    ctx.save();ctx.translate(f.x,f.y);
+    if(f.caught){const sc=1-Math.min(1,f.reelT)*0.4;ctx.scale(sc,sc);}
+    else if(f.vx<0)ctx.scale(-1,1);
+    ctx.fillStyle='rgba(0,0,0,0.1)';ctx.beginPath();ctx.arc(2,f.r*0.7,f.r*0.4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.font=`${f.r*2.1}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(f.emoji,0,0);
+    ctx.restore();
+  });
+  drawParticles(0);drawConfetti();drawFloatingEmojis();
+  // Score + title
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const sy=H*(H>W*1.5?0.14:0.12);
+  ctx.font=`bold ${S*0.055}px sans-serif`;
+  ctx.fillStyle='rgba(255,255,255,0.45)';ctx.fillText('\uD83D\uDC1F '+fishScore+' / '+FISH_TARGET,W/2+1,sy+1);
+  ctx.fillStyle='#fff';ctx.fillText('\uD83D\uDC1F '+fishScore+' / '+FISH_TARGET,W/2,sy);
+  const title=fishPhase==='done'?'Great Catch! \uD83C\uDFA3':'Fish! \uD83D\uDC1F';
+  ctx.font=`bold ${S*0.07}px sans-serif`;
+  ctx.fillStyle='rgba(0,0,0,0.25)';ctx.fillText(title,W/2+2,S*0.06+2);
+  ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
+  ctx.fillText(title,W/2,S*0.06);ctx.shadowBlur=0;ctx.textAlign='left';
+}
+
 // Handle canvas taps for match game
 canvas.addEventListener('click',e=>{
   if(currentMode==='match')handleMatchTap(e.clientX,e.clientY);
@@ -5351,6 +5493,7 @@ canvas.addEventListener('click',e=>{
   else if(currentMode==='hideseek')handleHideSeekTap(e.clientX,e.clientY);
   else if(currentMode==='spider')handleSpiderTap(e.clientX,e.clientY);
   else if(currentMode==='blend')handleBlendTap(e.clientX,e.clientY);
+  else if(currentMode==='fish')handleFishTap(e.clientX,e.clientY);
 });
 canvas.addEventListener('touchstart',e=>{
   if(currentMode==='match'){e.preventDefault();handleMatchTap(e.touches[0].clientX,e.touches[0].clientY)}
@@ -5367,6 +5510,7 @@ canvas.addEventListener('touchstart',e=>{
   else if(currentMode==='hideseek'){e.preventDefault();handleHideSeekTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='spider'){e.preventDefault();handleSpiderTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='blend'){e.preventDefault();handleBlendTap(e.touches[0].clientX,e.touches[0].clientY)}
+  else if(currentMode==='fish'){e.preventDefault();handleFishTap(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='chop'){e.preventDefault();handleChopDragStart(e.touches[0].clientX,e.touches[0].clientY)}
   else if(currentMode==='skewer'){e.preventDefault();handleSkewStart(e.touches[0].clientX,e.touches[0].clientY)}
 },{passive:false});
@@ -5911,6 +6055,7 @@ function gameLoop(ts){
   else if(currentMode==='blend'){updateBlendGame(dt);drawBlendGame()}
   else if(currentMode==='chop'){updateChopGame(dt);drawChopGame()}
   else if(currentMode==='skewer'){updateSkewGame(dt);drawSkewGame()}
+  else if(currentMode==='fish'){updateFishGame(dt);drawFishGame()}
 
   requestAnimationFrame(gameLoop);
 }
