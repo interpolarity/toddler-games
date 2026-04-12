@@ -5096,9 +5096,9 @@ function handleSkewMove(x,y){
     skewResolveCollisions();
   }else{
     item.x=x;item.y=y;
-    // Impale immediately when dragged across the stick
+    // Impale only when dragged through the tip at the top
     if(skewPhase==='playing'&&Math.abs(item.x-skewCX)<item.r&&
-      item.y>skewTopY-item.r&&item.y<skewTipY+item.r){
+      item.y>skewTopY-item.r*2&&item.y<skewTopY+item.r*3){
       skewImpaleItem(item);
       skewResolveCollisions();
     }
@@ -5110,7 +5110,7 @@ function handleSkewEnd(){
   item.dragging=false;
   if(!item.impaled){
     const onSkewer=Math.abs(item.x-skewCX)<item.r*2.2&&
-      item.y>skewTopY-item.r&&item.y<skewTipY+item.r;
+      item.y>skewTopY-item.r*2&&item.y<skewTopY+item.r*3;
     if(onSkewer&&skewPhase==='playing') skewImpaleItem(item);
     else item.returning=true;
   }
