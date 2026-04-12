@@ -32,6 +32,7 @@
   .btn-train{background:linear-gradient(180deg,#78909c,#455a64);min-width:70px}
   .btn-traingo{background:linear-gradient(180deg,#66bb6a,#388e3c);min-width:100px;font-size:18px}
   .btn-blend{background:linear-gradient(180deg,#ce93d8,#7b1fa2);min-width:70px}
+  .btn-milk{background:linear-gradient(180deg,#fce4ec,#f8bbd0);color:#880e4f;min-width:70px}
   .btn-blendgo{background:linear-gradient(180deg,#66bb6a,#388e3c);min-width:100px;font-size:18px}
   .game-btn.disabled{opacity:0.35;pointer-events:none;box-shadow:0 3px 0 rgba(0,0,0,0.15)}
   .instruction{position:fixed;top:8px;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-size:clamp(18px,4vw,28px);font-weight:900;color:white;text-shadow:2px 2px 6px rgba(0,0,0,0.5);z-index:60;text-align:center;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
@@ -4225,6 +4226,7 @@ const BLEND_FRUITS=[
   {id:'orange',emoji:'🍊',label:'Orange',color:[255,160,40]},
   {id:'apple',emoji:'🍏',label:'Apple',color:[120,200,80]},
   {id:'grape',emoji:'🍇',label:'Grape',color:[150,50,180]},
+  {id:'milk',emoji:'🥛',label:'Milk',color:[255,255,255],btn:'btn-milk'},
 ];
 let blendPhase='adding'; // 'adding','blending','done'
 let blendFruits=[]; // {x,y,vx,vy,emoji,color,radius}
@@ -4249,15 +4251,16 @@ function updateBlendButtons(){
   buttonsArea.innerHTML='';instruction.textContent='';
   if(blendPhase==='adding'){
     BLEND_FRUITS.forEach(f=>{
-      addBtn('btn-blend',f.emoji,f.label,()=>{
+      addBtn(f.btn||'btn-blend',f.emoji,f.label,()=>{
         initAudio();
         if(blendFruits.length>=12)return;
         const S=Math.min(W,H);
         const bx=W*0.5+(Math.random()-0.5)*S*0.15;
         const r=S*0.04;
         blendFruits.push({x:bx,y:H*0.1,vx:(Math.random()-0.5)*60,vy:0,emoji:f.emoji,color:f.color,radius:r,scale:1});
-        playPop();
-        playTone(250+Math.random()*100,0.15,'triangle',0.08);
+        if(f.id==='milk'){playTone(500,0.15,'sine',0.1);playTone(350,0.2,'sine',0.08,0.1)}
+        else{playPop();playTone(250+Math.random()*100,0.15,'triangle',0.08)}
+        sayWord(f.label);
         if(navigator.vibrate)navigator.vibrate(15);
         updateBlendButtons();
       },blendFruits.length>=12);
