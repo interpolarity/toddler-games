@@ -5143,7 +5143,6 @@ function drawSkewFoodAt(x,y,r,emoji,color,rim,scale,charLvl){
   charLvl=charLvl||0;
   ctx.save();ctx.translate(x,y);
   if(emoji){
-    if(skewPhase==='cooking'){ctx.fillStyle='#3a1500';ctx.beginPath();ctx.arc(0,0,r*scale*0.42,0,Math.PI*2);ctx.fill();}
     ctx.font=`${r*scale}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(emoji,0,0);
   }else{
@@ -5232,7 +5231,7 @@ function drawSkewGame(){
   const onStick=skewItems.filter(it=>it.impaled&&it!==dragItem);
   onStick.sort((a,b)=>(a.impaleSeq||0)-(b.impaleSeq||0));
   onStick.forEach(item=>{
-    drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2,cookT);
+    drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2,item.emoji?0:cookT);
   });
   // Floating free items (non-dragged)
   skewItems.forEach(item=>{
