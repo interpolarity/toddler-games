@@ -4226,7 +4226,7 @@ const BLEND_FRUITS=[
   {id:'orange',emoji:'🍊',label:'Orange',color:[255,160,40]},
   {id:'apple',emoji:'🍏',label:'Apple',color:[120,200,80]},
   {id:'grape',emoji:'🍇',label:'Grape',color:[150,50,180]},
-  {id:'milk',emoji:'🥛',label:'Milk',color:[255,255,255],btn:'btn-milk'},
+  {id:'milk',emoji:'🥛',label:'Milk',color:[255,255,255],btn:'btn-milk',isLiquid:true},
 ];
 let blendPhase='adding'; // 'adding','blending','done'
 let blendFruits=[]; // {x,y,vx,vy,emoji,color,radius}
@@ -4257,7 +4257,7 @@ function updateBlendButtons(){
         const S=Math.min(W,H);
         const bx=W*0.5+(Math.random()-0.5)*S*0.15;
         const r=S*0.04;
-        blendFruits.push({x:bx,y:H*0.1,vx:(Math.random()-0.5)*60,vy:0,emoji:f.emoji,color:f.color,radius:r,scale:1});
+        blendFruits.push({x:bx,y:H*0.1,vx:(Math.random()-0.5)*60,vy:0,emoji:f.emoji,color:f.color,radius:r,scale:1,isLiquid:!!f.isLiquid});
         if(f.id==='milk'){playTone(500,0.15,'sine',0.1);playTone(350,0.2,'sine',0.08,0.1)}
         else{playPop();playTone(250+Math.random()*100,0.15,'triangle',0.08)}
         sayWord(f.label);
@@ -4577,10 +4577,25 @@ function drawBlendGame(){
   ctx.globalAlpha=1;
   if(blendPhase!=='done'){
     blendFruits.forEach(f=>{
-      const sz=Math.max(4,f.radius*2*f.scale);
-      ctx.font=`${sz}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.globalAlpha=f.scale<0.3?f.scale/0.3:1;
-      ctx.fillText(f.emoji,f.x+ox,f.y+oy);
+      const alpha=f.scale<0.3?f.scale/0.3:1;
+      ctx.globalAlpha=alpha;
+      if(f.isLiquid){
+        // Draw as a white milk droplet blob, not a glass emoji
+        const r=f.radius*f.scale;
+        ctx.fillStyle='rgba(255,255,255,0.85)';
+        ctx.beginPath();ctx.arc(f.x+ox,f.y+oy,r,0,Math.PI*2);ctx.fill();
+        // Highlight
+        ctx.fillStyle='rgba(255,255,255,0.6)';
+        ctx.beginPath();ctx.arc(f.x+ox-r*0.25,f.y+oy-r*0.25,r*0.35,0,Math.PI*2);ctx.fill();
+        // Small drops around it
+        ctx.fillStyle='rgba(220,240,255,0.7)';
+        ctx.beginPath();ctx.arc(f.x+ox+r*0.6,f.y+oy-r*0.5,r*0.2,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(f.x+ox-r*0.55,f.y+oy+r*0.5,r*0.15,0,Math.PI*2);ctx.fill();
+      }else{
+        const sz=Math.max(4,f.radius*2*f.scale);
+        ctx.font=`${sz}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(f.emoji,f.x+ox,f.y+oy);
+      }
     });
     ctx.globalAlpha=1;
   }
