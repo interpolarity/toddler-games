@@ -13,7 +13,7 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;height:100vh;height:100dvh;width:100vw;background:#5d4037;overscroll-behavior:none;-webkit-overflow-scrolling:none;position:fixed;top:0;left:0;right:0;bottom:0}
   canvas{display:block;touch-action:none}
-  .buttons-area{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0));background:rgba(0,0,0,0.25);z-index:50}
+  .buttons-area{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,0.25);z-index:50}
   .game-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:85px;min-height:80px;padding:8px 14px;border:4px solid rgba(0,0,0,0.25);border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 0 rgba(0,0,0,0.3);color:white;text-shadow:1px 1px 2px rgba(0,0,0,0.4);-webkit-tap-highlight-color:transparent;transition:transform 0.1s,box-shadow 0.1s;border-bottom-width:6px}
   .game-btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,0.3)}
   .game-btn .emoji{font-size:32px;line-height:1;margin-bottom:2px}
@@ -34,8 +34,8 @@
   .btn-blend{background:linear-gradient(180deg,#ce93d8,#7b1fa2);min-width:70px}
   .btn-blendgo{background:linear-gradient(180deg,#66bb6a,#388e3c);min-width:100px;font-size:18px}
   .game-btn.disabled{opacity:0.35;pointer-events:none;box-shadow:0 3px 0 rgba(0,0,0,0.15)}
-  .instruction{position:fixed;top:8px;left:50%;transform:translateX(-50%);font-size:clamp(18px,4vw,28px);font-weight:900;color:white;text-shadow:2px 2px 6px rgba(0,0,0,0.5);z-index:60;text-align:center;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
-  .menu-btn-fixed{position:fixed;top:8px;left:8px;z-index:60;display:none;width:44px;height:44px;border-radius:12px;border:3px solid rgba(0,0,0,0.2);background:linear-gradient(180deg,#78909c,#546e7a);color:white;font-size:22px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,0.3);-webkit-tap-highlight-color:transparent;line-height:44px;text-align:center;padding:0}
+  .instruction{position:fixed;top:8px;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-size:clamp(18px,4vw,28px);font-weight:900;color:white;text-shadow:2px 2px 6px rgba(0,0,0,0.5);z-index:60;text-align:center;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+  .menu-btn-fixed{position:fixed;top:8px;top:calc(8px + env(safe-area-inset-top,0px));left:8px;left:calc(8px + env(safe-area-inset-left,0px));z-index:60;display:none;width:44px;height:44px;border-radius:12px;border:3px solid rgba(0,0,0,0.2);background:linear-gradient(180deg,#78909c,#546e7a);color:white;font-size:22px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,0.3);-webkit-tap-highlight-color:transparent;line-height:44px;text-align:center;padding:0}
   .menu-btn-fixed:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,0.3)}
   .menu-grid{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:6px;padding:8px;padding-top:env(safe-area-inset-top,4px);z-index:55;pointer-events:none;overflow-y:auto;background:transparent;visibility:hidden}
   .menu-grid.active{pointer-events:auto;visibility:visible;background:linear-gradient(180deg,#4fc3f7 0%,#81d4fa 40%,#b3e5fc 70%,#c8e6c9 100%)}
@@ -99,7 +99,7 @@ function playTaDa(){
   [523,659,784,1047].forEach(f=>{playTone(f,0.5,'sine',0.1,0.2)});playTone(262,0.5,'triangle',0.06,0.2);
 }
 function playMatch(){playTone(523,0.15,'sine',0.12);playTone(659,0.15,'sine',0.12,0.1);playTone(784,0.2,'sine',0.12,0.2)}
-function playWrong(){playTone(200,0.2,'square',0.1);setTimeout(()=>playTone(160,0.25,'square',0.1),150)}
+function playWrong(){playTone(200,0.2,'square',0.1);playTone(160,0.25,'square',0.1,0.15)}
 function playFlip(){playTone(800,0.08,'sine',0.1)}
 let enVoice=null;
 function findEnVoice(){
@@ -107,7 +107,7 @@ function findEnVoice(){
   const v=speechSynthesis.getVoices();if(!v.length)return;
   // Prefer native English voices: Samantha (iOS), Google US, any en-US, any en-*
   enVoice=v.find(x=>x.name==='Samantha')||v.find(x=>x.name.includes('Google')&&x.lang.startsWith('en'))
-    ||v.find(x=>x.lang==='en-US'&&!x.localService===false)||v.find(x=>x.lang.startsWith('en'))||null;
+    ||v.find(x=>x.lang==='en-US')||v.find(x=>x.lang.startsWith('en'))||null;
 }
 if(window.speechSynthesis){if(speechSynthesis.addEventListener)speechSynthesis.addEventListener('voiceschanged',findEnVoice);else if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=findEnVoice;findEnVoice()}
 function setEnVoice(utt){utt.lang='en-US';findEnVoice();if(enVoice)utt.voice=enVoice}
@@ -279,7 +279,7 @@ let wobbleAngle = 0, wobbleVel = 0; // wobbly stack physics
 // MENU
 // =============================================
 function showMenu(){
-  currentMode='menu';particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];wobbleAngle=0;wobbleVel=0;stopAutoEat();
+  currentMode='menu';particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];wobbleAngle=0;wobbleVel=0;mouthOpenTimer=0;stopAutoEat();
   if(window.speechSynthesis)window.speechSynthesis.cancel();speechBusy=false;
   instruction.textContent='';
   buttonsArea.innerHTML='';
@@ -543,7 +543,7 @@ function updateDigGame(dt){
             const rockStackH=(rockDumpsSoFar-1)*layerH;
             const bandTop=surfaceY-rockStackH-layerH;
             const bandBot=surfaceY-rockStackH;
-            for(let ri=0;ri<35;ri++){const rr=2+Math.random()*5;
+            for(let ri=0;ri<35;ri++){if(holeRocks.length>=200)break;const rr=2+Math.random()*5;
               holeRocks.push({x:hx-hw*0.9+Math.random()*hw*1.8,y:bandBot-rr-(bandBot-bandTop)*Math.random(),
                 radius:rr,verts:makeRockVerts(rr),color:['#78909c','#546e7a','#90a4ae','#455a64','#607d8b'][Math.floor(Math.random()*5)],
                 rotation:Math.random()*Math.PI*2});
@@ -1170,7 +1170,7 @@ let burgerStack, burgerState, burgerCustomerX, burgerCustomerPhase, burgerEatTim
 let burgerCamY, burgerEatCount, burgerTotalLayers;
 
 function startBurgerGame(){
-  currentMode='burger';particles=[];confetti=[];wobbleAngle=0;wobbleVel=0;
+  currentMode='burger';particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];wobbleAngle=0;wobbleVel=0;mouthOpenTimer=0;
   burgerStack=['bun_bottom'];burgerState='building';burgerCustomerX=W+80;burgerCustomerPhase=0;burgerEatTimer=0;burgerBounceTimer=0;
   burgerCamY=0;burgerEatCount=0;burgerTotalLayers=0;
   updateBurgerButtons();
@@ -1405,7 +1405,7 @@ function drawBurgerLayer(x,y,item){
     ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
     // Porous bread texture dots
     ctx.fillStyle='rgba(180,140,70,0.15)';
-    for(let i=0;i<8;i++){ctx.beginPath();ctx.arc(x-50+i*14+Math.random()*5,y-item.h/2,1.5+Math.random(),0,Math.PI*2);ctx.fill()}
+    const _brng=seededRand(731);for(let i=0;i<8;i++){ctx.beginPath();ctx.arc(x-50+i*14+_brng()*5,y-item.h/2,1.5+_brng(),0,Math.PI*2);ctx.fill()}
     ctx.fillStyle='rgba(255,255,255,0.15)';
     drawRoundRect(x-hw+6,y-item.h+2,hw*2-12,4,2);ctx.fill();
   }
@@ -1429,7 +1429,7 @@ let iceStack, iceState, iceCustomerX, iceCustomerPhase, iceEatTimer, iceBounceTi
 let iceSprinkleSeeds; // so sprinkles stay consistent
 
 function startIceCreamGame(){
-  currentMode='icecream';particles=[];confetti=[];wobbleAngle=0;wobbleVel=0;
+  currentMode='icecream';particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];wobbleAngle=0;wobbleVel=0;mouthOpenTimer=0;
   iceStack=['cone'];iceState='building';iceCustomerX=W+80;iceEatTimer=0;iceBounceTimer=0;
   iceCamY=0;iceSprinkleSeeds=[];iceEatCount=0;iceTotalLayers=0;
   updateIceButtons();
@@ -1470,8 +1470,8 @@ function addIceItem(id){
   iceStack.push(id);iceBounceTimer=0.3;wobbleVel+=(Math.random()-0.5)*0.08;
   if(id==='sprinkles')iceSprinkleSeeds.push(Math.floor(Math.random()*10000));
   // Placement sound
-  if(id==='sprinkles'){for(let i=0;i<4;i++)setTimeout(()=>playTone(600+Math.random()*400,0.05,'sine',0.08),i*40)}
-  else if(id==='cherry'){playTone(800,0.1,'sine',0.15);setTimeout(()=>playTone(1000,0.08,'sine',0.1),80)}
+  if(id==='sprinkles'){for(let i=0;i<4;i++)playTone(600+Math.random()*400,0.05,'sine',0.08,i*0.04)}
+  else if(id==='cherry'){playTone(800,0.1,'sine',0.15);playTone(1000,0.08,'sine',0.1,0.08)}
   else playPop();
   // Say item name
   const flav=ICE_FLAVORS.find(f=>f.id===id);
@@ -1977,7 +1977,7 @@ let pancakeCustomerX,pancakeEatCount,pancakeTotalLayers;
 let pancakeBounceTimer,pancakeCamY;
 
 function startPancakeGame(){
-  currentMode='pancake';particles=[];confetti=[];wobbleAngle=0;wobbleVel=0;
+  currentMode='pancake';particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];wobbleAngle=0;wobbleVel=0;mouthOpenTimer=0;
   pancakeState='stacking';pancakeStack=['plate'];pancakeFruits=[];pancakeFruitPos={};
   pancakeCustomerX=W+80;pancakeEatCount=0;pancakeTotalLayers=0;
   pancakeBounceTimer=0;pancakeCamY=0;
@@ -2026,7 +2026,7 @@ function addPancakeFruit(id){
   const rng=seededRand(id.length*333+pancakeFruits.length*77);
   if(!pancakeFruitPos[id])pancakeFruitPos[id]=[];
   // Spread evenly on oval — golden angle for even distribution
-  const allFruits=Object.values(pancakeFruitPos).flat();
+  const allFruits=[].concat.apply([],Object.values(pancakeFruitPos));
   const n=allFruits.length;
   const ga=2.399963; // golden angle
   const angle=n*ga,rad=0.35+((n*3)%7)*0.08;
@@ -2212,7 +2212,7 @@ let pizzaToppingPos,pizzaCustomerX,pizzaEatCount;
 let pizzaBakeTimer,pizzaCutAnim,pizzaCutAnimAngle,pizzaSliceSep;
 
 function startPizzaGame(){
-  currentMode='pizza';particles=[];confetti=[];
+  currentMode='pizza';particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];mouthOpenTimer=0;
   pizzaState='building';pizzaToppings=['crust'];pizzaCutAngles=[];
   pizzaSlicesLeft=0;pizzaTotalSlices=0;pizzaEatCount=0;
   pizzaToppingPos={};pizzaCustomerX=W+80;
@@ -2271,7 +2271,6 @@ function updatePizzaButtons(){
   }else{instruction.textContent='Here they come!'}
 }
 function addPizzaTopping(id){
-  const totalToppings=Object.values(pizzaToppingPos).flat().length;
   pizzaToppings.push(id);
   const t=PIZZA_TOPPINGS.find(t=>t.id===id);
   if(t&&t.type==='topping'){
@@ -2563,6 +2562,7 @@ function paintAddSplat(tx,ty,big){
   if(big){for(let i=0;i<8+Math.random()*6;i++){
     const a=Math.random()*Math.PI*2,d=sz+Math.random()*sz*1.2;
     droplets.push({x:Math.cos(a)*d,y:Math.sin(a)*d,r:3+Math.random()*8})}}
+  if(paintSplats.length>=500)paintSplats.splice(0,100);
   paintSplats.push({x:tx,y:ty,r:sz,color:c,droplets});
   if(big){spawnParticles(tx,ty,8,[c,'#ffffff'],{vyRange:6,spread:30,maxSize:6});
     playTone(120+Math.random()*80,0.15,'triangle',0.1)}
@@ -2617,10 +2617,11 @@ function startBalloonGame(){
 
 function updateBalloonButtons(){
   buttonsArea.innerHTML='';
-  instruction.textContent='';
+  instruction.textContent='Pop the bubbles! 🎈';
 }
 
 function spawnBalloon(){
+  if(balloons.length>=30)return;
   const r=W*0.06+Math.random()*W*0.05;
   balloons.push({
     x:r+Math.random()*(W-r*2),y:H+r+Math.random()*40,
@@ -2637,7 +2638,7 @@ function handleBalloonTap(tx,ty){
     if(dx*dx+dy*dy<(b.r+10)*(b.r+10)){
       initAudio();
       // Pop on single tap!
-      b.pop=true;b.popTimer=0.3;balloonScore++;if(navigator.vibrate)navigator.vibrate(20);
+      b.pop=true;b.popTimer=0.3;balloonScore++;sayNumber(balloonScore);if(navigator.vibrate)navigator.vibrate(20);
       spawnParticles(b.x,b.y,15,[b.color,'#ffffff','#e3f2fd'],{vyRange:8,spread:25,maxSize:8});
       spawnConfetti();
       playTone(800+Math.random()*400,0.12,'sine',0.18);
@@ -2719,9 +2720,10 @@ function startCatchGame(){
 }
 function updateCatchButtons(){
   buttonsArea.innerHTML='';
-  instruction.textContent='';
+  instruction.textContent='Catch the fruit! 🧺';
 }
 function spawnCatchObject(){
+  if(catchObjects.length>=30)return;
   const f=CATCH_FRUITS[Math.floor(Math.random()*CATCH_FRUITS.length)];
   const margin=W*0.1;
   catchObjects.push({x:margin+Math.random()*(W-margin*2),y:-W*0.1,emoji:f.emoji,name:f.name,vy:H*0.12+Math.random()*H*0.05});
@@ -3074,7 +3076,7 @@ function handleMazeMove(tx,ty){
     instruction.textContent='You did it! 🎉';
     mazeLevel++;
     if(mazeLevel<5){setTimeout(()=>{newMaze();updateMazeButtons()},2000)}
-    else{setTimeout(()=>{instruction.textContent='All mazes done! 🌟'},2200)}
+    else{setTimeout(()=>{instruction.textContent='All mazes done! 🌟';addBtn('btn-again','🔄','Again!',()=>{initAudio();startMazeGame()})},2200)}
   }
 }
 function handleMazeEnd(){mazeDragging=false}
@@ -3271,7 +3273,7 @@ function startCarWashGame(){
 function updateCarWashButtons(){
   buttonsArea.innerHTML='';
   if(cwState==='done'){
-    addBtn('btn-again','🚗','New Car!',()=>{playPop();startCarWashGame()});
+    addBtn('btn-again','🚗','New Car!',()=>{initAudio();playPop();startCarWashGame()});
 
     return;
   }
@@ -3432,7 +3434,7 @@ function startTrainGame(){
 function updateTrainButtons(){
   buttonsArea.innerHTML='';
   if(trainState==='done'){
-    addBtn('btn-again','🚂','Again!',()=>{playPop();startTrainGame()});
+    addBtn('btn-again','🚂','Again!',()=>{initAudio();playPop();startTrainGame()});
 
     return;
   }
@@ -3726,8 +3728,8 @@ function updateHideSeekGame(dt){
       else hsStartRound();
     }
   }else if(hsState==='done'){
-    hsDoneTimer+=dt;
-    if(hsDoneTimer>1.5){hsDoneTimer=0;spawnConfetti();}
+    const _prev=hsDoneTimer;hsDoneTimer+=dt;
+    if(hsDoneTimer<=7.5&&Math.floor(hsDoneTimer/1.5)>Math.floor(_prev/1.5))spawnConfetti();
   }
   updateParticles(dt);updateConfetti();
 }
@@ -3879,15 +3881,6 @@ function updateSpiderButtons(){
   }
 }
 
-function spiderDoClimb(){
-  if(spiderState!=='waiting')return;
-  spiderState='animating';
-  spiderClimbTimer=0;
-  spiderTargetY=spiderSpoutTop+Math.min(W,H)*0.08;
-  // climbing sounds
-  for(let i=0;i<6;i++)playTone(300+i*60,0.12,'sine',0.08,i*0.18);
-}
-
 function spiderGoToPage(pg){
   spiderPage=pg;spiderState='waiting';spiderAutoTimer=0;spiderPageTimer=0;spiderTapCount=0;
   const S=Math.min(W,H);
@@ -3961,8 +3954,9 @@ function updateSpiderGame(dt){
     if(spiderRainDrops[i].y>spiderGroundY)spiderRainDrops.splice(i,1);
   }
 
-  // Page 2: smooth sun size animation
+  // Page 2: smooth sun size animation + sky brightening timer
   if(spiderPage===2){
+    spiderPageTimer+=dt;
     spiderSunSize+=(spiderSunTarget-spiderSunSize)*dt*2;
     spiderSunRays+=dt*2;
   }
