@@ -4433,7 +4433,8 @@ function updateBlendGame(dt){
         if(navigator.vibrate)navigator.vibrate(15);
       }
     }
-    if(blendPourLevel<=0.01){
+    const allCupsFull=blendCups.length>0&&blendCups.every(c=>c.fill>=1/blendCups.length-0.005);
+    if(blendPourLevel<=0.01||allCupsFull){
       blendPourLevel=0;blendPourTarget=-1;
       blendPhase='done';blendTimer=0;
       playJingle();spawnConfetti();
