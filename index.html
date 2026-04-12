@@ -5046,6 +5046,20 @@ function handleSkewStart(x,y){
     }
   }
 }
+function skewImpaleItem(item){
+  item.impaled=true;
+  item.x=skewCX;
+  item.y=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,item.y));
+  skewScore++;
+  spawnParticles(item.x,item.y,14,[item.color,item.rim,'#fff'],{vyRange:8,spread:30,maxSize:6});
+  playTone(300+skewScore*70,0.12,'sine',0.1);playTone(500+skewScore*35,0.08,'sine',0.08,0.1);
+  if(navigator.vibrate)navigator.vibrate(30);
+  if(skewScore>=SKEW_TARGET){
+    skewPhase='done';playTaDa();spawnConfetti();spawnConfetti();
+    if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
+    updateSkewButtons();
+  }
+}
 function handleSkewMove(x,y){
   if(skewDragIdx<0)return;
   const item=skewItems[skewDragIdx];
@@ -5054,6 +5068,11 @@ function handleSkewMove(x,y){
     item.y=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,y));
   }else{
     item.x=x;item.y=y;
+    // Impale immediately when dragged across the stick
+    if(skewPhase==='playing'&&Math.abs(item.x-skewCX)<item.r&&
+      item.y>skewTopY-item.r&&item.y<skewTipY+item.r){
+      skewImpaleItem(item);
+    }
   }
 }
 function handleSkewEnd(){
@@ -5063,20 +5082,8 @@ function handleSkewEnd(){
   if(!item.impaled){
     const onSkewer=Math.abs(item.x-skewCX)<item.r*2.2&&
       item.y>skewTopY-item.r&&item.y<skewTipY+item.r;
-    if(onSkewer&&skewPhase==='playing'){
-      item.impaled=true;
-      item.x=skewCX;
-      item.y=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,item.y));
-      skewScore++;
-      spawnParticles(item.x,item.y,14,[item.color,item.rim,'#fff'],{vyRange:8,spread:30,maxSize:6});
-      playTone(300+skewScore*70,0.12,'sine',0.1);playTone(500+skewScore*35,0.08,'sine',0.08,0.1);
-      if(navigator.vibrate)navigator.vibrate(30);
-      if(skewScore>=SKEW_TARGET){
-        skewPhase='done';playTaDa();spawnConfetti();spawnConfetti();
-        if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
-        updateSkewButtons();
-      }
-    }else{item.returning=true;}
+    if(onSkewer&&skewPhase==='playing') skewImpaleItem(item);
+    else item.returning=true;
   }
   skewDragIdx=-1;
 }
