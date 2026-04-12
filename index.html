@@ -5224,9 +5224,11 @@ function drawSkewGame(){
   const dragItem=skewDragIdx>=0?skewItems[skewDragIdx]:null;
   const onStick=skewItems.filter(it=>it.impaled&&it!==dragItem);
   onStick.sort((a,b)=>(a.impaleSeq||0)-(b.impaleSeq||0));
+  if(cookT>0)ctx.globalAlpha=1-cookT*0.45;
   onStick.forEach(item=>{
     drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2);
   });
+  ctx.globalAlpha=1;
   // Floating free items (non-dragged)
   skewItems.forEach(item=>{
     if(item.impaled||item===dragItem)return;
@@ -5255,12 +5257,6 @@ function drawSkewGame(){
         }
       });
     }
-    skewItems.forEach(item=>{
-      if(!item.impaled)return;
-      if(cooking){ctx.fillStyle=`rgba(255,100,0,${cookT*0.12})`;ctx.beginPath();ctx.arc(item.x,item.y,item.r*1.15,0,Math.PI*2);ctx.fill();}
-      ctx.fillStyle=`rgba(40,20,0,${cookT*0.42})`;
-      ctx.beginPath();ctx.arc(item.x,item.y,item.r,0,Math.PI*2);ctx.fill();
-    });
   }
   // Score
   ctx.textAlign='center';ctx.textBaseline='middle';
