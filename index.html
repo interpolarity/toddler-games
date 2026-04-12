@@ -4488,9 +4488,23 @@ function drawBlendGame(){
   ctx.fillStyle='#ef5350';
   ctx.beginPath();ctx.arc(cx-S*0.004,jarY+jarH+baseH*0.76,S*0.006,0,Math.PI*2);ctx.fill();
 
-  // Cone-shaped glass jar
+  // Glass jar outline + shine (drawn before contents so nothing overlays fruits)
   blendJarPath(cx,topW,botW,jarY,jarH);
-  ctx.fillStyle='rgba(187,222,251,0.05)';
+  ctx.strokeStyle='rgba(100,181,246,0.5)';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.beginPath();
+  const shLt=cx-topW/2+S*0.012;
+  ctx.moveTo(shLt,jarY+S*0.02);ctx.lineTo(shLt+S*0.02,jarY+S*0.02);
+  const wAt65=topW+(botW-topW)*0.65;
+  ctx.lineTo(cx-wAt65/2+S*0.012+S*0.02,jarY+jarH*0.65);
+  ctx.lineTo(cx-wAt65/2+S*0.012,jarY+jarH*0.65);
+  ctx.closePath();ctx.fill();
+  // Rim at top
+  ctx.fillStyle='rgba(120,144,156,0.6)';
+  drawRoundRect(cx-topW/2-S*0.008,jarY-S*0.012,topW+S*0.016,S*0.02,S*0.008);
+  ctx.fill();
+  ctx.fillStyle='rgba(144,164,174,0.8)';
+  drawRoundRect(cx-topW/2-S*0.004,jarY-S*0.01,topW+S*0.008,S*0.012,S*0.005);
   ctx.fill();
 
   // Juice fill (pouring phase) — clipped to cone
@@ -4562,25 +4576,6 @@ function drawBlendGame(){
     ctx.beginPath();ctx.arc(p.x+ox,p.y+oy,3,0,Math.PI*2);ctx.fill();
   });
   ctx.globalAlpha=1;
-
-  // Glass jar outline + shine (on top of contents)
-  blendJarPath(cx,topW,botW,jarY,jarH);
-  ctx.strokeStyle='rgba(100,181,246,0.5)';ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,0.18)';
-  ctx.beginPath();
-  const shLt=cx-topW/2+S*0.012;
-  ctx.moveTo(shLt,jarY+S*0.02);ctx.lineTo(shLt+S*0.02,jarY+S*0.02);
-  const wAt65=topW+(botW-topW)*0.65;
-  ctx.lineTo(cx-wAt65/2+S*0.012+S*0.02,jarY+jarH*0.65);
-  ctx.lineTo(cx-wAt65/2+S*0.012,jarY+jarH*0.65);
-  ctx.closePath();ctx.fill();
-  // Rim at top
-  ctx.fillStyle='rgba(120,144,156,0.6)';
-  drawRoundRect(cx-topW/2-S*0.008,jarY-S*0.012,topW+S*0.016,S*0.02,S*0.008);
-  ctx.fill();
-  ctx.fillStyle='rgba(144,164,174,0.8)';
-  drawRoundRect(cx-topW/2-S*0.004,jarY-S*0.01,topW+S*0.008,S*0.012,S*0.005);
-  ctx.fill();
 
   // Lid (during blending only)
   if(blendPhase==='blending'){
