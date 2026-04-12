@@ -4916,7 +4916,6 @@ function drawChopGame(){
     else{ctx.rect(-h.r*2,-h.r*2,h.r*4,h.r*2);}
     ctx.clip();
     ctx.rotate(-h.cutAngle);
-    ctx.fillStyle=h.inside;ctx.beginPath();ctx.arc(0,0,h.r,0,Math.PI*2);ctx.fill();
     ctx.font=`${h.r*1.9}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(h.emoji,0,0);
     ctx.restore();
@@ -4976,33 +4975,37 @@ function drawChopGame(){
 // SKEWER GAME
 // =============================================
 const SKEWER_FOODS=[
-  {color:'#f48fb1',rim:'#c2185b',label:'Dango'},
-  {color:'#f9fbe7',rim:'#bdbdbd',label:'Dango'},
-  {color:'#a5d6a7',rim:'#2e7d32',label:'Dango'},
-  {color:'#ef9a9a',rim:'#b71c1c',label:'Meat'},
-  {color:'#ffcc80',rim:'#e65100',label:'Onion'},
-  {color:'#ef5350',rim:'#b71c1c',label:'Tomato'},
-  {color:'#aed581',rim:'#558b2f',label:'Pepper'},
-  {color:'#bcaaa4',rim:'#5d4037',label:'Mushroom'},
+  {emoji:'\uD83C\uDF45',label:'Tomato',color:'#ef5350',rim:'#b71c1c'},
+  {emoji:'\uD83E\uDD69',label:'Meat',color:'#8d6e63',rim:'#4e342e'},
+  {emoji:'\uD83E\uDDC5',label:'Onion',color:'#fff9c4',rim:'#f57f17'},
+  {emoji:'\uD83E\uDEB1',label:'Pepper',color:'#aed581',rim:'#558b2f'},
+  {emoji:'\uD83C\uDF44',label:'Mushroom',color:'#bcaaa4',rim:'#5d4037'},
+  {emoji:'\uD83E\uDDC0',label:'Cheese',color:'#ffee58',rim:'#f9a825'},
+  {emoji:'\uD83E\uDD55',label:'Carrot',color:'#ff8f00',rim:'#e65100'},
+  {emoji:'\uD83C\uDF3D',label:'Corn',color:'#ffee58',rim:'#aed581'},
 ];
 const SKEW_TARGET=5;
 let skewPhase,skewTimer,skewScore;
-let skewCX,skewCY,skewHalfL;
-let skewItems,skewImpaled,skewDragIdx;
+let skewCX,skewTopY,skewTipY;
+let skewItems=[],skewImpaled=[],skewDragIdx=-1;
 
 function startSkewGame(){
   currentMode='skewer';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
   skewPhase='playing';skewTimer=0;skewScore=0;skewDragIdx=-1;skewImpaled=[];
   const S=Math.min(W,H);
-  skewCX=W/2;skewCY=H*(H>W*1.5?0.46:0.48);skewHalfL=S*0.4;
+  skewCX=W/2;
+  skewTopY=H*(H>W*1.5?0.15:0.16);
+  skewTipY=H*(H>W*1.5?0.86:0.84);
   const foods=[...SKEWER_FOODS].sort(()=>Math.random()-0.5).slice(0,SKEW_TARGET);
-  // 5 positions: 3 above skewer, 2 below
-  const pos=[[0.15,0.27],[0.5,0.21],[0.85,0.27],[0.28,0.73],[0.72,0.73]];
+  // Food to the left and right of the vertical center stick
+  const p=H>W*1.5
+    ?[[0.18,0.26],[0.82,0.26],[0.18,0.58],[0.82,0.58],[0.18,0.80]]
+    :[[0.14,0.30],[0.86,0.30],[0.14,0.64],[0.86,0.64],[0.14,0.82]];
   skewItems=foods.map((f,i)=>{
-    const bx=W*pos[i][0],by=H*pos[i][1];
+    const bx=W*p[i][0],by=H*p[i][1];
     return{x:bx,y:by,homeX:bx,homeY:by,
-      bobT:Math.random()*Math.PI*2,bobAmp:S*0.018,bobSpeed:0.8+Math.random()*0.6,
-      r:S*0.065,color:f.color,rim:f.rim,label:f.label,
+      bobT:Math.random()*Math.PI*2,bobAmp:S*0.015,bobSpeed:0.8+Math.random()*0.6,
+      r:S*0.065,color:f.color,rim:f.rim,label:f.label,emoji:f.emoji,
       dragging:false,returning:false,impaled:false};
   });
   updateSkewButtons();
@@ -5029,14 +5032,16 @@ function handleSkewEnd(){
   if(skewDragIdx<0)return;
   const item=skewItems[skewDragIdx];
   item.dragging=false;
-  const onSkewer=Math.abs(item.y-skewCY)<item.r*1.7&&
-    item.x>skewCX-skewHalfL-item.r&&item.x<skewCX+skewHalfL+item.r;
+  // Drop onto vertical center stick: close to center X, within stick Y range
+  const onSkewer=Math.abs(item.x-skewCX)<item.r*2.2&&
+    item.y>skewTopY&&item.y<skewTipY+item.r;
   if(onSkewer&&skewPhase==='playing'){
     item.impaled=true;
-    const slotSpan=skewHalfL*2-item.r*2.4;
-    const slotX=skewCX-skewHalfL+item.r*1.2+(SKEW_TARGET>1?skewScore*slotSpan/(SKEW_TARGET-1):0);
-    skewImpaled.push({r:item.r,color:item.color,rim:item.rim,
-      startX:item.x,startY:item.y,targetX:slotX,targetY:skewCY,slideT:0,curX:item.x,curY:item.y});
+    // Stack from tip upward as score increases
+    const usable=(skewTipY-item.r*1.2)-(skewTopY+item.r*1.2);
+    const slotY=skewTipY-item.r*1.2-(SKEW_TARGET>1?skewScore*usable/(SKEW_TARGET-1):0);
+    skewImpaled.push({r:item.r,color:item.color,rim:item.rim,emoji:item.emoji,
+      startX:item.x,startY:item.y,targetX:skewCX,targetY:slotY,slideT:0,curX:item.x,curY:item.y});
     skewScore++;
     spawnParticles(item.x,item.y,14,[item.color,item.rim,'#fff'],{vyRange:8,spread:30,maxSize:6});
     playTone(300+skewScore*70,0.12,'sine',0.1);playTone(500+skewScore*35,0.08,'sine',0.08,0.1);
@@ -5079,58 +5084,60 @@ function drawSkewGame(){
   const bg=ctx.createLinearGradient(0,0,0,H);
   bg.addColorStop(0,'#fff8e1');bg.addColorStop(1,'#ffe0b2');
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  // Subtle target-zone glow around skewer
-  if(skewPhase==='playing'){
-    const gz=ctx.createLinearGradient(0,skewCY-S*0.12,0,skewCY+S*0.12);
-    gz.addColorStop(0,'rgba(255,200,50,0)');gz.addColorStop(0.5,'rgba(255,200,50,0.07)');gz.addColorStop(1,'rgba(255,200,50,0)');
-    ctx.fillStyle=gz;ctx.fillRect(0,skewCY-S*0.12,W,S*0.24);
+  // Drop zone glow when dragging
+  if(skewPhase==='playing'&&skewDragIdx>=0){
+    const gz=ctx.createLinearGradient(skewCX-S*0.15,0,skewCX+S*0.15,0);
+    gz.addColorStop(0,'rgba(255,200,50,0)');gz.addColorStop(0.5,'rgba(255,200,50,0.13)');gz.addColorStop(1,'rgba(255,200,50,0)');
+    ctx.fillStyle=gz;ctx.fillRect(skewCX-S*0.15,skewTopY,S*0.3,skewTipY-skewTopY);
   }
-  const tx=skewCX+skewHalfL,hx2=skewCX-skewHalfL;
-  // Impaled items (drawn behind stick so stick overlaps them)
+  // Impaled items drawn behind stick so stick pierces through center
   skewImpaled.forEach(imp=>{
     ctx.save();ctx.translate(imp.curX,imp.curY);
-    ctx.fillStyle=imp.color;ctx.beginPath();ctx.arc(0,0,imp.r,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=imp.rim;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,imp.r,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(-imp.r*0.3,-imp.r*0.3,imp.r*0.28,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.22)';ctx.beginPath();ctx.arc(0,0,imp.r*0.12,0,Math.PI*2);ctx.fill();
+    ctx.font=`${imp.r*1.85}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(imp.emoji,0,0);
     ctx.restore();
   });
-  // Bamboo stick (fixed horizontal center)
+  // Vertical bamboo stick
   ctx.save();ctx.lineCap='round';
-  ctx.strokeStyle='#8d6e38';ctx.lineWidth=11;
-  ctx.beginPath();ctx.moveTo(hx2,skewCY);ctx.lineTo(tx,skewCY);ctx.stroke();
-  ctx.strokeStyle='#c9a84c';ctx.lineWidth=7;
-  ctx.beginPath();ctx.moveTo(hx2,skewCY);ctx.lineTo(tx,skewCY);ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=17;
+  ctx.beginPath();ctx.moveTo(skewCX+3,skewTopY);ctx.lineTo(skewCX+3,skewTipY);ctx.stroke();
+  ctx.strokeStyle='#8d6e38';ctx.lineWidth=14;
+  ctx.beginPath();ctx.moveTo(skewCX,skewTopY);ctx.lineTo(skewCX,skewTipY);ctx.stroke();
+  ctx.strokeStyle='#c9a84c';ctx.lineWidth=9;
+  ctx.beginPath();ctx.moveTo(skewCX,skewTopY);ctx.lineTo(skewCX,skewTipY);ctx.stroke();
   ctx.strokeStyle='#7a5c2e';ctx.lineWidth=2.5;
-  for(let i=1;i<5;i++){
-    const nx=hx2+(tx-hx2)*i/5,pw=10;
-    ctx.beginPath();ctx.moveTo(nx,skewCY-pw);ctx.lineTo(nx,skewCY+pw);ctx.stroke();
+  for(let i=1;i<7;i++){
+    const ny=skewTopY+(skewTipY-skewTopY)*i/7,pw=9;
+    ctx.beginPath();ctx.moveTo(skewCX-pw,ny);ctx.lineTo(skewCX+pw,ny);ctx.stroke();
   }
-  ctx.strokeStyle='#5d3a1a';ctx.lineWidth=15;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(hx2,skewCY);ctx.lineTo(hx2+skewHalfL*0.15,skewCY);ctx.stroke();
+  // Handle knob at top
+  ctx.fillStyle='#5d3a1a';ctx.beginPath();ctx.arc(skewCX,skewTopY,16,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#8d6e38';ctx.beginPath();ctx.arc(skewCX,skewTopY,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c9a84c';ctx.beginPath();ctx.arc(skewCX,skewTopY,6,0,Math.PI*2);ctx.fill();
   ctx.restore();
-  // Metal tip (right end)
-  ctx.save();ctx.translate(tx,skewCY);
-  ctx.fillStyle='#cfd8dc';ctx.beginPath();ctx.moveTo(17,0);ctx.lineTo(-2,-4.5);ctx.lineTo(-2,4.5);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#90a4ae';ctx.lineWidth=1;ctx.stroke();ctx.restore();
-  // Floating food items (non-dragged)
+  // Metal tip at bottom
+  ctx.save();ctx.translate(skewCX,skewTipY);
+  ctx.fillStyle='#90a4ae';
+  ctx.beginPath();ctx.moveTo(0,24);ctx.lineTo(-6,-2);ctx.lineTo(6,-2);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#cfd8dc';
+  ctx.beginPath();ctx.moveTo(0,18);ctx.lineTo(-4,-2);ctx.lineTo(4,-2);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // Floating food items
   const dragItem=skewDragIdx>=0?skewItems[skewDragIdx]:null;
   skewItems.forEach(item=>{
     if(item.impaled||item===dragItem)return;
     ctx.save();ctx.translate(item.x,item.y);
-    ctx.fillStyle='rgba(0,0,0,0.08)';ctx.beginPath();ctx.arc(0,item.r*0.82,item.r*0.58,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=item.color;ctx.beginPath();ctx.arc(0,0,item.r,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=item.rim;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,item.r,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.45)';ctx.beginPath();ctx.arc(-item.r*0.3,-item.r*0.3,item.r*0.28,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.10)';ctx.beginPath();ctx.arc(item.r*0.15,item.r*0.85,item.r*0.5,0,Math.PI*2);ctx.fill();
+    ctx.font=`${item.r*1.85}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(item.emoji,0,0);
     ctx.restore();
   });
-  // Dragged item on top
+  // Dragged item on top with shadow
   if(dragItem){
     ctx.save();ctx.translate(dragItem.x,dragItem.y);
-    ctx.shadowColor='rgba(0,0,0,0.28)';ctx.shadowBlur=16;
-    ctx.fillStyle=dragItem.color;ctx.beginPath();ctx.arc(0,0,dragItem.r*1.12,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=dragItem.rim;ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,dragItem.r*1.12,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(-dragItem.r*0.33,-dragItem.r*0.33,dragItem.r*0.32,0,Math.PI*2);ctx.fill();
+    ctx.shadowColor='rgba(0,0,0,0.32)';ctx.shadowBlur=20;
+    ctx.font=`${dragItem.r*2.05}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(dragItem.emoji,0,0);
     ctx.shadowBlur=0;ctx.restore();
   }
   // Score
