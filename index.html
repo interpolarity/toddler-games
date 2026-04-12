@@ -3072,8 +3072,9 @@ function handleMazeMove(tx,ty){
   const dx=tx-mazeBall.x,dy=ty-mazeBall.y;
   const dist=Math.sqrt(dx*dx+dy*dy);
   if(dist<2)return;
-  const speed=4,br=W*0.04;
-  const steps=Math.min(Math.ceil(dist/speed),60);
+  const br=W*0.04;
+  const maxStep=br*0.7;
+  const steps=Math.max(1,Math.ceil(dist/maxStep));
   const sx=dx/steps,sy=dy/steps;
   for(let i=0;i<steps;i++){
     // --- X movement: use cell at current ball position ---
@@ -3098,6 +3099,15 @@ function handleMazeMove(tx,ty){
     else if(nr.r<c1.r&&cell1.top)yOk=false;     // crossing top wall
     else{if(ny<cT+br&&cell1.top)yOk=false;if(ny>cB-br&&cell1.bottom)yOk=false;}
     if(yOk)mazeBall.y=ny;
+    // --- Clamp ball to current cell walls (prevents any wall skip) ---
+    const cc=getMazeCell(mazeBall.x,mazeBall.y);
+    const cw=mazeGrid[cc.r][cc.c];
+    const wL=mazeOfsX+cc.c*mazeCellW,wR=wL+mazeCellW;
+    const wT=mazeOfsY+cc.r*mazeCellH,wB=wT+mazeCellH;
+    if(cw.left)mazeBall.x=Math.max(mazeBall.x,wL+br);
+    if(cw.right)mazeBall.x=Math.min(mazeBall.x,wR-br);
+    if(cw.top)mazeBall.y=Math.max(mazeBall.y,wT+br);
+    if(cw.bottom)mazeBall.y=Math.min(mazeBall.y,wB-br);
   }
   // Check win
   const gc=getMazeCell(mazeBall.x,mazeBall.y);
