@@ -4974,17 +4974,22 @@ function drawChopGame(){
 // =============================================
 // SKEWER GAME
 // =============================================
-const SKEWER_FOODS=[
+const SKEW_DANGO=[
+  {label:'Dango',color:'#f48fb1',rim:'#c2185b'},
+  {label:'Dango',color:'#f9fbe7',rim:'#bdbdbd'},
+  {label:'Dango',color:'#a5d6a7',rim:'#2e7d32'},
+];
+const SKEW_KEBAB=[
   {emoji:'\uD83C\uDF45',label:'Tomato',color:'#ef5350',rim:'#b71c1c'},
   {emoji:'\uD83E\uDD69',label:'Meat',color:'#8d6e63',rim:'#4e342e'},
   {emoji:'\uD83E\uDDC5',label:'Onion',color:'#fff9c4',rim:'#f57f17'},
-  {emoji:'\uD83E\uDEB1',label:'Pepper',color:'#aed581',rim:'#558b2f'},
+  {emoji:'\uD83C\uDF36\uFE0F',label:'Pepper',color:'#c62828',rim:'#8d0000'},
   {emoji:'\uD83C\uDF44',label:'Mushroom',color:'#bcaaa4',rim:'#5d4037'},
   {emoji:'\uD83E\uDDC0',label:'Cheese',color:'#ffee58',rim:'#f9a825'},
   {emoji:'\uD83E\uDD55',label:'Carrot',color:'#ff8f00',rim:'#e65100'},
   {emoji:'\uD83C\uDF3D',label:'Corn',color:'#ffee58',rim:'#aed581'},
 ];
-const SKEW_TARGET=5;
+let skewTarget,skewMode;
 let skewPhase,skewTimer,skewScore;
 let skewCX,skewTopY,skewTipY;
 let skewItems=[],skewImpaled=[],skewDragIdx=-1;
@@ -4992,21 +4997,24 @@ let skewItems=[],skewImpaled=[],skewDragIdx=-1;
 function startSkewGame(){
   currentMode='skewer';particles=[];confetti=[];floatingEmojis=[];wobbleAngle=0;wobbleVel=0;
   skewPhase='playing';skewTimer=0;skewScore=0;skewDragIdx=-1;skewImpaled=[];
+  skewMode=Math.random()<0.5?'dango':'kebab';
+  skewTarget=skewMode==='dango'?3:5;
   const S=Math.min(W,H);
   skewCX=W/2;
-  // Tip at TOP, base at BOTTOM
   skewTopY=H*(H>W*1.5?0.12:0.14);
   skewTipY=H*(H>W*1.5?0.88:0.86);
-  const foods=[...SKEWER_FOODS].sort(()=>Math.random()-0.5).slice(0,SKEW_TARGET);
-  // Food to the left and right of the vertical center stick
-  const p=H>W*1.5
-    ?[[0.18,0.26],[0.82,0.26],[0.18,0.54],[0.82,0.54],[0.18,0.78]]
-    :[[0.14,0.28],[0.86,0.28],[0.14,0.62],[0.86,0.62],[0.14,0.80]];
+  const foods=skewMode==='dango'
+    ?[...SKEW_DANGO]
+    :[...SKEW_KEBAB].sort(()=>Math.random()-0.5).slice(0,skewTarget);
+  const portrait=H>W*1.5;
+  const p=skewTarget===3
+    ?(portrait?[[0.20,0.35],[0.80,0.35],[0.50,0.68]]:[[0.18,0.36],[0.82,0.36],[0.50,0.68]])
+    :(portrait?[[0.18,0.26],[0.82,0.26],[0.18,0.54],[0.82,0.54],[0.18,0.78]]:[[0.14,0.28],[0.86,0.28],[0.14,0.62],[0.86,0.62],[0.14,0.80]]);
   skewItems=foods.map((f,i)=>{
     const bx=W*p[i][0],by=H*p[i][1];
     return{x:bx,y:by,homeX:bx,homeY:by,
       bobT:Math.random()*Math.PI*2,bobAmp:S*0.015,bobSpeed:0.8+Math.random()*0.6,
-      r:S*0.07,color:f.color,rim:f.rim,label:f.label,emoji:f.emoji,
+      r:S*0.07,color:f.color,rim:f.rim,label:f.label,emoji:f.emoji||null,
       dragging:false,returning:false,impaled:false};
   });
   updateSkewButtons();
@@ -5033,21 +5041,27 @@ function handleSkewEnd(){
   if(skewDragIdx<0)return;
   const item=skewItems[skewDragIdx];
   item.dragging=false;
-  // Drop onto vertical center stick: close to center X, within stick Y range
   const onSkewer=Math.abs(item.x-skewCX)<item.r*2.2&&
-    item.y>skewTopY&&item.y<skewTipY+item.r;
+    item.y>skewTopY-item.r&&item.y<skewTipY+item.r;
   if(onSkewer&&skewPhase==='playing'){
     item.impaled=true;
-    // Stack from tip (top) downward as score increases
-    const usable=(skewTipY-item.r*1.2)-(skewTopY+item.r*1.2);
-    const slotY=skewTopY+item.r*1.2+(SKEW_TARGET>1?skewScore*usable/(SKEW_TARGET-1):0);
-    skewImpaled.push({r:item.r,color:item.color,rim:item.rim,emoji:item.emoji,
-      startX:item.x,startY:item.y,targetX:skewCX,targetY:slotY,slideT:0,curX:item.x,curY:item.y});
+    const spacing=item.r*2.3;
+    // Push all existing items down one slot
+    for(let j=0;j<skewImpaled.length;j++){
+      skewImpaled[j].startX=skewImpaled[j].curX;
+      skewImpaled[j].startY=skewImpaled[j].curY;
+      skewImpaled[j].targetY+=spacing;
+      skewImpaled[j].slideT=0;
+    }
+    // New item enters at top, just below tip
+    const topY=skewTopY+item.r*1.5;
+    skewImpaled.push({r:item.r,color:item.color,rim:item.rim,emoji:item.emoji||null,
+      startX:item.x,startY:item.y,targetX:skewCX,targetY:topY,slideT:0,curX:item.x,curY:item.y});
     skewScore++;
     spawnParticles(item.x,item.y,14,[item.color,item.rim,'#fff'],{vyRange:8,spread:30,maxSize:6});
     playTone(300+skewScore*70,0.12,'sine',0.1);playTone(500+skewScore*35,0.08,'sine',0.08,0.1);
     if(navigator.vibrate)navigator.vibrate(30);
-    if(skewScore>=SKEW_TARGET){
+    if(skewScore>=skewTarget){
       skewPhase='done';playTaDa();spawnConfetti();spawnConfetti();
       if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
       updateSkewButtons();
@@ -5071,7 +5085,7 @@ function updateSkewGame(dt){
     }
   });
   skewImpaled.forEach(imp=>{
-    imp.slideT=Math.min(1,(imp.slideT||0)+dt*4);
+    imp.slideT=Math.min(1,(imp.slideT||0)+dt*3.5);
     const t=1-Math.pow(1-imp.slideT,3);
     imp.curX=imp.startX+(imp.targetX-imp.startX)*t;
     imp.curY=imp.startY+(imp.targetY-imp.startY)*t;
@@ -5079,6 +5093,19 @@ function updateSkewGame(dt){
   if(skewPhase==='done'){if(skewTimer<4&&Math.random()<0.07)spawnConfetti();}
 }
 
+function drawSkewFoodAt(x,y,r,emoji,color,rim,scale){
+  ctx.save();ctx.translate(x,y);
+  if(emoji){
+    ctx.font=`${r*scale}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(emoji,0,0);
+  }else{
+    const sr=r*(scale*0.48);
+    ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,sr,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=rim;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,sr,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(-sr*0.3,-sr*0.3,sr*0.28,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
 function drawSkewGame(){
   ctx.globalAlpha=1;
   const S=Math.min(W,H);
@@ -5091,7 +5118,7 @@ function drawSkewGame(){
     gz.addColorStop(0,'rgba(255,200,50,0)');gz.addColorStop(0.5,'rgba(255,200,50,0.13)');gz.addColorStop(1,'rgba(255,200,50,0)');
     ctx.fillStyle=gz;ctx.fillRect(skewCX-S*0.15,skewTopY,S*0.3,skewTipY-skewTopY);
   }
-  // Black metal skewer stick (drawn first, behind food)
+  // Black metal skewer stick (behind food)
   ctx.save();ctx.lineCap='round';
   ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=10;
   ctx.beginPath();ctx.moveTo(skewCX+2,skewTopY);ctx.lineTo(skewCX+2,skewTipY);ctx.stroke();
@@ -5114,10 +5141,7 @@ function drawSkewGame(){
   ctx.restore();
   // Impaled items on top of stick
   skewImpaled.forEach(imp=>{
-    ctx.save();ctx.translate(imp.curX,imp.curY);
-    ctx.font=`${imp.r*2}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(imp.emoji,0,0);
-    ctx.restore();
+    drawSkewFoodAt(imp.curX,imp.curY,imp.r,imp.emoji,imp.color,imp.rim,2);
   });
   // Floating food items
   const dragItem=skewDragIdx>=0?skewItems[skewDragIdx]:null;
@@ -5125,26 +5149,24 @@ function drawSkewGame(){
     if(item.impaled||item===dragItem)return;
     ctx.save();ctx.translate(item.x,item.y);
     ctx.fillStyle='rgba(0,0,0,0.13)';ctx.beginPath();ctx.arc(item.r*0.12,item.r*0.9,item.r*0.55,0,Math.PI*2);ctx.fill();
-    ctx.font=`${item.r*2}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(item.emoji,0,0);
     ctx.restore();
+    drawSkewFoodAt(item.x,item.y,item.r,item.emoji,item.color,item.rim,2);
   });
   // Dragged item on top with shadow
   if(dragItem){
-    ctx.save();ctx.translate(dragItem.x,dragItem.y);
-    ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=20;
-    ctx.font=`${dragItem.r*2.2}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(dragItem.emoji,0,0);
-    ctx.shadowBlur=0;ctx.restore();
+    ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=20;ctx.shadowOffsetY=4;
+    drawSkewFoodAt(dragItem.x,dragItem.y,dragItem.r,dragItem.emoji,dragItem.color,dragItem.rim,2.2);
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
   }
   // Score
   ctx.textAlign='center';ctx.textBaseline='middle';
   const sy=H*(H>W*1.5?0.09:0.08);
   ctx.font=`bold ${S*0.058}px sans-serif`;
-  ctx.fillStyle='rgba(100,55,15,0.4)';ctx.fillText('\uD83C\uDF61 '+skewScore+' / '+SKEW_TARGET,W/2+1,sy+1);
-  ctx.fillStyle='#5d4037';ctx.fillText('\uD83C\uDF61 '+skewScore+' / '+SKEW_TARGET,W/2,sy);
+  ctx.fillStyle='rgba(100,55,15,0.4)';ctx.fillText('\uD83C\uDF61 '+skewScore+' / '+skewTarget,W/2+1,sy+1);
+  ctx.fillStyle='#5d4037';ctx.fillText('\uD83C\uDF61 '+skewScore+' / '+skewTarget,W/2,sy);
   drawParticles(0);drawConfetti();drawFloatingEmojis();
-  const title=skewPhase==='done'?'Yummy! \uD83C\uDF1F':'Skewer! \uD83C\uDF61';
+  const label=skewMode==='dango'?'Dango! \uD83C\uDF61':'Kebab! \uD83C\uDF62';
+  const title=skewPhase==='done'?'Yummy! \uD83C\uDF1F':label;
   ctx.font=`bold ${S*0.07}px sans-serif`;ctx.textAlign='center';
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillText(title,W/2+2,S*0.065+2);
   ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
