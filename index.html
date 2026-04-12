@@ -5060,18 +5060,39 @@ function skewImpaleItem(item){
     updateSkewButtons();
   }
 }
+function skewResolveCollisions(){
+  const imp=[];
+  for(let i=0;i<skewItems.length;i++) if(skewItems[i].impaled) imp.push(skewItems[i]);
+  if(imp.length<2)return;
+  imp.sort((a,b)=>a.y-b.y);
+  // Forward pass: push items down so they don't overlap the one above
+  for(let i=1;i<imp.length;i++){
+    const minY=imp[i-1].y+imp[i-1].r+imp[i].r;
+    if(imp[i].y<minY) imp[i].y=minY;
+  }
+  // Clamp bottom to base, then backward pass to cascade up
+  const last=imp[imp.length-1];
+  if(last.y>skewTipY-last.r) last.y=skewTipY-last.r;
+  for(let i=imp.length-2;i>=0;i--){
+    const maxY=imp[i+1].y-imp[i+1].r-imp[i].r;
+    if(imp[i].y>maxY) imp[i].y=maxY;
+  }
+  if(imp[0].y<skewTopY+imp[0].r) imp[0].y=skewTopY+imp[0].r;
+}
 function handleSkewMove(x,y){
   if(skewDragIdx<0)return;
   const item=skewItems[skewDragIdx];
   if(item.impaled){
     item.x=skewCX;
     item.y=Math.max(skewTopY+item.r,Math.min(skewTipY-item.r,y));
+    skewResolveCollisions();
   }else{
     item.x=x;item.y=y;
     // Impale immediately when dragged across the stick
     if(skewPhase==='playing'&&Math.abs(item.x-skewCX)<item.r&&
       item.y>skewTopY-item.r&&item.y<skewTipY+item.r){
       skewImpaleItem(item);
+      skewResolveCollisions();
     }
   }
 }
