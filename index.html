@@ -1628,12 +1628,17 @@ function drawIceCreamGame(){
 }
 
 function drawCone(x,y){
-  // Waffle cone — bigger
-  ctx.fillStyle='#d7a86e';
+  // Waffle cone with vertical gradient
+  const coneGrad=ctx.createLinearGradient(0,y-95,0,y);
+  coneGrad.addColorStop(0,'#e8c78a');coneGrad.addColorStop(0.5,'#d7a86e');coneGrad.addColorStop(1,'#b87333');
+  ctx.fillStyle=coneGrad;
   ctx.beginPath();ctx.moveTo(x-45,y-95);ctx.lineTo(x+45,y-95);ctx.lineTo(x+6,y);ctx.lineTo(x-6,y);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#c49556';ctx.lineWidth=2.5;ctx.stroke();
-  // Waffle pattern
-  ctx.strokeStyle='#c49556';ctx.lineWidth=1.5;
+  ctx.strokeStyle='#9c6832';ctx.lineWidth=2.5;ctx.stroke();
+  // Left-side highlight stripe for 3D
+  ctx.fillStyle='rgba(255,230,180,0.28)';
+  ctx.beginPath();ctx.moveTo(x-42,y-94);ctx.lineTo(x-32,y-94);ctx.lineTo(x-3,y);ctx.lineTo(x-5.5,y);ctx.closePath();ctx.fill();
+  // Waffle crosshatch — softer so the pattern doesn't overpower the shading
+  ctx.strokeStyle='rgba(130,85,45,0.55)';ctx.lineWidth=1.5;
   for(let i=0;i<6;i++){const ly=y-i*16-5;const hw=6+i*7;ctx.beginPath();ctx.moveTo(x-hw,ly);ctx.lineTo(x+hw,ly);ctx.stroke()}
   for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(x+i*4,y);ctx.lineTo(x+i*14,y-95);ctx.stroke()}
 }
