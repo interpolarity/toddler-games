@@ -2535,9 +2535,13 @@ function drawPizzaGame(){
       const mid=(a0+a1)/2,sd=sep*R*0.5;
       const sx=cx+Math.cos(mid)*sd,sy=cy+Math.sin(mid)*sd;
       ctx.save();ctx.beginPath();ctx.moveTo(sx,sy);ctx.arc(sx,sy,R+2,a0+sep*0.3,a1-sep*0.3);ctx.closePath();ctx.clip();
-      ctx.fillStyle='#d7a86e';ctx.beginPath();ctx.arc(sx,sy,R,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#c49556';ctx.lineWidth=2;ctx.stroke();
-      ctx.fillStyle='#ffe0b2';ctx.beginPath();ctx.arc(sx,sy,innerR,0,Math.PI*2);ctx.fill();
+      const slCrust=ctx.createRadialGradient(sx-R*0.2,sy-R*0.2,R*0.3,sx,sy,R);
+      slCrust.addColorStop(0,'#eac88d');slCrust.addColorStop(0.65,'#d7a86e');slCrust.addColorStop(1,'#b88752');
+      ctx.fillStyle=slCrust;ctx.beginPath();ctx.arc(sx,sy,R,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#9c6832';ctx.lineWidth=2;ctx.stroke();
+      const slDough=ctx.createRadialGradient(sx-innerR*0.15,sy-innerR*0.15,innerR*0.2,sx,sy,innerR);
+      slDough.addColorStop(0,'#fff2ba');slDough.addColorStop(1,'#ffd180');
+      ctx.fillStyle=slDough;ctx.beginPath();ctx.arc(sx,sy,innerR,0,Math.PI*2);ctx.fill();
       pizzaToppings.forEach(id=>{
         if(id==='crust')return;
         if(id==='sauce'){ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(sx,sy,innerR-2,0,Math.PI*2);ctx.fill()}
@@ -2554,11 +2558,18 @@ function drawPizzaGame(){
       ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+Math.cos(a1-sep*0.3)*R,sy+Math.sin(a1-sep*0.3)*R);ctx.stroke();
     }
   }else{
-    // Whole pizza
-    ctx.fillStyle='rgba(0,0,0,0.08)';ctx.beginPath();ctx.arc(cx+3,cy+3,R,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#d7a86e';ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#c49556';ctx.lineWidth=3;ctx.stroke();
-    ctx.fillStyle='#ffe0b2';ctx.beginPath();ctx.arc(cx,cy,innerR,0,Math.PI*2);ctx.fill();
+    // Whole pizza — crust with radial gradient, soft shadow, dough with gradient
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.22)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+    const whCrust=ctx.createRadialGradient(cx-R*0.2,cy-R*0.2,R*0.3,cx,cy,R);
+    whCrust.addColorStop(0,'#eac88d');whCrust.addColorStop(0.65,'#d7a86e');whCrust.addColorStop(1,'#b88752');
+    ctx.fillStyle=whCrust;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle='#9c6832';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+    const whDough=ctx.createRadialGradient(cx-innerR*0.15,cy-innerR*0.15,innerR*0.2,cx,cy,innerR);
+    whDough.addColorStop(0,'#fff2ba');whDough.addColorStop(1,'#ffd180');
+    ctx.fillStyle=whDough;ctx.beginPath();ctx.arc(cx,cy,innerR,0,Math.PI*2);ctx.fill();
     pizzaToppings.forEach(id=>{
       if(id==='crust')return;
       if(id==='sauce'){ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx,cy,innerR-2,0,Math.PI*2);ctx.fill();
