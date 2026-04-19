@@ -1677,54 +1677,136 @@ function drawCustomer(x,y,mouthOpen){
 }
 
 function drawCharFace(mouthOpen,eyeColor,browColor){
-  // Shared face features — angry brows, eyes, mouth, blush
+  // Shared face: angry brows, large eyes with dual highlights + eyelashes, mouth, glowing blush
   const bh=55;
-  // Angry brows
-  ctx.strokeStyle=browColor;ctx.lineWidth=4;ctx.lineCap='round';
+  // Angry brows with soft shadow beneath for depth
+  ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-26,-bh*0.62+1);ctx.lineTo(-11,-bh*0.53+1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(26,-bh*0.62+1);ctx.lineTo(11,-bh*0.53+1);ctx.stroke();
+  ctx.strokeStyle=browColor;
   ctx.beginPath();ctx.moveTo(-26,-bh*0.62);ctx.lineTo(-11,-bh*0.53);ctx.stroke();
   ctx.beginPath();ctx.moveTo(26,-bh*0.62);ctx.lineTo(11,-bh*0.53);ctx.stroke();
   // Eyes
   if(mouthOpen){
-    ctx.strokeStyle=eyeColor;ctx.lineWidth=3;
-    ctx.beginPath();ctx.arc(-14,-bh*0.4,6,Math.PI+0.4,-0.4);ctx.stroke();
-    ctx.beginPath();ctx.arc(14,-bh*0.4,6,Math.PI+0.4,-0.4);ctx.stroke();
+    // Happy closed-arc eyes
+    ctx.strokeStyle=eyeColor;ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(-14,-bh*0.4,7,Math.PI+0.35,-0.35);ctx.stroke();
+    ctx.beginPath();ctx.arc(14,-bh*0.4,7,Math.PI+0.35,-0.35);ctx.stroke();
+    // Cheek eyelash flick
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(-20,-bh*0.44);ctx.lineTo(-23,-bh*0.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(20,-bh*0.44);ctx.lineTo(23,-bh*0.5);ctx.stroke();
   }else{
+    // Round glossy eyes with primary + secondary highlights
     ctx.fillStyle=eyeColor;
-    ctx.beginPath();ctx.arc(-14,-bh*0.4,5,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(14,-bh*0.4,5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(-14,-bh*0.4,5.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(14,-bh*0.4,5.5,0,Math.PI*2);ctx.fill();
+    // Primary white highlight (top-inner)
     ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.arc(-12,-bh*0.43,2,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(16,-bh*0.43,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(-12,-bh*0.44,2.4,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(16,-bh*0.44,2.4,0,Math.PI*2);ctx.fill();
+    // Secondary tiny highlight (bottom-outer for wet catch-light)
+    ctx.beginPath();ctx.arc(-16,-bh*0.35,0.9,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(12,-bh*0.35,0.9,0,Math.PI*2);ctx.fill();
+    // Outer eyelash flick
+    ctx.strokeStyle=browColor;ctx.lineWidth=1.3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(-19,-bh*0.46);ctx.lineTo(-22,-bh*0.51);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(19,-bh*0.46);ctx.lineTo(22,-bh*0.51);ctx.stroke();
   }
   // Mouth
   if(mouthOpen){
-    ctx.fillStyle='#c62828';ctx.beginPath();ctx.ellipse(0,-bh*0.16,14,12,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#ef9a9a';ctx.beginPath();ctx.ellipse(0,-bh*0.12,9,6,0,0,Math.PI*2);ctx.fill();
+    // Dark cavity
+    ctx.fillStyle='#4a1810';ctx.beginPath();ctx.ellipse(0,-bh*0.16,14,12,0,0,Math.PI*2);ctx.fill();
+    // Tongue
+    ctx.fillStyle='#ef5350';ctx.beginPath();ctx.ellipse(0,-bh*0.1,8.5,5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f8bbd0';ctx.beginPath();ctx.ellipse(0,-bh*0.08,4,2,0,0,Math.PI*2);ctx.fill();
+    // Upper teeth strip
+    ctx.fillStyle='#fff';ctx.fillRect(-10,-bh*0.22,20,2);
   }else{
-    ctx.strokeStyle=eyeColor;ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.moveTo(-7,-bh*0.2);ctx.quadraticCurveTo(0,-bh*0.1,0,-bh*0.2);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,-bh*0.2);ctx.quadraticCurveTo(0,-bh*0.1,7,-bh*0.2);ctx.stroke();
+    // "3" smile
+    ctx.strokeStyle=eyeColor;ctx.lineWidth=2.5;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(-7,-bh*0.2);ctx.quadraticCurveTo(0,-bh*0.08,0,-bh*0.2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,-bh*0.2);ctx.quadraticCurveTo(0,-bh*0.08,7,-bh*0.2);ctx.stroke();
   }
-  // Blush
-  ctx.fillStyle='rgba(255,138,128,0.35)';
-  ctx.beginPath();ctx.ellipse(-26,-bh*0.28,8,5,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(26,-bh*0.28,8,5,0,0,Math.PI*2);ctx.fill();
+  // Blush — soft outer glow + stronger inner core + sparkle
+  ctx.fillStyle='rgba(255,138,128,0.2)';
+  ctx.beginPath();ctx.ellipse(-26,-bh*0.26,11,7,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(26,-bh*0.26,11,7,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,138,128,0.5)';
+  ctx.beginPath();ctx.ellipse(-26,-bh*0.26,7,4,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(26,-bh*0.26,7,4,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.beginPath();ctx.arc(-28,-bh*0.3,0.9,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(28,-bh*0.3,0.9,0,Math.PI*2);ctx.fill();
 }
 
 function drawPurin(mouthOpen){
-  const bw=50,bh=55;
-  // Caramel top
-  ctx.fillStyle='#a0522d';ctx.beginPath();ctx.ellipse(0,-bh-8,bw+4,16,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#8b4513';
-  ctx.beginPath();ctx.ellipse(-25,-bh+2,8,12,0.2,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(20,-bh+5,6,10,-0.15,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(0,-bh+1,10,8,0,0,Math.PI*2);ctx.fill();
-  // Body
-  ctx.fillStyle='#ffe082';ctx.beginPath();
-  ctx.moveTo(-bw,-2);ctx.quadraticCurveTo(-bw,-bh,-(bw-8),-bh);ctx.lineTo(bw-8,-bh);
-  ctx.quadraticCurveTo(bw,-bh,bw,-2);ctx.quadraticCurveTo(bw,8,0,8);ctx.quadraticCurveTo(-bw,8,-bw,-2);
-  ctx.closePath();ctx.fill();ctx.strokeStyle='#f9a825';ctx.lineWidth=2.5;ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.ellipse(-bw+18,-bh/2,10,bh*0.35,0.15,0,Math.PI*2);ctx.fill();
+  const bw=52,bh=56;
+  // Plate shadow beneath
+  ctx.fillStyle='rgba(0,0,0,0.2)';
+  ctx.beginPath();ctx.ellipse(0,12,bw*1.1,5,0,0,Math.PI*2);ctx.fill();
+  // === CARAMEL DOME on top ===
+  const capY=-bh-5;
+  // Base caramel cap with vertical gradient
+  const capGrad=ctx.createLinearGradient(0,capY-11,0,capY+12);
+  capGrad.addColorStop(0,'#b35a2b');
+  capGrad.addColorStop(0.5,'#8d4420');
+  capGrad.addColorStop(1,'#5d2a10');
+  ctx.fillStyle=capGrad;
+  ctx.beginPath();ctx.ellipse(0,capY,bw+3,13,0,0,Math.PI*2);ctx.fill();
+  // Drippy caramel running down the sides of the pudding
+  ctx.fillStyle='#7a3818';
+  [[-bw+6,-bh+2,7,15],[-bw*0.3,-bh+1,7,9],[bw*0.25,-bh+3,6,13],[bw-8,-bh+2,8,12]].forEach(d=>{
+    ctx.beginPath();ctx.ellipse(d[0],d[1],d[2],d[3],0,0,Math.PI*2);ctx.fill();
+  });
+  // Caramel rim shadow (underside of cap where it meets body)
+  ctx.fillStyle='rgba(40,15,0,0.35)';
+  ctx.beginPath();ctx.ellipse(0,capY+8,bw-2,4,0,0,Math.PI*2);ctx.fill();
+  // Bright glossy highlight crescent
+  ctx.fillStyle='rgba(255,214,160,0.85)';
+  ctx.beginPath();ctx.ellipse(-bw*0.3,capY-5,bw*0.4,3.5,-0.12,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.beginPath();ctx.ellipse(-bw*0.3,capY-6,bw*0.25,1.3,-0.12,0,Math.PI*2);ctx.fill();
+  // Small wet sheen spot on the right
+  ctx.fillStyle='rgba(255,180,120,0.45)';
+  ctx.beginPath();ctx.ellipse(bw*0.35,capY-2,bw*0.12,1.8,0.1,0,Math.PI*2);ctx.fill();
+  // === BODY — trapezoidal custard with vertical gradient ===
+  const bodyGrad=ctx.createLinearGradient(0,-bh,0,9);
+  bodyGrad.addColorStop(0,'#fff4bd');
+  bodyGrad.addColorStop(0.35,'#ffe082');
+  bodyGrad.addColorStop(0.75,'#ffc947');
+  bodyGrad.addColorStop(1,'#e8a317');
+  ctx.fillStyle=bodyGrad;
+  ctx.beginPath();
+  ctx.moveTo(-bw,-2);ctx.quadraticCurveTo(-bw,-bh,-(bw-10),-bh);
+  ctx.lineTo(bw-10,-bh);
+  ctx.quadraticCurveTo(bw,-bh,bw,-2);
+  ctx.quadraticCurveTo(bw,9,0,9);
+  ctx.quadraticCurveTo(-bw,9,-bw,-2);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#c88712';ctx.lineWidth=2;ctx.stroke();
+  // Subtle horizontal jiggle-line through middle
+  ctx.strokeStyle='rgba(184,134,11,0.35)';ctx.lineWidth=1.2;
+  ctx.beginPath();
+  ctx.moveTo(-bw+8,-bh*0.52);
+  ctx.quadraticCurveTo(0,-bh*0.47,bw-8,-bh*0.52);
+  ctx.stroke();
+  // Left-side glossy jiggly highlight (big)
+  ctx.fillStyle='rgba(255,255,255,0.4)';
+  ctx.beginPath();ctx.ellipse(-bw+16,-bh*0.5,8,bh*0.38,0.12,0,Math.PI*2);ctx.fill();
+  // Smaller secondary highlight closer to bottom
+  ctx.fillStyle='rgba(255,255,255,0.28)';
+  ctx.beginPath();ctx.ellipse(-bw+13,-bh*0.15,4.5,bh*0.14,0.08,0,Math.PI*2);ctx.fill();
+  // Right-side depth shadow
+  ctx.fillStyle='rgba(150,90,10,0.18)';
+  ctx.beginPath();ctx.ellipse(bw-10,-bh*0.35,6,bh*0.38,-0.08,0,Math.PI*2);ctx.fill();
+  // Ambient occlusion strip where caramel meets custard (darker seam)
+  ctx.fillStyle='rgba(80,40,10,0.18)';
+  ctx.fillRect(-bw+8,-bh+1,bw*2-16,2.5);
+  // Bottom ambient shadow
+  ctx.fillStyle='rgba(100,60,10,0.15)';
+  ctx.beginPath();ctx.ellipse(0,8,bw*0.8,3,0,0,Math.PI*2);ctx.fill();
+  // Face
   drawCharFace(mouthOpen,'#5d4037','#5d4037');
 }
 
