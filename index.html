@@ -1426,10 +1426,20 @@ function drawBurgerLayer(x,y,item){
     ctx.beginPath();ctx.moveTo(x,y-item.h*0.4);ctx.lineTo(x+25,y-item.h+2);ctx.stroke();
   }else if(item.shape==='tomato'){
     drawRoundRect(x-hw,y-item.h,hw*2,item.h,3);ctx.fill();
+    // Pulpy center band (slightly paler flesh)
+    const tomGrad=ctx.createLinearGradient(0,y-item.h,0,y);
+    tomGrad.addColorStop(0,'rgba(255,230,210,0)');
+    tomGrad.addColorStop(0.5,'rgba(255,220,210,0.3)');
+    tomGrad.addColorStop(1,'rgba(255,230,210,0)');
+    ctx.fillStyle=tomGrad;
+    drawRoundRect(x-hw,y-item.h,hw*2,item.h,3);ctx.fill();
     ctx.strokeStyle=item.dark;ctx.lineWidth=1.5;ctx.stroke();
-    // Seeds
-    ctx.fillStyle='rgba(255,255,200,0.4)';
-    for(let i=-2;i<=2;i++){ctx.beginPath();ctx.ellipse(x+i*16,y-item.h/2,2,3,0,0,Math.PI*2);ctx.fill()}
+    // Glossy top highlight
+    ctx.fillStyle='rgba(255,255,255,0.25)';
+    ctx.fillRect(x-hw+4,y-item.h+2,hw*2-8,2);
+    // Seeds (more prominent)
+    ctx.fillStyle='rgba(255,253,185,0.85)';
+    for(let i=-2;i<=2;i++){ctx.beginPath();ctx.ellipse(x+i*16,y-item.h/2,2.5,3.5,0,0,Math.PI*2);ctx.fill()}
   }else if(item.shape==='onion'){
     drawRoundRect(x-hw+5,y-item.h,hw*2-10,item.h,2);ctx.fill();
     ctx.strokeStyle=item.dark;ctx.lineWidth=1;ctx.stroke();
