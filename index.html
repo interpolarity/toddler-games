@@ -1363,16 +1363,21 @@ function drawBurgerGame(){
 function drawBunBottom(x,y){
   // Bottom bun — thick bread slice style
   const hw=70,bh=20;
-  ctx.fillStyle='#d7a86e';
+  const bbGrad=ctx.createLinearGradient(0,y-bh,0,y);
+  bbGrad.addColorStop(0,'#e8c78a');bbGrad.addColorStop(0.5,'#d7a86e');bbGrad.addColorStop(1,'#b68350');
+  ctx.fillStyle=bbGrad;
   drawRoundRect(x-hw,y-bh,hw*2,bh,5);ctx.fill();
-  ctx.strokeStyle='#c49556';ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.strokeStyle='#9c6832';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='rgba(255,245,210,0.3)';
   ctx.fillRect(x-hw+4,y-bh+2,hw*2-8,5);
 }
 function drawBunTop(x,y){
-  ctx.fillStyle='#d7a86e';
+  // Dome with warm radial gradient so the top pops
+  const btGrad=ctx.createRadialGradient(x-15,y-40,5,x,y-30,80);
+  btGrad.addColorStop(0,'#f0cf95');btGrad.addColorStop(0.5,'#d7a86e');btGrad.addColorStop(1,'#a8764a');
+  ctx.fillStyle=btGrad;
   ctx.beginPath();ctx.moveTo(x-72,y);ctx.quadraticCurveTo(x-72,y-50,x,y-60);ctx.quadraticCurveTo(x+72,y-50,x+72,y);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#c49556';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.strokeStyle='#9c6832';ctx.lineWidth=2.5;ctx.stroke();
   // Sesame seeds
   ctx.fillStyle='#fff9c4';
   [[-30,-32],[0,-45],[28,-35],[15,-25],[-18,-22],[35,-20],[-35,-25]].forEach(([dx,dy])=>{
