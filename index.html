@@ -2928,14 +2928,32 @@ function drawCatchGame(){
   catchObjects.forEach(o=>{ctx.font=fs+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.emoji,o.x,o.y)});
   // Basket
   const bx=catchBasketX,by=H*0.68,bw=W*0.125,bh=W*0.08;
-  ctx.fillStyle='#8d6e63';
+  // Ground shadow under basket
+  ctx.fillStyle='rgba(0,0,0,0.2)';
+  ctx.beginPath();ctx.ellipse(bx,by+bh+4,bw*0.9,bh*0.14,0,0,Math.PI*2);ctx.fill();
+  // Basket body — gradient wicker
+  const bktGrad=ctx.createLinearGradient(0,by-bh*0.3,0,by+bh);
+  bktGrad.addColorStop(0,'#a1887f');bktGrad.addColorStop(0.4,'#8d6e63');bktGrad.addColorStop(1,'#5d4037');
+  ctx.fillStyle=bktGrad;
   ctx.beginPath();ctx.moveTo(bx-bw,by-bh*0.3);ctx.lineTo(bx-bw*0.8,by+bh);ctx.lineTo(bx+bw*0.8,by+bh);ctx.lineTo(bx+bw,by-bh*0.3);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#5d4037';ctx.lineWidth=3;ctx.stroke();
-  // Basket weave lines
-  ctx.strokeStyle='#a1887f';ctx.lineWidth=2;
-  for(let r=0;r<3;r++){const ry=by-bh*0.2+bh*0.4*r;ctx.beginPath();ctx.moveTo(bx-bw*0.95+r*3,ry);ctx.lineTo(bx+bw*0.95-r*3,ry);ctx.stroke()}
-  // Basket rim
-  ctx.fillStyle='#6d4c41';drawRoundRect(bx-bw-2,by-bh*0.45,bw*2+4,bh*0.2,4);ctx.fill();
+  ctx.strokeStyle='#4e342e';ctx.lineWidth=3;ctx.stroke();
+  // Gently curved woven bands
+  ctx.strokeStyle='rgba(180,150,130,0.7)';ctx.lineWidth=2;ctx.lineCap='round';
+  for(let r=0;r<3;r++){
+    const ry=by-bh*0.2+bh*0.4*r;const taper=r*3;
+    ctx.beginPath();
+    ctx.moveTo(bx-bw*0.95+taper,ry);
+    ctx.quadraticCurveTo(bx,ry+3,bx+bw*0.95-taper,ry);
+    ctx.stroke();
+  }
+  // Basket rim — gradient band with highlight
+  const rimGrad=ctx.createLinearGradient(0,by-bh*0.45,0,by-bh*0.25);
+  rimGrad.addColorStop(0,'#8d6e63');rimGrad.addColorStop(1,'#4e342e');
+  ctx.fillStyle=rimGrad;
+  drawRoundRect(bx-bw-2,by-bh*0.45,bw*2+4,bh*0.2,4);ctx.fill();
+  ctx.strokeStyle='#3e2723';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='rgba(255,230,200,0.35)';
+  ctx.fillRect(bx-bw,by-bh*0.42,bw*2,bh*0.04);
   ctx.textAlign='left';ctx.textBaseline='alphabetic';
   // Score
   ctx.fillStyle='#fff';ctx.font='bold '+Math.max(22,W*0.05)+'px sans-serif';ctx.textAlign='center';
