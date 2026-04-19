@@ -1303,19 +1303,13 @@ function drawBurgerGame(){
   // Counter
   ctx.fillStyle='#8d6e63';ctx.fillRect(0,floorY-8,W,12);
   ctx.fillStyle='#a1887f';ctx.fillRect(0,floorY-8,W,4);
-  // Plate — ceramic with rim, shadow, highlight (proper 3:1 perspective)
+  // Plate — flat 2D to match the food illustration style
   const plateX=W*0.35,plateY=floorY-8;
-  const plateRX=W*0.135,plateRY=W*0.042;
-  ctx.fillStyle='rgba(0,0,0,0.18)';
-  ctx.beginPath();ctx.ellipse(plateX+plateRX*0.04,plateY+plateRY*0.55,plateRX*0.95,plateRY*0.3,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#cfcfcf';
-  ctx.beginPath();ctx.ellipse(plateX,plateY,plateRX,plateRY,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.14)';
+  ctx.beginPath();ctx.ellipse(plateX+2,plateY+3,W*0.14,W*0.028,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#f5f5f5';
-  ctx.beginPath();ctx.ellipse(plateX,plateY-plateRY*0.1,plateRX*0.9,plateRY*0.8,0,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,0.08)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.ellipse(plateX,plateY-plateRY*0.1,plateRX*0.72,plateRY*0.62,0,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,0.6)';
-  ctx.beginPath();ctx.ellipse(plateX-plateRX*0.4,plateY-plateRY*0.4,plateRX*0.22,plateRY*0.18,-0.12,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(plateX,plateY,W*0.135,W*0.024,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#d0d0d0';ctx.lineWidth=2;ctx.stroke();
 
   // Draw burger stack — bun stays on plate, camera shifts down to keep top visible
   const stackX=plateX;
@@ -2254,19 +2248,13 @@ function drawPancakeGame(){
   const ts=30;for(let x=0;x<W;x+=ts)for(let y=floorY;y<H;y+=ts){if((Math.floor(x/ts)+Math.floor(y/ts))%2===0){ctx.fillStyle='#ffcc80';ctx.fillRect(x,y,ts,ts)}}
   ctx.fillStyle='#8d6e63';ctx.fillRect(0,floorY-8,W,12);
   ctx.fillStyle='#a1887f';ctx.fillRect(0,floorY-8,W,4);
-  // Plate — ceramic with rim, shadow, highlight (proper 3:1 perspective)
+  // Plate — flat 2D to match the food illustration style
   const plateX=W*0.35,plateY=floorY-8;
-  const plateRX=W*0.135,plateRY=W*0.042;
-  ctx.fillStyle='rgba(0,0,0,0.18)';
-  ctx.beginPath();ctx.ellipse(plateX+plateRX*0.04,plateY+plateRY*0.55,plateRX*0.95,plateRY*0.3,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#cfcfcf';
-  ctx.beginPath();ctx.ellipse(plateX,plateY,plateRX,plateRY,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.14)';
+  ctx.beginPath();ctx.ellipse(plateX+2,plateY+3,W*0.14,W*0.028,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#f5f5f5';
-  ctx.beginPath();ctx.ellipse(plateX,plateY-plateRY*0.1,plateRX*0.9,plateRY*0.8,0,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,0.08)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.ellipse(plateX,plateY-plateRY*0.1,plateRX*0.72,plateRY*0.62,0,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,0.6)';
-  ctx.beginPath();ctx.ellipse(plateX-plateRX*0.4,plateY-plateRY*0.4,plateRX*0.22,plateRY*0.18,-0.12,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(plateX,plateY,W*0.135,W*0.024,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#d0d0d0';ctx.lineWidth=2;ctx.stroke();
 
   const stackX=plateX,bunBase=plateY-10;
   const totalH=getPancakeHeight();const topY=bunBase-totalH;
@@ -2546,15 +2534,10 @@ function drawPizzaGame(){
   ctx.fillStyle='#a1887f';ctx.fillRect(0,floorY-8,W,4);
 
   const cx=W*0.5,cy=H*0.4,R=Math.min(W,H)*0.35,innerR=R*0.85;
-  // Plate — radial gradient for depth, decorative inner ring
-  const pizPlateGrad=ctx.createRadialGradient(cx-R*0.25,cy-R*0.25,R*0.2,cx,cy,R+15);
-  pizPlateGrad.addColorStop(0,'#ffffff');
-  pizPlateGrad.addColorStop(0.65,'#f2f2f2');
-  pizPlateGrad.addColorStop(1,'#d8d8d8');
-  ctx.fillStyle=pizPlateGrad;ctx.beginPath();ctx.arc(cx,cy,R+15,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#bababa';ctx.lineWidth=2;ctx.stroke();
-  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(cx,cy,R+8,0,Math.PI*2);ctx.stroke();
+  // Plate — flat 2D to match food illustration style
+  ctx.fillStyle='#f5f5f5';
+  ctx.beginPath();ctx.arc(cx,cy,R+15,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#d0d0d0';ctx.lineWidth=2;ctx.stroke();
 
   const slices=getPizzaSlices();
   if(slices.length>0&&pizzaState!=='building'&&pizzaState!=='baking'&&pizzaState!=='cutting'){
