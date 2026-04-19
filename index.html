@@ -3384,13 +3384,44 @@ function updateBuildButtons(){
 }
 function drawBuildShape(p,x,y,alpha){
   ctx.globalAlpha=alpha||1;
-  ctx.fillStyle=p.color;
-  if(p.type==='rect'){drawRoundRect(x-p.w/2,y-p.h/2,p.w,p.h,4);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
-  else if(p.type==='tri'){ctx.beginPath();ctx.moveTo(x,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
-  else if(p.type==='rtri'){ctx.beginPath();ctx.moveTo(x-p.w/2,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
-  else if(p.type==='trap'){ctx.beginPath();ctx.moveTo(x-p.w/2,y-p.h/2);ctx.lineTo(x+p.w/2,y-p.h/2);ctx.lineTo(x+p.w*0.35,y+p.h/2);ctx.lineTo(x-p.w*0.35,y+p.h/2);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
-  else if(p.type==='oval'){ctx.beginPath();ctx.ellipse(x,y,p.w/2,p.h/2,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke()}
-  else if(p.type==='circle'){ctx.beginPath();ctx.arc(x,y,p.w,0,Math.PI*2);ctx.fill()}
+  // Top-lit shading overlay — lightens the top half, darkens the bottom
+  const topY=p.type==='circle'?y-p.w:y-p.h/2;
+  const botY=p.type==='circle'?y+p.w:y+p.h/2;
+  const shade=ctx.createLinearGradient(0,topY,0,botY);
+  shade.addColorStop(0,'rgba(255,255,255,0.38)');
+  shade.addColorStop(0.45,'rgba(255,255,255,0)');
+  shade.addColorStop(1,'rgba(0,0,0,0.22)');
+  const stroke='rgba(0,0,0,0.28)';
+  if(p.type==='rect'){
+    drawRoundRect(x-p.w/2,y-p.h/2,p.w,p.h,4);
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.fillStyle=shade;ctx.fill();
+    ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();
+  }else if(p.type==='tri'){
+    ctx.beginPath();ctx.moveTo(x,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.fillStyle=shade;ctx.fill();
+    ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();
+  }else if(p.type==='rtri'){
+    ctx.beginPath();ctx.moveTo(x-p.w/2,y-p.h/2);ctx.lineTo(x-p.w/2,y+p.h/2);ctx.lineTo(x+p.w/2,y+p.h/2);ctx.closePath();
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.fillStyle=shade;ctx.fill();
+    ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();
+  }else if(p.type==='trap'){
+    ctx.beginPath();ctx.moveTo(x-p.w/2,y-p.h/2);ctx.lineTo(x+p.w/2,y-p.h/2);ctx.lineTo(x+p.w*0.35,y+p.h/2);ctx.lineTo(x-p.w*0.35,y+p.h/2);ctx.closePath();
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.fillStyle=shade;ctx.fill();
+    ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();
+  }else if(p.type==='oval'){
+    ctx.beginPath();ctx.ellipse(x,y,p.w/2,p.h/2,0,0,Math.PI*2);
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.fillStyle=shade;ctx.fill();
+    ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();
+  }else if(p.type==='circle'){
+    ctx.beginPath();ctx.arc(x,y,p.w,0,Math.PI*2);
+    ctx.fillStyle=p.color;ctx.fill();
+    ctx.fillStyle=shade;ctx.fill();
+  }
   ctx.globalAlpha=1;
 }
 function handleBuildTap(tx,ty){
