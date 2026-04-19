@@ -1576,9 +1576,17 @@ function drawIceCreamGame(){
   ctx.fillStyle='#ad1457';ctx.fillRect(0,floorY-8,W,8);
   ctx.fillStyle='#c2185b';ctx.fillRect(0,floorY-4,W,4);
 
-  // Napkin/plate
+  // Napkin/doily — paper with drop shadow and lace-dot rim
   const plateX=W*0.35;
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(plateX,floorY-6,50,8,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.14)';
+  ctx.beginPath();ctx.ellipse(plateX+2,floorY-3,52,9,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.ellipse(plateX,floorY-6,50,8,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fce4ec';
+  for(let a=0;a<Math.PI*2;a+=Math.PI/9){
+    const ex=plateX+Math.cos(a)*47,ey=floorY-6+Math.sin(a)*7;
+    ctx.beginPath();ctx.arc(ex,ey,1.6,0,Math.PI*2);ctx.fill();
+  }
 
   // Draw ice cream stack — cone stays on counter, camera shifts down to keep top visible
   const coneBase=floorY-10;
