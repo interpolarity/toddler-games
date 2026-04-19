@@ -6198,19 +6198,21 @@ const GT_TRASH_TYPES=['banana','can','paper','apple','bottle','box','peel','cup'
 let gtItems=[],gtScore=0,gtState='picking';
 let gtTruckX=0,gtTruckBounce=0,gtCompactT=0,gtDriveT=0,gtBounceT=0;
 let gtFlyingItems=[];
+let gtTargetX=0,gtPickingIdx=-1,gtPickupT=0,gtWheelSpin=0;
 
 function startGarbageGame(){
   currentMode='garbage';
   particles=[];confetti=[];floatingEmojis=[];flyingFoods=[];
   wobbleAngle=0;wobbleVel=0;
   gtItems=[];gtScore=0;gtState='picking';
-  gtTruckX=W*0.78;gtTruckBounce=0;gtCompactT=0;gtDriveT=0;gtBounceT=0;gtFlyingItems=[];
-  const GOAL=6;
+  gtTruckX=W*0.9;gtTruckBounce=0;gtCompactT=0;gtDriveT=0;gtBounceT=0;gtFlyingItems=[];
+  gtTargetX=gtTruckX;gtPickingIdx=-1;gtPickupT=0;gtWheelSpin=0;
+  const GOAL=5;
   const shuffled=[...GT_TRASH_TYPES].sort(()=>Math.random()-0.5).slice(0,GOAL);
   const S=Math.min(W,H);
   const streetY=H*0.72;
-  // Spread across the street, but leave space on the right for the truck
-  const startX=W*0.08,endX=W*0.62;
+  // Trash items spaced along the street; truck drives to each one
+  const startX=W*0.18,endX=W*0.66;
   shuffled.forEach((t,i)=>{
     gtItems.push({
       x:startX+(endX-startX)*(i/(GOAL-1)),
@@ -6232,7 +6234,7 @@ function updateGarbageButtons(){
 }
 
 function handleGarbageTap(tx,ty){
-  if(gtState!=='picking')return;
+  if(gtState!=='picking'&&gtState!=='approaching')return;
   for(let i=0;i<gtItems.length;i++){
     const it=gtItems[i];
     if(it.collected)continue;
@@ -6240,24 +6242,14 @@ function handleGarbageTap(tx,ty){
     const hitR=Math.min(W,H)*0.09;
     if(dx*dx+dy*dy<hitR*hitR){
       initAudio();
-      it.collected=true;
-      gtScore++;
-      gtFlyingItems.push({
-        x:it.x,y:it.y,
-        tx:gtTruckX+W*0.06,ty:H*0.56,
-        type:it.type,
-        t:0,dur:0.55
-      });
-      playTone(400+gtScore*80,0.15,'sine',0.1);
-      playTone(200,0.08,'triangle',0.08,0.05);
-      if(navigator.vibrate)navigator.vibrate(18);
-      spawnParticles(it.x,it.y,10,['#fff','#ccc','#bcaaa4'],{vyRange:6,spread:25,maxSize:5});
-      sayNumber(gtScore);
-      if(gtScore>=gtItems.length){
-        setTimeout(()=>{
-          if(gtState==='picking'){gtState='compacting';gtCompactT=0;playTone(120,0.5,'sawtooth',0.1);}
-        },650);
-      }
+      gtPickingIdx=i;
+      // Position truck so the hopper (bed center) hovers above the tapped trash
+      const s=W*0.0018;
+      gtTargetX=it.x-96*s;
+      gtState='approaching';
+      playTone(160,0.12,'square',0.07);
+      playTone(200,0.1,'square',0.06,0.1);
+      if(navigator.vibrate)navigator.vibrate(10);
       return;
     }
   }
@@ -6276,18 +6268,65 @@ function updateGarbageGame(dt){
       gtBounceT=1;
     }
   }
+  // Truck drives to the tapped trash
+  if(gtState==='approaching'){
+    const diff=gtTargetX-gtTruckX;
+    if(Math.abs(diff)<3){
+      gtTruckX=gtTargetX;
+      // Arrived — suck up the trash into the hopper
+      const it=gtItems[gtPickingIdx];
+      const s=W*0.0018;
+      const hopperX=gtTruckX+96*s;
+      const hopperY=H*0.72-82*s;
+      gtFlyingItems.push({
+        x:it.x,y:it.y,
+        tx:hopperX,ty:hopperY,
+        type:it.type,
+        t:0,dur:0.55
+      });
+      it.collected=true;
+      gtScore++;
+      playTone(400+gtScore*80,0.15,'sine',0.1);
+      playTone(240,0.08,'triangle',0.08,0.05);
+      if(navigator.vibrate)navigator.vibrate(20);
+      spawnParticles(it.x,it.y,10,['#fff','#ccc','#bcaaa4'],{vyRange:6,spread:25,maxSize:5});
+      sayNumber(gtScore);
+      gtState='sucking';
+      gtPickupT=0;
+    }else{
+      const dir=diff>0?1:-1;
+      const speed=Math.min(Math.abs(diff)*5,W*0.85);
+      gtTruckX+=dir*speed*dt;
+      gtWheelSpin+=dir*speed*dt*0.01;
+      // Occasional rumble
+      if(Math.random()<dt*4)playTone(75+Math.random()*25,0.07,'triangle',0.04);
+    }
+  }
+  // Waiting for suck animation to complete
+  if(gtState==='sucking'){
+    gtPickupT+=dt;
+    if(gtPickupT>=0.6){
+      if(gtScore>=gtItems.length){
+        gtState='compacting';gtCompactT=0;playTone(120,0.5,'sawtooth',0.1);
+      }else{
+        gtState='picking';
+      }
+    }
+  }
+  // Compactor crushes collected trash
   if(gtState==='compacting'){
     gtCompactT+=dt;
-    // Clank sound at squeeze peaks
     const prevPhase=Math.floor((gtCompactT-dt)*4);
     const curPhase=Math.floor(gtCompactT*4);
     if(curPhase!==prevPhase&&curPhase<6)playTone(80+Math.random()*30,0.12,'square',0.1);
-    if(gtCompactT>1.6){gtState='driving';gtDriveT=0;playTone(260,0.3,'square',0.08);playTone(320,0.3,'square',0.08,0.32);}
+    if(gtCompactT>1.6){gtState='leaving';gtDriveT=0;playTone(260,0.3,'square',0.08);playTone(320,0.3,'square',0.08,0.32);}
   }
-  if(gtState==='driving'){
+  // Truck drives off to the LEFT (cab is the front)
+  if(gtState==='leaving'){
     gtDriveT+=dt;
-    gtTruckX+=dt*200;
-    if(gtTruckX>W+W*0.3){
+    gtTruckX-=dt*W*0.35;
+    gtWheelSpin-=dt*W*0.35*0.01;
+    if(gtTruckX<-W*0.4){
       gtState='done';playTaDa();spawnConfetti();spawnConfetti();
       if(navigator.vibrate)navigator.vibrate([50,20,50,20,100]);
       updateGarbageButtons();
@@ -6337,10 +6376,18 @@ function drawGarbageGame(){
   ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.setLineDash([20,15]);
   ctx.beginPath();ctx.moveTo(0,streetY+S*0.1);ctx.lineTo(W,streetY+S*0.1);ctx.stroke();
   ctx.setLineDash([]);
-  // Trash items sitting on the sidewalk
-  gtItems.forEach(it=>{
+  // Trash items sitting on the sidewalk — tapped one bounces faster
+  gtItems.forEach((it,i)=>{
     if(it.collected)return;
-    const bob=Math.sin(gtTruckBounce*2+it.wobble)*2;
+    const isTarget=gtState==='approaching'&&gtPickingIdx===i;
+    const bob=Math.sin(gtTruckBounce*(isTarget?7:2)+it.wobble)*(isTarget?4:2);
+    if(isTarget){
+      // Target highlight ring
+      ctx.strokeStyle='rgba(255,214,0,0.8)';ctx.lineWidth=3;
+      ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.ellipse(it.x,it.y+S*0.02,S*0.065,S*0.018,0,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+    }
     drawTrashItem(it.x,it.y+bob,it.type);
   });
   // Garbage truck
@@ -6548,7 +6595,7 @@ function drawGarbageTruck(x,y){
     ctx.fillStyle='#888';ctx.beginPath();ctx.arc(wx,wheelY,wheelR*0.4,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.stroke();
     ctx.strokeStyle='#555';ctx.lineWidth=1.5;
-    for(let sp=0;sp<5;sp++){const a=sp*Math.PI*2/5+(gtState==='driving'?gtDriveT*4:0);
+    for(let sp=0;sp<5;sp++){const a=sp*Math.PI*2/5+gtWheelSpin;
       ctx.beginPath();ctx.moveTo(wx+Math.cos(a)*wheelR*0.15,wheelY+Math.sin(a)*wheelR*0.15);
       ctx.lineTo(wx+Math.cos(a)*wheelR*0.75,wheelY+Math.sin(a)*wheelR*0.75);ctx.stroke();}
   });
@@ -6631,12 +6678,14 @@ function drawGarbageTruck(x,y){
   ctx.fillStyle='#757575';ctx.fillRect(-6*s,-cabH+12*s,4*s,6*s);
   // Exhaust pipe
   ctx.fillStyle='#616161';ctx.fillRect(bedX+bedW-3*s,-bedH-10*s,4*s,10*s);
-  // Exhaust puff when driving
-  if(gtState==='driving'){
+  // Exhaust puffs — rise from the pipe whenever the truck is moving
+  if(gtState==='approaching'||gtState==='leaving'){
     for(let i=0;i<3;i++){
-      ctx.fillStyle=`rgba(180,180,180,${0.5-i*0.15})`;
-      const ex=bedX+bedW-2*s-i*6*s-gtDriveT*20;
-      ctx.beginPath();ctx.arc(ex,-bedH-12*s-i*4*s,4*s+i*2*s,0,Math.PI*2);ctx.fill();
+      const phase=(gtTruckBounce*2+i*0.33)%1;
+      ctx.fillStyle=`rgba(180,180,180,${(1-phase)*0.55})`;
+      const ex=bedX+bedW-1*s+(Math.random()-0.5)*2*s;
+      const ey=-bedH-12*s-phase*22*s;
+      ctx.beginPath();ctx.arc(ex,ey,(3+phase*6)*s,0,Math.PI*2);ctx.fill();
     }
   }
   ctx.restore();
