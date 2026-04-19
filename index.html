@@ -1388,9 +1388,20 @@ function drawBurgerLayer(x,y,item){
   ctx.fillStyle=item.color;
   if(item.shape==='patty'){
     drawRoundRect(x-hw,y-item.h,hw*2,item.h,6);ctx.fill();
+    // Seared-edge shading: darker top + bottom, middle stays the meat color
+    const searGrad=ctx.createLinearGradient(0,y-item.h,0,y);
+    searGrad.addColorStop(0,'rgba(0,0,0,0.35)');
+    searGrad.addColorStop(0.25,'rgba(0,0,0,0)');
+    searGrad.addColorStop(0.75,'rgba(0,0,0,0)');
+    searGrad.addColorStop(1,'rgba(0,0,0,0.35)');
+    ctx.fillStyle=searGrad;
+    drawRoundRect(x-hw,y-item.h,hw*2,item.h,6);ctx.fill();
     ctx.strokeStyle=item.dark;ctx.lineWidth=2;ctx.stroke();
+    // Grease sheen on top
+    ctx.fillStyle='rgba(255,220,180,0.22)';
+    ctx.fillRect(x-hw+8,y-item.h+3,hw*2-16,2);
     // Grill marks
-    ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=2;
+    ctx.strokeStyle='rgba(0,0,0,0.22)';ctx.lineWidth=2;
     for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(x-30+i*20,y-item.h+3);ctx.lineTo(x-30+i*20+15,y-3);ctx.stroke()}
   }else if(item.shape==='cheese'){
     ctx.beginPath();ctx.moveTo(x-hw-5,y);ctx.lineTo(x-hw,y-item.h);ctx.lineTo(x+hw,y-item.h);ctx.lineTo(x+hw+5,y);
